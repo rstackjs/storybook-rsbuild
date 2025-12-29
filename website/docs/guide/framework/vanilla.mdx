@@ -29,12 +29,15 @@ Install the HTML framework package to enable vanilla stories.
 
 ```js
 import { StorybookConfig } from 'storybook-html-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-html-rsbuild',
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
-    return config
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
   },
 }
 

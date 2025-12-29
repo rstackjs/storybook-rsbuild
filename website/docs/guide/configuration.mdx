@@ -12,9 +12,14 @@ The `rsbuildFinal` field gives you direct access to the Rsbuild configuration. Y
 
 This function receives the current Rsbuild config and an options object, and should return the modified config.
 
+:::warning Use `mergeRsbuildConfig` for modifications
+Always use [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) from `@rsbuild/core` to modify the config. Directly mutating properties like `config.tools.rspack = {...}` may not work because internal configs can be arrays of functions/objects, and direct assignment may be silently ignored.
+:::
+
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
 import type { StorybookConfig } from 'storybook-react-rsbuild';
+import { mergeRsbuildConfig } from '@rsbuild/core';
 
 const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
@@ -23,16 +28,21 @@ const config: StorybookConfig = {
   async rsbuildFinal(config, { configType }) {
     // Customize Rsbuild config here
     if (configType === 'PRODUCTION') {
-      config.performance = {
-        ...config.performance,
-        removeConsole: true,
-      };
+      return mergeRsbuildConfig(config, {
+        performance: {
+          removeConsole: true,
+        },
+      });
     }
 
-    // You can modify config.source, config.tools, etc.
-    // config.source = { ...config.source, alias: { ... } };
-
-    return config;
+    // Example: add source alias
+    return mergeRsbuildConfig(config, {
+      source: {
+        alias: {
+          '@components': './src/components',
+        },
+      },
+    });
   },
 };
 

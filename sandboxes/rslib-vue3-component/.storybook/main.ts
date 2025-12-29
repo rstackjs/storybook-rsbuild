@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginVue } from '@rsbuild/plugin-vue'
 import type { StorybookConfig } from 'storybook-vue3-rsbuild'
 
@@ -34,14 +35,18 @@ const config: StorybookConfig = {
   rsbuildFinal: (config) => {
     // Since HMR for Rspack is not supported by unplugin-vue as of now (https://github.com/unplugin/unplugin-vue/issues/162),
     // it's better to remove rsbuild-plugin-unplugin-vue and use @rsbuild/plugin-vue to handle all Vue files.
-    config.plugins = (config.plugins || []).filter((p) => {
+    const filteredPlugins = (config.plugins || []).filter((p) => {
       if (p && 'name' in p) {
         return p.name !== 'plugin-unplugin-vue'
       }
       return true
     })
-    config.plugins.push(pluginVue())
-    return config
+    return mergeRsbuildConfig(
+      { ...config, plugins: filteredPlugins },
+      {
+        plugins: [pluginVue()],
+      },
+    )
   },
 }
 

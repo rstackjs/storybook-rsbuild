@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginBabel } from '@rsbuild/plugin-babel'
 import type { StorybookConfig } from 'storybook-react-native-web-rsbuild'
 
@@ -40,24 +41,24 @@ const config: StorybookConfig = {
     // This is needed because react-native-reanimated (in modulesToTranspile)
     // gets its JSX transformed to use nativewind/jsx-runtime, but can't resolve
     // nativewind from deep within pnpm's .pnpm directory structure
-    config.resolve ??= {}
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      nativewind: nativewindPath,
-    }
-
-    config.plugins?.push(
-      pluginBabel({
-        // KEY: Only transform src files to avoid transforming Rsbuild internals
-        // Use [\\/] to match both Unix (/) and Windows (\) path separators
-        include: /[\\/]src[\\/]/,
-        babelLoaderOptions: {
-          presets: ['@babel/preset-typescript', 'nativewind/babel'],
-          plugins: ['@babel/plugin-proposal-export-namespace-from'],
+    return mergeRsbuildConfig(config, {
+      resolve: {
+        alias: {
+          nativewind: nativewindPath,
         },
-      }),
-    )
-    return config
+      },
+      plugins: [
+        pluginBabel({
+          // KEY: Only transform src files to avoid transforming Rsbuild internals
+          // Use [\\/] to match both Unix (/) and Windows (\) path separators
+          include: /[\\/]src[\\/]/,
+          babelLoaderOptions: {
+            presets: ['@babel/preset-typescript', 'nativewind/babel'],
+            plugins: ['@babel/plugin-proposal-export-namespace-from'],
+          },
+        }),
+      ],
+    })
   },
 }
 
