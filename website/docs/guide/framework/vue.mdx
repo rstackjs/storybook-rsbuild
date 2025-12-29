@@ -30,12 +30,15 @@ Install the Vue framework package to enable Storybook support.
 
 ```js
 import { StorybookConfig } from 'storybook-vue3-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-vue3-rsbuild',
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
-    return config
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
   },
 }
 

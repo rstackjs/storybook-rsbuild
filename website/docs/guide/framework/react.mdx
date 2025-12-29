@@ -30,12 +30,15 @@ Install the framework package to enable React support.
 
 ```js
 import { StorybookConfig } from 'storybook-react-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
-    return config
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
   },
 }
 

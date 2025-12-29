@@ -30,12 +30,15 @@ Install the Web Components framework package.
 
 ```js
 import { StorybookConfig } from 'storybook-web-components-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-web-components-rsbuild',
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
-    return config
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
   },
 }
 

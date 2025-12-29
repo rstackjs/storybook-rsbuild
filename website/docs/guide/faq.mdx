@@ -4,13 +4,17 @@
 
 The default Vite and webpack builders emit relative asset paths, but Rsbuild recommends absolute paths for deployment (see the [asset prefix tips](https://rsbuild.rs/config/output/asset-prefix#path-types:~:text=on%20file%20location.-,TIP,-It%27s%20not%20recommended)). To deploy Storybook at `https://example.com/sb-path`, set [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix).
 
-```diff
+```js
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
 const config: StorybookConfig = {
   // --snip--
   rsbuildFinal: (config) => {
-+   config.output ??= {}
-+   config.output.assetPrefix = '/sb-path/'
-    return config
+    return mergeRsbuildConfig(config, {
+      output: {
+        assetPrefix: '/sb-path/',
+      },
+    })
   },
   // --snip--
 }

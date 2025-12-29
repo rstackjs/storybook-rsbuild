@@ -339,27 +339,31 @@ pnpm add -D @babel/core babel-loader @babel/preset-flow @babel/preset-react
 2. Add a custom Rsbuild configuration in `.storybook/main.ts`:
 
 ```ts
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
 const config: StorybookConfig = {
   framework: {
     name: 'storybook-react-native-web-rsbuild',
     options: {},
   },
   rsbuildFinal: async (config) => {
-    config.tools ??= {}
-    config.tools.bundlerChain = (chain) => {
-      // Add babel-loader for packages with Flow syntax
-      chain.module
-        .rule('flow')
-        .test(/\.jsx?$/)
-        .include.add(/node_modules\/(react-native|@react-native)/)
-        .end()
-        .use('babel')
-        .loader('babel-loader')
-        .options({
-          presets: ['@babel/preset-flow', '@babel/preset-react'],
-        })
-    }
-    return config
+    return mergeRsbuildConfig(config, {
+      tools: {
+        bundlerChain: (chain) => {
+          // Add babel-loader for packages with Flow syntax
+          chain.module
+            .rule('flow')
+            .test(/\.jsx?$/)
+            .include.add(/node_modules\/(react-native|@react-native)/)
+            .end()
+            .use('babel')
+            .loader('babel-loader')
+            .options({
+              presets: ['@babel/preset-flow', '@babel/preset-react'],
+            })
+        },
+      },
+    })
   },
 }
 ```
