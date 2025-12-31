@@ -11,7 +11,7 @@ hero:
       link: /guide/
     - theme: alt
       text: GitHub
-      link: https://github.com/rspack-contrib/storybook-rsbuild
+      link: https://github.com/rstackjs/storybook-rsbuild
   image:
     src: /storybook-rsbuild.svg
     alt: Storybook Rsbuild Logo

@@ -9,13 +9,13 @@
     "react-native-web",
     "expo"
   ],
-  "homepage": "https://github.com/rspack-contrib/storybook-rsbuild",
+  "homepage": "https://github.com/rstackjs/storybook-rsbuild",
   "bugs": {
-    "url": "https://github.com/rspack-contrib/storybook-rsbuild/issues"
+    "url": "https://github.com/rstackjs/storybook-rsbuild/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rspack-contrib/storybook-rsbuild",
+    "url": "https://github.com/rstackjs/storybook-rsbuild",
     "directory": "packages/rsbuild-plugin-react-native-web"
   },
   "license": "MIT",

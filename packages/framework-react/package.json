@@ -10,11 +10,11 @@
   ],
   "homepage": "https://storybook.rsbuild.rs",
   "bugs": {
-    "url": "https://github.com/rspack-contrib/storybook-rsbuild/issues"
+    "url": "https://github.com/rstackjs/storybook-rsbuild/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rspack-contrib/storybook-rsbuild",
+    "url": "https://github.com/rstackjs/storybook-rsbuild",
     "directory": "packages/framework-react"
   },
   "license": "MIT",

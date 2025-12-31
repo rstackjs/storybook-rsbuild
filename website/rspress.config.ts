@@ -56,7 +56,7 @@ export default defineConfig({
       {
         icon: 'github',
         mode: 'link',
-        content: 'https://github.com/rspack-contrib/storybook-rsbuild',
+        content: 'https://github.com/rstackjs/storybook-rsbuild',
       },
     ],
   },

@@ -27,7 +27,7 @@
     "items": [
       {
         "text": "Changelog",
-        "link": "https://github.com/rspack-contrib/storybook-rsbuild/releases"
+        "link": "https://github.com/rstackjs/storybook-rsbuild/releases"
       },
       {
         "text": "v2.x (Storybook 9)",
@@ -35,7 +35,7 @@
       },
       {
         "text": "v1.x (Storybook 8)",
-        "link": "https://github.com/rspack-contrib/storybook-rsbuild/blob/v1/website/docs/guide/"
+        "link": "https://github.com/rstackjs/storybook-rsbuild/blob/v1/website/docs/guide/"
       }
     ]
   }

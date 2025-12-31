@@ -51,7 +51,7 @@ export const getVirtualModules = async (options: Options) => {
     needPipelinedImport,
   })
   // If the entrypoint is changed, remember to sync the change to Chromatic https://github.com/chromaui/chromatic-cli/pull/1206/files.
-  // Also ref https://github.com/rspack-contrib/storybook-rsbuild/issues/332.
+  // Also ref https://github.com/rstackjs/storybook-rsbuild/issues/332.
   const configEntryPath = resolve(join(workingDir, 'storybook-config-entry.js'))
   virtualModules[configEntryPath] = (
     await readTemplate(
