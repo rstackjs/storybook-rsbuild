@@ -1,11 +1,11 @@
-![Storybook Rsbuild](https://github.com/rspack-contrib/storybook-rsbuild/assets/7237365/00165054-9e3e-4a15-8a99-27985989b9d2)
+![Storybook Rsbuild](https://github.com/rstackjs/storybook-rsbuild/assets/7237365/00165054-9e3e-4a15-8a99-27985989b9d2)
 
 # Storybook Rsbuild
 
 <p>
   <a href="https://www.npmjs.com/package/storybook-builder-rsbuild"><img src="https://img.shields.io/npm/v/storybook-builder-rsbuild?style=flat-square&color=ff4785" alt="npm version" /></a>
   <a href="https://npmcharts.com/compare/storybook-builder-rsbuild?interval=30"><img src="https://img.shields.io/npm/dm/storybook-builder-rsbuild?style=flat-square&color=%23ff4785" alt="downloads" /></a>
-  <a href="https://github.com/rspack-contrib/storybook-rsbuild/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/storybook-builder-rsbuild?style=flat-square&color=%23ff4785" alt="license" /></a>
+  <a href="https://github.com/rstackjs/storybook-rsbuild/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/storybook-builder-rsbuild?style=flat-square&color=%23ff4785" alt="license" /></a>
 </p>
 
 Build your [Storybook](https://storybook.js.org/) with [Rsbuild](https://rsbuild.rs/), unleashing the power of [Rspack](https://rspack.rs/).

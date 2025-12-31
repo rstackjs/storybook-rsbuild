@@ -425,8 +425,8 @@ export default async (
   })
 
   // Override `config.source.entry` here, prevent it from merging with user config entries.
-  // see https://github.com/rspack-contrib/storybook-rsbuild/issues/43.
-  // see https://github.com/rspack-contrib/storybook-rsbuild/issues/357.
+  // see https://github.com/rstackjs/storybook-rsbuild/issues/43.
+  // see https://github.com/rstackjs/storybook-rsbuild/issues/357.
   rsbuildConfig.source ??= {}
   rsbuildConfig.source.entry = {
     main: [...(entries ?? []), ...dynamicEntries],
