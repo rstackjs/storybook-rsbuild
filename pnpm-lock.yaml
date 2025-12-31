@@ -200,8 +200,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/builder-rsbuild/compiled/@storybook/core-webpack: {}
-
   packages/framework-html:
     dependencies:
       '@rollup/pluginutils':
@@ -807,8 +805,8 @@ importers:
         specifier: ^1.4.2
         version: 1.4.2(@rsbuild/core@1.6.15)
       '@storybook/addon-coverage':
-        specifier: 2.0.0
-        version: 2.0.0(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.30.2)(sass-embedded@1.90.0)(sass@1.90.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
+        specifier: 3.0.0
+        version: 3.0.0(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.30.2)(sass-embedded@1.90.0)(sass@1.90.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       '@storybook/addon-docs':
         specifier: 10.1.10
         version: 10.1.10(@types/react@18.3.27)(esbuild@0.27.0)(rollup@4.53.2)(storybook@10.1.10(@testing-library/dom@10.4.0)(prettier@3.6.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.30.2)(sass-embedded@1.90.0)(sass@1.90.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))(webpack@5.103.0(@swc/core@1.14.0(@swc/helpers@0.5.18))(esbuild@0.27.0))
@@ -4309,8 +4307,8 @@ packages:
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
-  '@storybook/addon-coverage@2.0.0':
-    resolution: {integrity: sha512-KRqpV7+kjrKos/Im7UKqPC5MqDsZvsNl1N+Ie3TAZQd9nR/Z/4rC0oOlqW1FCRYDeyT44IQes/Km42sP8ow36g==}
+  '@storybook/addon-coverage@3.0.0':
+    resolution: {integrity: sha512-ADXpeAXtSvyGs1BSZhtO5Bi2BUedcP6eGPcBm7w3cYSj6KTpww4epEp1lnUD4faojSBBIOI2bRa/a4NA+/zt2Q==}
 
   '@storybook/addon-docs@10.1.10':
     resolution: {integrity: sha512-PSJVtawnGNrEkeLJQn9TTdeqrtDij8onvmnFtfkDaFG5IaUdQaLX9ibJ4gfxYakq+BEtlCcYiWErNJcqDrDluQ==}
@@ -16501,7 +16499,7 @@ snapshots:
 
   '@standard-schema/spec@1.0.0': {}
 
-  '@storybook/addon-coverage@2.0.0(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.30.2)(sass-embedded@1.90.0)(sass@1.90.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))':
+  '@storybook/addon-coverage@3.0.0(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.30.2)(sass-embedded@1.90.0)(sass@1.90.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
       '@istanbuljs/load-nyc-config': 1.1.0
       '@jsdevtools/coverage-istanbul-loader': 3.0.5
