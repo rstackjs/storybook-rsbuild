@@ -64,7 +64,7 @@
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.6.15",
+    "@rsbuild/core": "^1.7.2",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.27",
     "@types/resolve": "^1.20.6",
