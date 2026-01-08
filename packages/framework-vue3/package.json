@@ -51,7 +51,7 @@
     "vue-docgen-loader": "^2.0.1"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.6.15",
+    "@rsbuild/core": "^1.7.2",
     "@types/node": "^22.0.0",
     "storybook": "10.1.10",
     "typescript": "^5.9.3",
