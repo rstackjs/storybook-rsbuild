@@ -55,7 +55,7 @@
     "@rsbuild/core": "^1.7.2",
     "@types/node": "^22.0.0",
     "lit": "^3.3.2",
-    "storybook": "10.1.10",
+    "storybook": "10.1.11",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
