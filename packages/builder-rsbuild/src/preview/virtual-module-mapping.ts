@@ -46,7 +46,8 @@ export const getVirtualModules = async (options: Options) => {
   const storiesFilename = 'storybook-stories.js'
   const storiesPath = resolve(join(workingDir, storiesFilename))
 
-  const needPipelinedImport = !!builderOptions.lazyCompilation && !isProd
+  const needPipelinedImport =
+    builderOptions.lazyCompilation !== false && !isProd
   virtualModules[storiesPath] = toImportFn(stories, {
     needPipelinedImport,
   })

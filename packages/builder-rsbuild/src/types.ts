@@ -1,4 +1,4 @@
-import type { RsbuildConfig } from '@rsbuild/core'
+import type { DevConfig, RsbuildConfig } from '@rsbuild/core'
 import type { PluginTypeCheckerOptions } from '@rsbuild/plugin-type-check'
 import type {
   Builder,
@@ -42,9 +42,9 @@ export type BuilderOptions = {
    */
   rsbuildConfigPath?: string
   /**
-   * Enable Rspack's lazy compilation (experimental).
+   * Pass-through Rsbuild `dev.lazyCompilation` options.
    */
-  lazyCompilation?: NonNullable<RsbuildConfig['performance']>['buildCache']
+  lazyCompilation?: DevConfig['lazyCompilation']
   /**
    * Enable Rspack's [persistent cache(experimental)](https://rspack.dev/config/experiments#experimentscache).
    * We continue to use the name `fsCache` here to maintain better compatibility with the webpack builder.

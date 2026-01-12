@@ -200,6 +200,8 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/builder-rsbuild/compiled/@storybook/core-webpack: {}
+
   packages/framework-html:
     dependencies:
       '@rollup/pluginutils':
