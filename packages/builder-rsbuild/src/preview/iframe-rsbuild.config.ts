@@ -137,12 +137,13 @@ export default async (
   const builderOptions = await getBuilderOptions<BuilderOptions>(options)
   const cacheConfig = builderOptions.fsCache ? true : undefined
 
-  const lazyCompilationConfig: Rspack.LazyCompilationOptions | undefined =
-    builderOptions.lazyCompilation && !isProd
+  const lazyCompilationConfig: Rspack.Configuration['lazyCompilation'] = !isProd
+    ? builderOptions.lazyCompilation === undefined
       ? {
           entries: false,
         }
-      : undefined
+      : builderOptions.lazyCompilation
+    : undefined
 
   if (!template) {
     throw new Error(dedent`
