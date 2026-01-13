@@ -307,7 +307,9 @@ export function generateDocgenCodeBlock(options: GeneratorOptions): {
   const printNode = (sourceNode: ts.Node) =>
     printer.printNode(ts.EmitHint.Unspecified, sourceNode, sourceFile)
 
-  const s = new MagicString(options.source)
+  const s = new MagicString(options.source, {
+    filename: options.filename,
+  })
 
   for (const node of codeBlocks) {
     s.append(printNode(node))
@@ -315,6 +317,10 @@ export function generateDocgenCodeBlock(options: GeneratorOptions): {
 
   return {
     code: s.toString(),
-    map: s.generateMap(),
+    map: s.generateMap({
+      source: options.filename,
+      includeContent: true,
+      hires: true,
+    }),
   }
 }

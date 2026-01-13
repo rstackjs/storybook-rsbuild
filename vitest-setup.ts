@@ -1,8 +1,19 @@
 // Code taken from https://github.com/storybookjs/storybook/blob/next/code/vitest-setup.ts.
 import '@testing-library/jest-dom/vitest'
 
+import path from 'node:path'
+import { createSnapshotSerializer } from 'path-serializer'
 import { dedent } from 'ts-dedent'
 import { expect, vi } from 'vitest'
+
+const ROOT = path.resolve(__dirname)
+
+// Normalize paths in snapshots to ensure consistent results across different environments
+expect.addSnapshotSerializer(
+  createSnapshotSerializer({
+    root: ROOT,
+  }),
+)
 
 const ignoreList = [
   (error: any) =>
