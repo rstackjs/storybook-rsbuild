@@ -80,6 +80,9 @@ export async function generateBundle({
   const external = (await getExternal(DIR_CWD)).runtimeExternal
   const { entries, postbuild } = entry
 
+  const shouldDefineE2eDisableHmr =
+    process.env.SB_RSBUILD_TEST_MINIMAL_DEV === 'true'
+
   const sharedOptions = {
     format: 'esm',
     bundle: true,
@@ -100,6 +103,9 @@ export async function generateBundle({
        * @see 6th bullet in "browser" section in https://esbuild.github.io/api/#platform
        */
       'process.env.NODE_ENV': 'process.env.NODE_ENV',
+      ...(shouldDefineE2eDisableHmr
+        ? { 'process.env.SB_RSBUILD_TEST_MINIMAL_DEV': '"true"' }
+        : {}),
     },
     plugins: [
       {

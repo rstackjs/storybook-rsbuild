@@ -137,13 +137,25 @@ export default async (
   const builderOptions = await getBuilderOptions<BuilderOptions>(options)
   const cacheConfig = builderOptions.fsCache ? true : undefined
 
-  const lazyCompilationConfig: Rspack.Configuration['lazyCompilation'] = !isProd
-    ? builderOptions.lazyCompilation === undefined
-      ? {
-          entries: false,
-        }
-      : builderOptions.lazyCompilation
-    : undefined
+  const shouldDisableDevFeatures =
+    process.env.SB_RSBUILD_TEST_MINIMAL_DEV === 'true'
+
+  let lazyCompilationConfig: Rspack.Configuration['lazyCompilation']
+
+  if (!isProd) {
+    if (shouldDisableDevFeatures) {
+      lazyCompilationConfig = false
+    } else {
+      lazyCompilationConfig =
+        builderOptions.lazyCompilation === undefined
+          ? {
+              entries: false,
+            }
+          : builderOptions.lazyCompilation
+    }
+  }
+
+  const shouldDisableHmr = shouldDisableDevFeatures
 
   if (!template) {
     throw new Error(dedent`
@@ -248,6 +260,7 @@ export default async (
     dev: {
       assetPrefix: '/',
       progressBar: !quiet,
+      hmr: shouldDisableHmr ? false : undefined,
     },
     resolve: {
       alias: {

@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { expectDocsStorybookTitle, previewFrame } from '../utils/assertions'
+import {
+  expectDocsStorybookTitle,
+  previewFrame,
+  waitForPreviewReady,
+} from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 const sandbox = sandboxes.find((entry) => entry.name === 'react-18')
@@ -29,7 +33,9 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    await page.goto(currentServer.url, { waitUntil: 'networkidle' })
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
+    // with HMR/WebSocket connections that keep the network active
+    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
     await expectDocsStorybookTitle(page)
   })
 
@@ -39,7 +45,13 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    await page.goto(currentServer.url, { waitUntil: 'networkidle' })
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
+    // with HMR/WebSocket connections that keep the network active
+    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
+
+    // Wait for preview to be ready before interacting with sidebar
+    await waitForPreviewReady(page)
+
     const storyCategory = 'mock-mockedgreeting'
     const sidebarCategory = page.locator(`[data-item-id="${storyCategory}"]`)
     await expect(sidebarCategory).toBeVisible()

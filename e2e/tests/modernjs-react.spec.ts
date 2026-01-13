@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { previewFrame } from '../utils/assertions'
+import { previewFrame, waitForPreviewReady } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 const sandbox = sandboxes.find((entry) => entry.name === 'modernjs-react')
@@ -29,20 +29,22 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    await page.goto(currentServer.url, { waitUntil: 'networkidle' })
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
+    // with HMR/WebSocket connections that keep the network active
+    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
+
+    // Use the robust waiting mechanism that handles HMR rebuilds
+    await waitForPreviewReady(page)
+
+    // This sandbox uses autodocs, so it loads Docs view by default
+    // Verify the AntdButton docs page renders
     const frame = previewFrame(page)
     const docsRoot = frame.locator('#storybook-docs:not([hidden])')
+    await expect(docsRoot).toBeVisible()
 
-    if ((await docsRoot.count()) > 0) {
-      await expect(docsRoot).toBeVisible()
-      const title = docsRoot.locator('h1')
-      await expect(title).toBeVisible()
-      await expect(title).toHaveText('AntdButton')
-      return
-    }
-
-    throw new Error(
-      'Could not locate the Storybook docs root for modernjs-react. The sandbox may have rendered the Canvas view or failed to load docs.',
-    )
+    // Verify the title is present (autodocs generates h1 from component name)
+    const title = docsRoot.locator('h1')
+    await expect(title).toBeVisible()
+    await expect(title).toHaveText('AntdButton')
   })
 })

@@ -114,6 +114,10 @@ jobs:
         run: |
           pnpm test
 
+      - name: Build test packages
+        run: |
+          pnpm build:test
+
       - name: E2E
         run: |
           pnpm e2e
