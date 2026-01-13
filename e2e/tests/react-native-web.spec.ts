@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { previewFrame } from '../utils/assertions'
+import { waitForPreviewReady } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 // Skip on Windows due to path handling differences that affect Nativewind/Reanimated
@@ -35,9 +35,11 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    await page.goto(currentServer.url, { waitUntil: 'networkidle' })
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
+    // with HMR/WebSocket connections that keep the network active
+    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
     const docsRoot = frame.locator('#storybook-docs:not([hidden])')
     await expect(docsRoot).toBeVisible()
 
@@ -56,14 +58,15 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to Primary story
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(
       `${currentServer.url}?path=/story/components-button--primary`,
       {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       },
     )
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
 
     // The button text should be visible
     // TouchableOpacity renders as a div, and Text renders as a span
@@ -78,14 +81,15 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to Card Default story
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(
       `${currentServer.url}?path=/story/components-card--default`,
       {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       },
     )
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
 
     // Check card title is rendered
     const cardTitle = frame.getByText('Card Title')
@@ -105,11 +109,12 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to Button docs
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(`${currentServer.url}?path=/docs/components-button--docs`, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     })
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
     const docsRoot = frame.locator('#storybook-docs:not([hidden])')
     await expect(docsRoot).toBeVisible()
 
@@ -128,14 +133,15 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to Nativewind Showcase story
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(
       `${currentServer.url}?path=/story/nativewind-showcase--showcase`,
       {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       },
     )
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
 
     // Check that the Nativewind container is rendered
     const container = frame.locator('[data-testid="nativewind-container"]')
@@ -168,14 +174,15 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to Reanimated Showcase story
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(
       `${currentServer.url}?path=/story/reanimated-animations--showcase`,
       {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       },
     )
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
 
     // Check that the showcase container is rendered
     const showcase = frame.locator('[data-testid="reanimated-showcase"]')
@@ -209,14 +216,15 @@ test.describe(sandbox.name, () => {
     }
 
     // Navigate to FadeIn story
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     await page.goto(
       `${currentServer.url}?path=/story/reanimated-animations--fade-in`,
       {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       },
     )
 
-    const frame = previewFrame(page)
+    const frame = await waitForPreviewReady(page)
 
     // Check that the FadeInBox component is rendered
     const fadeInBox = frame.locator('[data-testid="reanimated-fade-in"]')

@@ -29,7 +29,9 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    await page.goto(currentServer.url, { waitUntil: 'networkidle' })
+    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
+    // with HMR/WebSocket connections that keep the network active
+    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
     await expectDocsStorybookTitle(page)
   })
 })
