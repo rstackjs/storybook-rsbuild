@@ -1,6 +1,6 @@
 {
   "name": "storybook-vue3-rsbuild",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Storybook for Vue3 and Rsbuild: Develop React Component in isolation with Hot Reloading.",
   "keywords": [
     "storybook",
