@@ -1,10 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import {
-  attachConsoleLogs,
-  previewFrame,
-  waitForPreviewReady,
-} from '../utils/assertions'
+import { previewFrame, waitForPreviewReady } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 const sandbox = sandboxes.find((entry) => entry.name === 'modernjs-react')
@@ -32,8 +28,6 @@ test.describe(sandbox.name, () => {
     if (!currentServer) {
       throw new Error('Storybook server failed to start')
     }
-
-    attachConsoleLogs(page, sandbox.name)
 
     // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
     // with HMR/WebSocket connections that keep the network active

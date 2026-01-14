@@ -138,17 +138,22 @@ export default async (
   const cacheConfig = builderOptions.fsCache ? true : undefined
 
   const shouldDisableDevFeatures =
-    process.env.STORYBOOK_RSBUILD_E2E_DISABLE_HMR === 'true'
+    process.env.SB_RSBUILD_TEST_MINIMAL_DEV === 'true'
 
-  const lazyCompilationConfig: Rspack.Configuration['lazyCompilation'] = !isProd
-    ? shouldDisableDevFeatures
-      ? false
-      : builderOptions.lazyCompilation === undefined
-        ? {
-            entries: false,
-          }
-        : builderOptions.lazyCompilation
-    : undefined
+  let lazyCompilationConfig: Rspack.Configuration['lazyCompilation']
+
+  if (!isProd) {
+    if (shouldDisableDevFeatures) {
+      lazyCompilationConfig = false
+    } else {
+      lazyCompilationConfig =
+        builderOptions.lazyCompilation === undefined
+          ? {
+              entries: false,
+            }
+          : builderOptions.lazyCompilation
+    }
+  }
 
   const shouldDisableHmr = shouldDisableDevFeatures
 
@@ -313,19 +318,6 @@ export default async (
         config.module.parser ??= {}
         config.module.parser.javascript ??= {}
         config.module.parser.javascript.unknownContextCritical = false
-
-        if (shouldDisableHmr) {
-          config.devServer ??= {}
-          config.devServer.hot = false
-          config.devServer.liveReload = false
-          config.devServer.client = false
-
-          if (config.plugins) {
-            config.plugins = config.plugins.filter((plugin) => {
-              return plugin?.constructor?.name !== 'HotModuleReplacementPlugin'
-            })
-          }
-        }
 
         config.resolve ??= {}
         config.resolve.symlinks = !isPreservingSymlinks()

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" run build",
+    "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "build:sandboxes": "pnpm --filter \"./sandboxes/*\" run build:storybook",
     "bump": "bumpp",
     "check": "pnpm --parallel --filter \"./packages/**\" run check",
