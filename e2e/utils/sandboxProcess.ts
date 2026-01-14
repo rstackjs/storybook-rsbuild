@@ -28,6 +28,7 @@ export async function launchSandbox(
       ...process.env,
       CI: 'true',
       PORT: port,
+      STORYBOOK_RSBUILD_E2E_DISABLE_HMR: 'true',
       ...definition.env,
     },
     stdio: ['pipe'],

@@ -137,13 +137,20 @@ export default async (
   const builderOptions = await getBuilderOptions<BuilderOptions>(options)
   const cacheConfig = builderOptions.fsCache ? true : undefined
 
+  const shouldDisableDevFeatures =
+    process.env.STORYBOOK_RSBUILD_E2E_DISABLE_HMR === 'true'
+
   const lazyCompilationConfig: Rspack.Configuration['lazyCompilation'] = !isProd
-    ? builderOptions.lazyCompilation === undefined
-      ? {
-          entries: false,
-        }
-      : builderOptions.lazyCompilation
+    ? shouldDisableDevFeatures
+      ? false
+      : builderOptions.lazyCompilation === undefined
+        ? {
+            entries: false,
+          }
+        : builderOptions.lazyCompilation
     : undefined
+
+  const shouldDisableHmr = shouldDisableDevFeatures
 
   if (!template) {
     throw new Error(dedent`
@@ -248,6 +255,7 @@ export default async (
     dev: {
       assetPrefix: '/',
       progressBar: !quiet,
+      hmr: shouldDisableHmr ? false : undefined,
     },
     resolve: {
       alias: {
@@ -305,6 +313,19 @@ export default async (
         config.module.parser ??= {}
         config.module.parser.javascript ??= {}
         config.module.parser.javascript.unknownContextCritical = false
+
+        if (shouldDisableHmr) {
+          config.devServer ??= {}
+          config.devServer.hot = false
+          config.devServer.liveReload = false
+          config.devServer.client = false
+
+          if (config.plugins) {
+            config.plugins = config.plugins.filter((plugin) => {
+              return plugin?.constructor?.name !== 'HotModuleReplacementPlugin'
+            })
+          }
+        }
 
         config.resolve ??= {}
         config.resolve.symlinks = !isPreservingSymlinks()
