@@ -18,6 +18,24 @@ export function previewIframe(page: Page): Locator {
   return page.locator(previewFrameSelector)
 }
 
+export function attachConsoleLogs(page: Page, prefix?: string): void {
+  const tag = prefix ? `[${prefix}]` : '[page]'
+
+  page.on('console', (message) => {
+    const location = message.location()
+    const locationText = location.url
+      ? ` (${location.url}:${location.lineNumber}:${location.columnNumber})`
+      : ''
+    process.stdout.write(
+      `${tag} console.${message.type()}: ${message.text()}${locationText}\n`,
+    )
+  })
+
+  page.on('pageerror', (error) => {
+    process.stderr.write(`${tag} pageerror: ${error.message}\n`)
+  })
+}
+
 /**
  * Wait for the Storybook preview iframe to be ready and stable.
  * This handles the race condition where Storybook may still be doing HMR rebuilds
