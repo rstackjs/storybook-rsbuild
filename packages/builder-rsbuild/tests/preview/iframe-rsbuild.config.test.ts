@@ -128,9 +128,12 @@ describe('iframe-rsbuild.config', () => {
     expect(typeof rspackTool).toBe('function')
 
     const baseConfig = {} as any
+    const addRules = vi.fn()
+    const appendRules = vi.fn()
 
-    return (rspackTool as any)(baseConfig, {
-      addRules: vi.fn(),
+    const result = (rspackTool as any)(baseConfig, {
+      addRules,
+      appendRules,
       rspack: {
         experiments: {
           VirtualModulesPlugin: class VirtualModulesPlugin {},
@@ -139,25 +142,37 @@ describe('iframe-rsbuild.config', () => {
       },
       mergeConfig: (c: any) => c,
     }) as any
+
+    return { rspackConfig: result, addRules, appendRules }
   }
 
   it('uses entries:false when lazyCompilation is unset', async () => {
-    const rspackConfig = await runRspackTool('unset')
+    const { rspackConfig } = await runRspackTool('unset')
     expect(rspackConfig.lazyCompilation).toEqual({ entries: false })
   })
 
   it('disables lazyCompilation when set to false', async () => {
-    const rspackConfig = await runRspackTool(false)
+    const { rspackConfig } = await runRspackTool(false)
     expect(rspackConfig.lazyCompilation).toBe(false)
   })
 
   it('passes through lazyCompilation when set to true', async () => {
-    const rspackConfig = await runRspackTool(true)
+    const { rspackConfig } = await runRspackTool(true)
     expect(rspackConfig.lazyCompilation).toBe(true)
   })
 
   it('passes through lazyCompilation options object', async () => {
-    const rspackConfig = await runRspackTool({ entries: true })
+    const { rspackConfig } = await runRspackTool({ entries: true })
     expect(rspackConfig.lazyCompilation).toEqual({ entries: true })
+  })
+
+  it('appends raw query fallback rule for asset/source imports', async () => {
+    const { appendRules } = await runRspackTool(false)
+
+    expect(appendRules).toHaveBeenCalledTimes(1)
+    expect(appendRules).toHaveBeenCalledWith({
+      resourceQuery: /[?&]raw(?:&|=|$)/,
+      type: 'asset/source',
+    })
   })
 })
