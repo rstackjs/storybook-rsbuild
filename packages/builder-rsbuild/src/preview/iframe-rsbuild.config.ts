@@ -179,10 +179,6 @@ export default async (
   const { virtualModules: virtualModuleMapping, entries: dynamicEntries } =
     await getVirtualModules(options)
 
-  if (!options.cache) {
-    throw new Error('Cache is required')
-  }
-
   let contentFromConfig: RsbuildConfig = {}
   const { content } = await loadConfig({
     cwd: workingDir,

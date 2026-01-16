@@ -98,6 +98,16 @@ const createOptions = (
   return { options, apply }
 }
 
+const createOptionsWithoutCache = (
+  lazyCompilation: LazyCompilationOption | 'unset' = false,
+) => {
+  const { options, apply } = createOptions(lazyCompilation)
+
+  delete options.cache
+
+  return { options, apply }
+}
+
 describe('iframe-rsbuild.config', () => {
   it('overrides rsbuild source.entry with Storybook entry', async () => {
     const { options } = createOptions()
@@ -114,6 +124,16 @@ describe('iframe-rsbuild.config', () => {
     expect(config.source?.entry).toEqual({
       main: [storybookEntries[0], expectedDynamicEntry],
     })
+  })
+
+  it('does not require cache from storybook options', async () => {
+    const { options } = createOptionsWithoutCache()
+
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+
+    expect(config.source?.entry).toBeDefined()
   })
 
   const runRspackTool = async (
