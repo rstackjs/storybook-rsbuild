@@ -52,6 +52,9 @@ const builtInResolveExtensions = [
   '.cjs',
 ]
 
+/** @see https://github.com/web-infra-dev/rsbuild/blob/d8204bb72b5dd32dc736372dff6bb618675a4ad5/packages/core/src/constants.ts#L61 */
+const RAW_QUERY_REGEX = /[?&]raw(?:&|=|$)/
+
 const globalPath = maybeGetAbsolutePath('@storybook/global')
 
 // these packages are not pre-bundled because of react dependencies.
@@ -299,7 +302,7 @@ export default async (
         // Ensure the deconstruction of the in-play function in parameters.
         config.env.bugfixes = true
       },
-      rspack: (config, { addRules, rspack, mergeConfig }) => {
+      rspack: (config, { addRules, appendRules, rspack, mergeConfig }) => {
         addRules({
           test: /\.stories\.([tj])sx?$|(stories|story)\.mdx$/,
           exclude: /node_modules/,
@@ -397,6 +400,16 @@ export default async (
         if (lazyCompilationConfig !== undefined) {
           config.lazyCompilation = lazyCompilationConfig
         }
+
+        // Fallback rule for raw imports (e.g., `import docs from './README.md?raw'`).
+        // This is a low-priority rule that handles any file with `?raw` query as raw string.
+        // Placed at the end of rules array via appendRules to ensure it doesn't override
+        // more specific rules from Rsbuild's asset/script plugins.
+        // @see https://github.com/storybookjs/storybook/blob/8486c72ce5fc4946755cafdcdb671f6f5dd9937d/code/builders/builder-webpack5/src/preview/base-webpack.config.ts
+        appendRules({
+          resourceQuery: RAW_QUERY_REGEX,
+          type: 'asset/source',
+        })
 
         return mergeConfig(
           config,
