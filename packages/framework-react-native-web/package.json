@@ -47,7 +47,7 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/react": "^10.1.11",
+    "@storybook/react": "^10.2.1",
     "rsbuild-plugin-react-native-web": "workspace:*",
     "storybook-builder-rsbuild": "workspace:*",
     "storybook-react-rsbuild": "workspace:*"
