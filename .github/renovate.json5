@@ -12,29 +12,45 @@
 			"rangeStrategy": "bump"
 		},
 		{
+			"groupName": "react-16 (keep React pinned)",
+			"groupSlug": "react-16-keep-react-pinned",
+			"matchFileNames": ["sandboxes/react-16/package.json"],
+			"matchPackagePatterns": [
+				"^react$",
+				"^react-dom$",
+				"^@types/react$",
+				"^@types/react-dom$"
+			],
+			"enabled": false
+		},
+		{
 			"groupName": "storybook",
-			"matchPackageNames": ["storybook", "@storybook/**"],
 			"groupSlug": "storybook",
-			"rangeStrategy": "pin",
-			"matchDepTypes": ["devDependencies"]
+			"matchManagers": ["npm"],
+			"matchPackagePatterns": ["^storybook$", "^@storybook/"],
+			"matchDepTypes": ["dependencies", "devDependencies"],
+			"rangeStrategy": "replace",
+			"separateMajorMinor": false,
+			"separateMinorPatch": false,
+			"separateMultipleMajor": false
+		},
+		{
+			"groupName": "all non-major dependencies",
+			"groupSlug": "all-non-major",
+			"matchUpdateTypes": ["patch", "minor"],
+			"excludePackagePatterns": ["^storybook$", "^@storybook/"]
+		},
+		// manually update peer dependencies
+		{
+			"depTypeList": ["peerDependencies"],
+			"enabled": false
 		},
 		{
 			groupName: 'rspress',
 			matchPackageNames: ['@rspress/**'],
 			groupSlug: 'rspress',
 			extends: ['schedule:daily'],
-    	},
-		{
-			"groupName": "all non-major dependencies",
-			"groupSlug": "all-non-major",
-			"matchPackageNames": ["**", "!storybook", "!@storybook/**"],
-			"matchUpdateTypes": ["patch", "minor"],
-		},
-		// manually update peer dependencies
-		{
-			"depTypeList": ["peerDependencies"],
-			"enabled": false
-		}
+	    	}
 	],
 	"ignoreDeps": [
 		// manually update some packages
