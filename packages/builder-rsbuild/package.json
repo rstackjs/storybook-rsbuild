@@ -70,14 +70,14 @@
   },
   "devDependencies": {
     "@rsbuild/core": "^1.7.2",
-    "@storybook/core-webpack": "10.1.11",
+    "@storybook/core-webpack": "10.2.1",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
     "@types/pretty-hrtime": "^1.0.3",
     "prebundle": "^1.6.2",
     "pretty-hrtime": "^1.0.3",
     "slash": "^5.1.0",
-    "storybook": "10.1.11",
+    "storybook": "10.2.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
