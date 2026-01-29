@@ -48,14 +48,14 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/web-components": "^10.1.11",
+    "@storybook/web-components": "^10.2.1",
     "storybook-builder-rsbuild": "workspace:*"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.7.2",
     "@types/node": "^22.0.0",
     "lit": "^3.3.2",
-    "storybook": "10.1.11",
+    "storybook": "10.2.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
