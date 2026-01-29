@@ -27,7 +27,7 @@
 			"matchManagers": ["npm"],
 			"matchPackagePatterns": ["^storybook$", "^@storybook/"],
 			"matchDepTypes": ["dependencies", "devDependencies"],
-			"rangeStrategy": "replace",
+			"rangeStrategy": "bump",
 			"separateMajorMinor": false,
 			"separateMinorPatch": false,
 			"separateMultipleMajor": false
