@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@rollup/pluginutils": "^5.3.0",
-    "@storybook/react": "^10.1.11",
+    "@storybook/react": "^10.2.1",
     "@storybook/react-docgen-typescript-plugin": "^1.0.1",
     "find-up": "^5.0.0",
     "magic-string": "^0.30.21",
@@ -70,7 +70,7 @@
     "@types/resolve": "^1.20.6",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "storybook": "10.1.11",
+    "storybook": "10.2.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
