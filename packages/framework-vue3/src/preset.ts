@@ -3,10 +3,11 @@ import type { PresetProperty } from 'storybook/internal/types'
 
 export { rsbuildFinal } from './framework-preset-vue3'
 
-export const core: PresetProperty<'core'> = async (_config, options) => {
+export const core: PresetProperty<'core'> = async (config, options) => {
   const framework = await options.presets.apply('framework')
 
   return {
+    ...config,
     builder: {
       name: fileURLToPath(import.meta.resolve('storybook-builder-rsbuild')),
       options:
