@@ -75,6 +75,10 @@ console.log(
   return JSON.parse(output)
 }
 
+function normalizePathSeparators(value: string): string {
+  return value.replaceAll('\\', '/')
+}
+
 describe.each(CASES)('$name core preset', ({
   modulePath,
   expectedRendererSegment,
@@ -85,6 +89,8 @@ describe.each(CASES)('$name core preset', ({
     expect(result.channelOptions).toEqual({ wsToken: 'test-token' })
     expect(result.disableTelemetry).toBe(true)
     expect(result.builderOptions).toEqual({ lazyCompilation: true })
-    expect(result.renderer).toContain(expectedRendererSegment)
+    expect(normalizePathSeparators(result.renderer)).toContain(
+      expectedRendererSegment,
+    )
   })
 })
