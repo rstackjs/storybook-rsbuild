@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
@@ -36,7 +37,13 @@ const CASES: CaseItem[] = [
 
 async function runCorePreset(modulePath: string): Promise<CoreResult> {
   const script = `
-import { core } from '${modulePath}';
+import { pathToFileURL } from 'node:url';
+
+const presetPath = process.env.STORYBOOK_PRESET_PATH;
+if (!presetPath) {
+  throw new Error('STORYBOOK_PRESET_PATH is required');
+}
+const { core } = await import(pathToFileURL(presetPath).href);
 
 const config = {
   channelOptions: { wsToken: 'test-token' },
@@ -65,6 +72,10 @@ console.log(
     ['--import', 'tsx', '--input-type=module', '-e', script],
     {
       cwd: workspaceRoot,
+      env: {
+        ...process.env,
+        STORYBOOK_PRESET_PATH: resolve(workspaceRoot, modulePath),
+      },
     },
   )
 
