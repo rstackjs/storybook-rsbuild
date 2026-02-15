@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -34,6 +34,16 @@ const commandOutput = (command: string, args: string[], cwd?: string): string =>
     cwd,
     encoding: 'utf-8',
     env: process.env,
+  })
+}
+
+const commandOutputFromFile = (command: string, args: string[], inputFilePath: string, cwd?: string): string => {
+  const input = readFileSync(inputFilePath, 'utf-8')
+  return execFileSync(command, args, {
+    cwd,
+    encoding: 'utf-8',
+    env: process.env,
+    input,
   })
 }
 
@@ -195,13 +205,19 @@ Commits:
 ${JSON.stringify(records, null, 2)}
 `
 
-const analyzeWithOpenCode = (records: CommitAnalysisRecord[]): string => {
+const analyzeWithOpenCode = (workspace: string, records: CommitAnalysisRecord[]): string => {
   if (!records.length) {
     return '[]'
   }
 
-  const prompt = formatOpenCodePrompt(records)
-  const output = commandOutput('opencode', ['run', '-m', OPENCODE_MODEL, prompt]).trim()
+  const promptPath = join(workspace, 'opencode-prompt.md')
+  writeFileSync(promptPath, formatOpenCodePrompt(records))
+  const output = commandOutputFromFile(
+    'opencode',
+    ['run', '-m', OPENCODE_MODEL],
+    promptPath,
+    workspace,
+  ).trim()
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, '### OpenCode Analysis\n')
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${output}\n`)
 
@@ -264,7 +280,7 @@ try {
   const { spec, usedFallback, reason } = getCandidateSpec(workspace, checkpointSha)
   const records = getRelevantCommits(workspace, spec)
   const analysisPayload = prepareAnalysisPayload(workspace, records)
-  const openCodeAnalysis = analyzeWithOpenCode(analysisPayload)
+  const openCodeAnalysis = analyzeWithOpenCode(workspace, analysisPayload)
 
   const report = formatReport(records, usedFallback, reason)
   console.log(report)
