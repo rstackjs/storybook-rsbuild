@@ -38,6 +38,8 @@ const OPENCODE_PROMPT_TEMPLATE = new URL(
   './storybook-frameworks-sync.prompt.md',
   import.meta.url,
 )
+const STEP_SUMMARY_PATH = process.env.GITHUB_STEP_SUMMARY
+const GITHUB_OUTPUT_PATH = process.env.GITHUB_OUTPUT
 
 const commandOutput = (
   command: string,
@@ -232,23 +234,29 @@ const analyzeWithOpenCode = (
     promptPath,
     workspace,
   ).trim()
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, '### OpenCode Analysis\n')
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${output}\n`)
+  if (STEP_SUMMARY_PATH) {
+    appendFileSync(STEP_SUMMARY_PATH, '### OpenCode Analysis\n')
+    appendFileSync(STEP_SUMMARY_PATH, `${output}\n`)
+  }
 
   return output
 }
 
 const toOutput = (name: string, value: string): void => {
+  if (!GITHUB_OUTPUT_PATH) {
+    return
+  }
+
   if (value.includes('\n')) {
     const token = `__${name}_${Date.now()}_${Math.random().toString(36).slice(2)}__`
     appendFileSync(
-      process.env.GITHUB_OUTPUT!,
+      GITHUB_OUTPUT_PATH,
       `${name}<<${token}\n${value}\n${token}\n`,
     )
     return
   }
 
-  appendFileSync(process.env.GITHUB_OUTPUT!, `${name}=${value}\n`)
+  appendFileSync(GITHUB_OUTPUT_PATH, `${name}=${value}\n`)
 }
 
 const formatReport = (
@@ -304,7 +312,9 @@ try {
 
   const report = formatReport(records, usedFallback, reason)
   console.log(report)
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${report}\n`)
+  if (STEP_SUMMARY_PATH) {
+    appendFileSync(STEP_SUMMARY_PATH, `${report}\n`)
+  }
 
   const headSha = commandOutput('git', ['rev-parse', 'HEAD'], workspace).trim()
 
