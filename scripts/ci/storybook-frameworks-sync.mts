@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -29,14 +29,7 @@ const SHA_REGEX = /^[0-9a-f]{40}$/i
 const DIFF_MAX_CHARS = 6000
 const OPENCODE_MODEL = 'opencode/claude-haiku-4-5'
 
-const commandOutput = (command: string, cwd?: string): string => {
-  return execSync(command, {
-    cwd,
-    encoding: 'utf-8',
-  })
-}
-
-const commandOutputWithArgs = (command: string, args: string[], cwd?: string): string => {
+const commandOutput = (command: string, args: string[], cwd?: string): string => {
   return execFileSync(command, args, {
     cwd,
     encoding: 'utf-8',
@@ -69,7 +62,7 @@ const getCandidateSpec = (
   }
 
   try {
-    commandOutput(`git cat-file -t ${checkpointSha}^{commit}`, workspace)
+    commandOutput('git', ['cat-file', '-t', `${checkpointSha}^{commit}`], workspace)
     return {
       spec: `${checkpointSha}..HEAD`,
       usedFallback: false,
@@ -95,7 +88,7 @@ const getRelevantCommits = (workspace: string, rangeOrSince: string): CommitReco
     WATCH_PATH,
   ]
 
-  const raw = commandOutput(args.join(' '), workspace)
+  const raw = commandOutput('git', args, workspace)
 
   const records: CommitRecord[] = []
 
@@ -153,13 +146,7 @@ const getCommitDiff = (workspace: string, record: CommitRecord): string => {
     return ''
   }
 
-  const quotedFiles = srcFiles
-    .map((file) => `"${file.replace(/"/g, '\\"')}"`)
-    .join(' ')
-  const rawDiff = commandOutput(
-    `git show --no-color --unified=0 ${record.sha} -- ${quotedFiles}`,
-    workspace,
-  )
+  const rawDiff = commandOutput('git', ['show', '--no-color', '--unified=0', record.sha, '--', ...srcFiles], workspace)
   if (rawDiff.length <= DIFF_MAX_CHARS) {
     return rawDiff.trimEnd()
   }
@@ -214,7 +201,7 @@ const analyzeWithOpenCode = (records: CommitAnalysisRecord[]): string => {
   }
 
   const prompt = formatOpenCodePrompt(records)
-  const output = commandOutputWithArgs('opencode', ['run', '-m', OPENCODE_MODEL, prompt]).trim()
+  const output = commandOutput('opencode', ['run', '-m', OPENCODE_MODEL, prompt]).trim()
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, '### OpenCode Analysis\n')
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${output}\n`)
 
@@ -262,9 +249,17 @@ ${record.files.map((file) => `    - ${file}`).join('\n')}`
 const workspace = mkdtempSync(join(tmpdir(), 'storybook-sync-'))
 try {
   const checkpointSha = readCheckpoint()
-  commandOutput(
-    `git clone --filter=blob:none --single-branch --branch next ${REMOTE_URL} ${workspace} --shallow-since ${sinceDate()}`,
-  )
+  commandOutput('git', [
+    'clone',
+    '--filter=blob:none',
+    '--single-branch',
+    '--branch',
+    'next',
+    REMOTE_URL,
+    workspace,
+    '--shallow-since',
+    sinceDate(),
+  ])
 
   const { spec, usedFallback, reason } = getCandidateSpec(workspace, checkpointSha)
   const records = getRelevantCommits(workspace, spec)
@@ -275,7 +270,7 @@ try {
   console.log(report)
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${report}\n`)
 
-  const headSha = commandOutput('git rev-parse HEAD', workspace).trim()
+  const headSha = commandOutput('git', ['rev-parse', 'HEAD'], workspace).trim()
 
   toOutput('sync_report', report)
   toOutput('next_head_sha', headSha)
