@@ -34,6 +34,7 @@ const HOUR_MS = 60 * 60 * 1000
 const SHA_REGEX = /^[0-9a-f]{40}$/i
 const DIFF_MAX_CHARS = 6000
 const OPENCODE_MODEL = 'opencode/claude-haiku-4-5'
+const MAINTAINER_MENTION = 'fi3ework'
 const OPENCODE_PROMPT_TEMPLATE = new URL(
   './storybook-frameworks-sync.prompt.md',
   import.meta.url,
@@ -259,6 +260,15 @@ const toOutput = (name: string, value: string): void => {
   appendFileSync(GITHUB_OUTPUT_PATH, `${name}=${value}\n`)
 }
 
+const hasSyncRequired = (analysis: string): boolean => {
+  try {
+    const parsed = JSON.parse(analysis) as unknown
+    return Array.isArray(parsed) && parsed.length > 0
+  } catch {
+    return false
+  }
+}
+
 const formatReport = (
   records: CommitRecord[],
   usedFallback: boolean,
@@ -309,11 +319,18 @@ try {
   const records = getRelevantCommits(workspace, spec)
   const analysisPayload = prepareAnalysisPayload(workspace, records)
   const openCodeAnalysis = analyzeWithOpenCode(workspace, analysisPayload)
+  const shouldMentionMaintainer = hasSyncRequired(openCodeAnalysis)
 
   const report = formatReport(records, usedFallback, reason)
   console.log(report)
   if (STEP_SUMMARY_PATH) {
     appendFileSync(STEP_SUMMARY_PATH, `${report}\n`)
+    if (shouldMentionMaintainer) {
+      appendFileSync(
+        STEP_SUMMARY_PATH,
+        `\ncc @${MAINTAINER_MENTION} Sync-required commits detected.\n`,
+      )
+    }
   }
 
   const headSha = commandOutput('git', ['rev-parse', 'HEAD'], workspace).trim()
@@ -324,6 +341,7 @@ try {
   toOutput('has_target_commits', records.length > 0 ? 'true' : 'false')
   toOutput('sync_analysis_payload', JSON.stringify(analysisPayload))
   toOutput('opencode_analysis', openCodeAnalysis)
+  toOutput('has_sync_required', shouldMentionMaintainer ? 'true' : 'false')
   toOutput(
     'has_opencode_analysis',
     openCodeAnalysis.trim().length > 0 ? 'true' : 'false',
