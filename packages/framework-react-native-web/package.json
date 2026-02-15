@@ -1,6 +1,6 @@
 {
   "name": "storybook-react-native-web-rsbuild",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "description": "Storybook for React Native Web and Rsbuild: Develop React Native components for web in isolation with Hot Reloading.",
   "keywords": [
     "storybook",
