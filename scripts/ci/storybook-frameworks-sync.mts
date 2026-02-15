@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -28,9 +34,16 @@ const HOUR_MS = 60 * 60 * 1000
 const SHA_REGEX = /^[0-9a-f]{40}$/i
 const DIFF_MAX_CHARS = 6000
 const OPENCODE_MODEL = 'opencode/claude-haiku-4-5'
-const OPENCODE_PROMPT_TEMPLATE = new URL('./storybook-frameworks-sync.prompt.md', import.meta.url)
+const OPENCODE_PROMPT_TEMPLATE = new URL(
+  './storybook-frameworks-sync.prompt.md',
+  import.meta.url,
+)
 
-const commandOutput = (command: string, args: string[], cwd?: string): string => {
+const commandOutput = (
+  command: string,
+  args: string[],
+  cwd?: string,
+): string => {
   return execFileSync(command, args, {
     cwd,
     encoding: 'utf-8',
@@ -38,7 +51,12 @@ const commandOutput = (command: string, args: string[], cwd?: string): string =>
   })
 }
 
-const commandOutputFromFile = (command: string, args: string[], inputFilePath: string, cwd?: string): string => {
+const commandOutputFromFile = (
+  command: string,
+  args: string[],
+  inputFilePath: string,
+  cwd?: string,
+): string => {
   const input = readFileSync(inputFilePath, 'utf-8')
   return execFileSync(command, args, {
     cwd,
@@ -73,7 +91,11 @@ const getCandidateSpec = (
   }
 
   try {
-    commandOutput('git', ['cat-file', '-t', `${checkpointSha}^{commit}`], workspace)
+    commandOutput(
+      'git',
+      ['cat-file', '-t', `${checkpointSha}^{commit}`],
+      workspace,
+    )
     return {
       spec: `${checkpointSha}..HEAD`,
       usedFallback: false,
@@ -88,7 +110,10 @@ const getCandidateSpec = (
   }
 }
 
-const getRelevantCommits = (workspace: string, rangeOrSince: string): CommitRecord[] => {
+const getRelevantCommits = (
+  workspace: string,
+  rangeOrSince: string,
+): CommitRecord[] => {
   const args = [
     'log',
     rangeOrSince,
@@ -135,7 +160,9 @@ const getRelevantCommits = (workspace: string, rangeOrSince: string): CommitReco
   }
 
   return records.filter((record) => {
-    return record.files.some((file) => /^code\/frameworks\/[^/]+\/src\//.test(file))
+    return record.files.some((file) =>
+      /^code\/frameworks\/[^/]+\/src\//.test(file),
+    )
   })
 }
 
@@ -151,12 +178,18 @@ const toFrameworkNames = (files: string[]) => {
 }
 
 const getCommitDiff = (workspace: string, record: CommitRecord): string => {
-  const srcFiles = record.files.filter((file) => /^code\/frameworks\/[^/]+\/src\//.test(file))
+  const srcFiles = record.files.filter((file) =>
+    /^code\/frameworks\/[^/]+\/src\//.test(file),
+  )
   if (!srcFiles.length) {
     return ''
   }
 
-  const rawDiff = commandOutput('git', ['show', '--no-color', '--unified=0', record.sha, '--', ...srcFiles], workspace)
+  const rawDiff = commandOutput(
+    'git',
+    ['show', '--no-color', '--unified=0', record.sha, '--', ...srcFiles],
+    workspace,
+  )
   if (rawDiff.length <= DIFF_MAX_CHARS) {
     return rawDiff.trimEnd()
   }
@@ -164,7 +197,10 @@ const getCommitDiff = (workspace: string, record: CommitRecord): string => {
   return `${rawDiff.slice(0, DIFF_MAX_CHARS)}\n... [truncated to ${DIFF_MAX_CHARS} chars]`
 }
 
-const prepareAnalysisPayload = (workspace: string, records: CommitRecord[]): CommitAnalysisRecord[] => {
+const prepareAnalysisPayload = (
+  workspace: string,
+  records: CommitRecord[],
+): CommitAnalysisRecord[] => {
   return records.map((record) => ({
     sha: record.sha,
     date: record.date,
@@ -180,7 +216,10 @@ const buildOpenCodePrompt = (records: CommitAnalysisRecord[]): string => {
   return template.replace('{{COMMITS_JSON}}', JSON.stringify(records, null, 2))
 }
 
-const analyzeWithOpenCode = (workspace: string, records: CommitAnalysisRecord[]): string => {
+const analyzeWithOpenCode = (
+  workspace: string,
+  records: CommitAnalysisRecord[],
+): string => {
   if (!records.length) {
     return '[]'
   }
@@ -202,7 +241,10 @@ const analyzeWithOpenCode = (workspace: string, records: CommitAnalysisRecord[])
 const toOutput = (name: string, value: string): void => {
   if (value.includes('\n')) {
     const token = `__${name}_${Date.now()}_${Math.random().toString(36).slice(2)}__`
-    appendFileSync(process.env.GITHUB_OUTPUT!, `${name}<<${token}\n${value}\n${token}\n`)
+    appendFileSync(
+      process.env.GITHUB_OUTPUT!,
+      `${name}<<${token}\n${value}\n${token}\n`,
+    )
     return
   }
 
@@ -252,7 +294,10 @@ try {
     sinceDate(),
   ])
 
-  const { spec, usedFallback, reason } = getCandidateSpec(workspace, checkpointSha)
+  const { spec, usedFallback, reason } = getCandidateSpec(
+    workspace,
+    checkpointSha,
+  )
   const records = getRelevantCommits(workspace, spec)
   const analysisPayload = prepareAnalysisPayload(workspace, records)
   const openCodeAnalysis = analyzeWithOpenCode(workspace, analysisPayload)
@@ -269,7 +314,10 @@ try {
   toOutput('has_target_commits', records.length > 0 ? 'true' : 'false')
   toOutput('sync_analysis_payload', JSON.stringify(analysisPayload))
   toOutput('opencode_analysis', openCodeAnalysis)
-  toOutput('has_opencode_analysis', openCodeAnalysis.trim().length > 0 ? 'true' : 'false')
+  toOutput(
+    'has_opencode_analysis',
+    openCodeAnalysis.trim().length > 0 ? 'true' : 'false',
+  )
 } finally {
   rmSync(workspace, { recursive: true, force: true })
 }
