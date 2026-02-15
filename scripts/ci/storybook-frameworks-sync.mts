@@ -28,6 +28,7 @@ const HOUR_MS = 60 * 60 * 1000
 const SHA_REGEX = /^[0-9a-f]{40}$/i
 const DIFF_MAX_CHARS = 6000
 const OPENCODE_MODEL = 'opencode/claude-haiku-4-5'
+const OPENCODE_PROMPT_TEMPLATE = new URL('./storybook-frameworks-sync.prompt.md', import.meta.url)
 
 const commandOutput = (command: string, args: string[], cwd?: string): string => {
   return execFileSync(command, args, {
@@ -89,11 +90,10 @@ const getCandidateSpec = (
 
 const getRelevantCommits = (workspace: string, rangeOrSince: string): CommitRecord[] => {
   const args = [
-    'git',
     'log',
     rangeOrSince,
     '--name-only',
-    "--pretty=format:'COMMIT\t%H\t%aI\t%s'",
+    '--pretty=format:COMMIT\t%H\t%aI\t%s',
     '--',
     WATCH_PATH,
   ]
@@ -175,35 +175,10 @@ const prepareAnalysisPayload = (workspace: string, records: CommitRecord[]): Com
   }))
 }
 
-const formatOpenCodePrompt = (records: CommitAnalysisRecord[]) => `
-Use English only.
-You are helping maintainers of storybook-rsbuild.
-Given the following upstream Storybook commits that touched code/frameworks/*/src, identify which commits require sync work in this downstream repository.
-Return strict JSON array only, with one item per commit that requires sync.
-
-JSON schema:
-[
-  {
-    "sha": "full commit SHA",
-    "sync_required": true,
-    "priority": "high|medium|low",
-    "reason": "short reason referencing changed files",
-    "suggested_actions": [
-      "specific action 1",
-      "specific action 2"
-    ]
-  }
-]
-
-Rules:
-- Keep output strictly valid JSON.
-- Return only English text in every reason and suggested action.
-- Exclude commits where sync_required is false.
-- If none require sync, return [] exactly.
-
-Commits:
-${JSON.stringify(records, null, 2)}
-`
+const buildOpenCodePrompt = (records: CommitAnalysisRecord[]): string => {
+  const template = readFileSync(OPENCODE_PROMPT_TEMPLATE, 'utf-8')
+  return template.replace('{{COMMITS_JSON}}', JSON.stringify(records, null, 2))
+}
 
 const analyzeWithOpenCode = (workspace: string, records: CommitAnalysisRecord[]): string => {
   if (!records.length) {
@@ -211,7 +186,7 @@ const analyzeWithOpenCode = (workspace: string, records: CommitAnalysisRecord[])
   }
 
   const promptPath = join(workspace, 'opencode-prompt.md')
-  writeFileSync(promptPath, formatOpenCodePrompt(records))
+  writeFileSync(promptPath, buildOpenCodePrompt(records))
   const output = commandOutputFromFile(
     'opencode',
     ['run', '-m', OPENCODE_MODEL],
