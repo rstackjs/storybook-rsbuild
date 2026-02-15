@@ -83,6 +83,7 @@ const cloneStorybookNextBranch = (workspace: string): void => {
       sinceDate(),
     ])
   } catch {
+    rmSync(workspace, { recursive: true, force: true })
     commandOutput('git', [
       'clone',
       '--filter=blob:none',
