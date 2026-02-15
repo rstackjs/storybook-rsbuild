@@ -1,0 +1,289 @@
+#!/usr/bin/env node
+import { execFileSync, execSync } from 'node:child_process'
+import { appendFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+interface CommitRecord {
+  sha: string
+  date: string
+  message: string
+  files: string[]
+}
+
+interface CommitAnalysisRecord {
+  sha: string
+  date: string
+  message: string
+  frameworks: string[]
+  files: string[]
+  diff: string
+}
+
+const REMOTE_URL = 'https://github.com/storybookjs/storybook.git'
+const WATCH_PATH = 'code/frameworks'
+const CHECKPOINT_ENV = 'STORYBOOK_SYNC_CHECK_LAST_SHA'
+const HOURS_BACK = 36
+const HOUR_MS = 60 * 60 * 1000
+const SHA_REGEX = /^[0-9a-f]{40}$/i
+const DIFF_MAX_CHARS = 6000
+const OPENCODE_MODEL = 'opencode/claude-haiku-4-5'
+
+const commandOutput = (command: string, cwd?: string): string => {
+  return execSync(command, {
+    cwd,
+    encoding: 'utf-8',
+  })
+}
+
+const commandOutputWithArgs = (command: string, args: string[], cwd?: string): string => {
+  return execFileSync(command, args, {
+    cwd,
+    encoding: 'utf-8',
+    env: process.env,
+  })
+}
+
+const isValidSha = (value?: string): value is string =>
+  typeof value === 'string' && SHA_REGEX.test(value)
+
+const formatIso = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+const readCheckpoint = (): string => process.env[CHECKPOINT_ENV]?.trim() ?? ''
+
+const sinceDate = (): string =>
+  formatIso(new Date(Date.now() - HOURS_BACK * HOUR_MS))
+
+const getCandidateSpec = (
+  workspace: string,
+  checkpointSha: string,
+): { spec: string; usedFallback: boolean; reason: string } => {
+  const sinceArg = `--since=${sinceDate()}`
+
+  if (!isValidSha(checkpointSha)) {
+    return {
+      spec: sinceArg,
+      usedFallback: true,
+      reason: `checkpoint=${checkpointSha} (not a valid full SHA)`,
+    }
+  }
+
+  try {
+    commandOutput(`git cat-file -t ${checkpointSha}^{commit}`, workspace)
+    return {
+      spec: `${checkpointSha}..HEAD`,
+      usedFallback: false,
+      reason: `checkpoint=${checkpointSha}`,
+    }
+  } catch {
+    return {
+      spec: sinceArg,
+      usedFallback: true,
+      reason: `checkpoint=${checkpointSha} (invalid in checked-out history)`,
+    }
+  }
+}
+
+const getRelevantCommits = (workspace: string, rangeOrSince: string): CommitRecord[] => {
+  const args = [
+    'git',
+    'log',
+    rangeOrSince,
+    '--name-only',
+    "--pretty=format:'COMMIT\t%H\t%aI\t%s'",
+    '--',
+    WATCH_PATH,
+  ]
+
+  const raw = commandOutput(args.join(' '), workspace)
+
+  const records: CommitRecord[] = []
+
+  let current: CommitRecord | null = null
+  for (const line of raw.split('\n')) {
+    if (line.startsWith('COMMIT\t')) {
+      if (current) {
+        records.push(current)
+      }
+      const [, sha, date, ...messageParts] = line.split('\t')
+      current = {
+        sha: sha ?? '',
+        date: date ?? '',
+        message: messageParts.join('\t'),
+        files: [],
+      }
+      continue
+    }
+
+    if (!current) {
+      continue
+    }
+
+    const file = line.trim()
+    if (!file) {
+      continue
+    }
+
+    current.files.push(file)
+  }
+
+  if (current) {
+    records.push(current)
+  }
+
+  return records.filter((record) => {
+    return record.files.some((file) => /^code\/frameworks\/[^/]+\/src\//.test(file))
+  })
+}
+
+const toFrameworkNames = (files: string[]) => {
+  const names = new Set<string>()
+  for (const file of files) {
+    const match = file.match(/^code\/frameworks\/([^/]+)\//)?.[1]
+    if (match) {
+      names.add(match)
+    }
+  }
+  return [...names]
+}
+
+const getCommitDiff = (workspace: string, record: CommitRecord): string => {
+  const srcFiles = record.files.filter((file) => /^code\/frameworks\/[^/]+\/src\//.test(file))
+  if (!srcFiles.length) {
+    return ''
+  }
+
+  const quotedFiles = srcFiles
+    .map((file) => `"${file.replace(/"/g, '\\"')}"`)
+    .join(' ')
+  const rawDiff = commandOutput(
+    `git show --no-color --unified=0 ${record.sha} -- ${quotedFiles}`,
+    workspace,
+  )
+  if (rawDiff.length <= DIFF_MAX_CHARS) {
+    return rawDiff.trimEnd()
+  }
+
+  return `${rawDiff.slice(0, DIFF_MAX_CHARS)}\n... [truncated to ${DIFF_MAX_CHARS} chars]`
+}
+
+const prepareAnalysisPayload = (workspace: string, records: CommitRecord[]): CommitAnalysisRecord[] => {
+  return records.map((record) => ({
+    sha: record.sha,
+    date: record.date,
+    message: record.message,
+    frameworks: toFrameworkNames(record.files),
+    files: record.files,
+    diff: getCommitDiff(workspace, record),
+  }))
+}
+
+const formatOpenCodePrompt = (records: CommitAnalysisRecord[]) => `
+Use English only.
+You are helping maintainers of storybook-rsbuild.
+Given the following upstream Storybook commits that touched code/frameworks/*/src, identify which commits require sync work in this downstream repository.
+Return strict JSON array only, with one item per commit that requires sync.
+
+JSON schema:
+[
+  {
+    "sha": "full commit SHA",
+    "sync_required": true,
+    "priority": "high|medium|low",
+    "reason": "short reason referencing changed files",
+    "suggested_actions": [
+      "specific action 1",
+      "specific action 2"
+    ]
+  }
+]
+
+Rules:
+- Keep output strictly valid JSON.
+- Return only English text in every reason and suggested action.
+- Exclude commits where sync_required is false.
+- If none require sync, return [] exactly.
+
+Commits:
+${JSON.stringify(records, null, 2)}
+`
+
+const analyzeWithOpenCode = (records: CommitAnalysisRecord[]): string => {
+  if (!records.length) {
+    return '[]'
+  }
+
+  const prompt = formatOpenCodePrompt(records)
+  const output = commandOutputWithArgs('opencode', ['run', '-m', OPENCODE_MODEL, prompt]).trim()
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, '### OpenCode Analysis\n')
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${output}\n`)
+
+  return output
+}
+
+const toOutput = (name: string, value: string): void => {
+  if (value.includes('\n')) {
+    const token = `__${name}_${Date.now()}_${Math.random().toString(36).slice(2)}__`
+    appendFileSync(process.env.GITHUB_OUTPUT!, `${name}<<${token}\n${value}\n${token}\n`)
+    return
+  }
+
+  appendFileSync(process.env.GITHUB_OUTPUT!, `${name}=${value}\n`)
+}
+
+const formatReport = (
+  records: CommitRecord[],
+  usedFallback: boolean,
+  fallbackReason: string,
+): string => {
+  const header = usedFallback
+    ? `Fallback mode: using ${HOURS_BACK}h history window (${fallbackReason}).`
+    : `Increment mode: using ${fallbackReason} as lower bound.`
+
+  const body = records
+    .map((record) => {
+      const frameworks = toFrameworkNames(record.files)
+
+      return `- [\`${record.sha}\`](https://github.com/storybookjs/storybook/commit/${record.sha}) ${record.message}
+  - Date: ${record.date}
+  - Frameworks: ${frameworks.join(', ')}
+  - Files:
+${record.files.map((file) => `    - ${file}`).join('\n')}`
+    })
+    .join('\n\n')
+
+  if (!records.length) {
+    return `${header}\n\nNo commits matched code/frameworks/*/src changes.`
+  }
+
+  return `${header}\n\n### Matching commits\n\n${body}`
+}
+
+const workspace = mkdtempSync(join(tmpdir(), 'storybook-sync-'))
+try {
+  const checkpointSha = readCheckpoint()
+  commandOutput(
+    `git clone --filter=blob:none --single-branch --branch next ${REMOTE_URL} ${workspace} --shallow-since ${sinceDate()}`,
+  )
+
+  const { spec, usedFallback, reason } = getCandidateSpec(workspace, checkpointSha)
+  const records = getRelevantCommits(workspace, spec)
+  const analysisPayload = prepareAnalysisPayload(workspace, records)
+  const openCodeAnalysis = analyzeWithOpenCode(analysisPayload)
+
+  const report = formatReport(records, usedFallback, reason)
+  console.log(report)
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${report}\n`)
+
+  const headSha = commandOutput('git rev-parse HEAD', workspace).trim()
+
+  toOutput('sync_report', report)
+  toOutput('next_head_sha', headSha)
+  toOutput('used_fallback', usedFallback ? 'true' : 'false')
+  toOutput('has_target_commits', records.length > 0 ? 'true' : 'false')
+  toOutput('sync_analysis_payload', JSON.stringify(analysisPayload))
+  toOutput('opencode_analysis', openCodeAnalysis)
+  toOutput('has_opencode_analysis', openCodeAnalysis.trim().length > 0 ? 'true' : 'false')
+} finally {
+  rmSync(workspace, { recursive: true, force: true })
+}

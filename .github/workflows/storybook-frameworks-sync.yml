@@ -1,0 +1,61 @@
+name: Storybook Frameworks Sync
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    environment: opencode
+    permissions:
+      contents: read
+      actions: write
+    env:
+      STORYBOOK_SYNC_CHECK_LAST_SHA: ${{ vars.STORYBOOK_SYNC_CHECK_LAST_SHA }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install pnpm
+        run: |
+          npm install -g corepack@latest --force
+          corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install OpenCode
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Scan Storybook framework src commits
+        id: storybook-sync
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPENCODE_PERMISSION: |
+            {
+              "bash": {
+                "*": "deny"
+              },
+              "webfetch": "deny"
+            }
+        run: pnpm exec tsx scripts/ci/storybook-frameworks-sync.mts
+
+      - name: Update last checked SHA
+        if: steps.storybook-sync.outputs.next_head_sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh variable set STORYBOOK_SYNC_CHECK_LAST_SHA --repo "${{ github.repository }}" --body "${{ steps.storybook-sync.outputs.next_head_sha }}"
