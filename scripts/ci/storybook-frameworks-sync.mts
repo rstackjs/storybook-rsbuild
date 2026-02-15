@@ -69,6 +69,34 @@ const commandOutputFromFile = (
   })
 }
 
+const cloneStorybookNextBranch = (workspace: string): void => {
+  try {
+    commandOutput('git', [
+      'clone',
+      '--filter=blob:none',
+      '--single-branch',
+      '--branch',
+      'next',
+      REMOTE_URL,
+      workspace,
+      '--shallow-since',
+      sinceDate(),
+    ])
+  } catch {
+    commandOutput('git', [
+      'clone',
+      '--filter=blob:none',
+      '--single-branch',
+      '--branch',
+      'next',
+      REMOTE_URL,
+      workspace,
+      '--depth',
+      '2000',
+    ])
+  }
+}
+
 const isValidSha = (value?: string): value is string =>
   typeof value === 'string' && SHA_REGEX.test(value)
 
@@ -300,17 +328,7 @@ ${record.files.map((file) => `    - ${file}`).join('\n')}`
 const workspace = mkdtempSync(join(tmpdir(), 'storybook-sync-'))
 try {
   const checkpointSha = readCheckpoint()
-  commandOutput('git', [
-    'clone',
-    '--filter=blob:none',
-    '--single-branch',
-    '--branch',
-    'next',
-    REMOTE_URL,
-    workspace,
-    '--shallow-since',
-    sinceDate(),
-  ])
+  cloneStorybookNextBranch(workspace)
 
   const { spec, usedFallback, reason } = getCandidateSpec(
     workspace,
