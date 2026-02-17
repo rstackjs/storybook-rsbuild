@@ -52,6 +52,15 @@ const builtInResolveExtensions = [
   '.cjs',
 ]
 
+const getRspackMajorVersion = (version: unknown): number | null => {
+  if (typeof version !== 'string') {
+    return null
+  }
+
+  const major = Number.parseInt(version.split('.')[0] ?? '', 10)
+  return Number.isNaN(major) ? null : major
+}
+
 /** @see https://github.com/web-infra-dev/rsbuild/blob/d8204bb72b5dd32dc736372dff6bb618675a4ad5/packages/core/src/constants.ts#L61 */
 const RAW_QUERY_REGEX = /[?&]raw(?:&|=|$)/
 
@@ -385,8 +394,15 @@ export default async (
           ].filter(Boolean),
         )
 
-        config.experiments ??= {}
-        config.experiments.outputModule = false
+        const rspackMajorVersion = getRspackMajorVersion(rspack.version)
+        if (rspackMajorVersion === 1) {
+          const experiments = (config.experiments ??= {}) as Record<
+            string,
+            unknown
+          >
+          experiments.outputModule = false
+        }
+
         config.externalsType = 'var'
         config.output ??= {}
         config.output.module = false

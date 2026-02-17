@@ -1,13 +1,16 @@
 import path from 'node:path'
-import {
-  type AppTools,
-  appTools,
-  type CliPluginFuture,
-  defineConfig,
-} from '@modern-js/app-tools'
+import { appTools } from '@modern-js/app-tools'
+
+type RsbuildPluginApi = {
+  modifyRsbuildConfig: (modifier: (config: object) => void) => void
+}
+
+type ConfigPluginApi = {
+  config: (modifier: () => { output: { disableTsChecker: boolean } }) => void
+}
 
 // https://modernjs.dev/en/configure/app/usage
-export default defineConfig({
+export default {
   runtime: {
     router: true,
   },
@@ -17,20 +20,18 @@ export default defineConfig({
     },
   },
   plugins: [
-    appTools({
-      bundler: 'rspack', // Set to 'webpack' to enable webpack
-    }),
+    appTools(),
     {
       name: 'modern-js-rsbuild-plugin',
-      setup(api) {
+      setup(api: RsbuildPluginApi) {
         api.modifyRsbuildConfig((_config) => {
           console.log('run builder hook')
         })
       },
-    } as CliPluginFuture<AppTools<'shared'>>,
+    },
     {
       name: 'modern-js-plugin',
-      setup(api) {
+      setup(api: ConfigPluginApi) {
         api.config(() => {
           return {
             output: {
@@ -39,6 +40,6 @@ export default defineConfig({
           }
         })
       },
-    } as CliPluginFuture<AppTools<'shared'>>,
+    },
   ],
-})
+}

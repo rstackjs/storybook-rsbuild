@@ -48,15 +48,15 @@
   },
   "devDependencies": {
     "@modern-js/app-tools": "^3.0.2",
-    "@rsbuild/core": "^1.7.2",
+    "@rsbuild/core": "^2.0.0-0",
     "@types/node": "^22.0.0",
     "storybook": "10.2.3",
     "storybook-builder-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@modern-js/app-tools": "^2.67.9",
-    "@rsbuild/core": "^1.5.0",
+    "@modern-js/app-tools": "^2.67.9 || ^3.0.0-0",
+    "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
     "storybook-builder-rsbuild": "*"
   },
   "peerDependenciesMeta": {

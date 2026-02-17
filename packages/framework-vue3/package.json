@@ -51,14 +51,14 @@
     "vue-docgen-loader": "^2.0.1"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.7.2",
+    "@rsbuild/core": "^2.0.0-0",
     "@types/node": "^22.0.0",
     "storybook": "10.2.3",
     "typescript": "^5.9.3",
     "vue": "^3.5.27"
   },
   "peerDependencies": {
-    "@rsbuild/core": "^1.5.0",
+    "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
     "storybook": "^10.1.0",
     "vue": "^3.0.0"
   },

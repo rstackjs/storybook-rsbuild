@@ -15,6 +15,13 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["src", "shared", "config", "modern.config.ts", ".storybook/**/*"],
+  "include": [
+    "src",
+    "shared",
+    "config",
+    "@mf-types/**/*",
+    "modern.config.ts",
+    ".storybook/**/*"
+  ],
   "exclude": ["**/node_modules"]
 }

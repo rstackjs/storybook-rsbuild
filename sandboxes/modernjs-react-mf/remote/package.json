@@ -1,7 +1,7 @@
 {
   "name": "@sandboxes/modernjs-react-mf-remote",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "scripts": {
     "build": "modern build",
     "dev": "modern dev",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@modern-js/runtime": "2.70.4",
-    "@module-federation/modern-js": "0.24.0",
+    "@module-federation/modern-js-v3": "^2.0.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },

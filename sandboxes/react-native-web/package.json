@@ -21,8 +21,9 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+    "@babel/plugin-transform-react-jsx": "^7.28.6",
     "@babel/preset-typescript": "^7.28.5",
-    "@rsbuild/core": "^1.7.2",
+    "@rsbuild/core": "^2.0.0-0",
     "@rsbuild/plugin-babel": "^1.1.0",
     "@rsbuild/plugin-react": "^1.4.5",
     "@storybook/addon-docs": "10.2.3",

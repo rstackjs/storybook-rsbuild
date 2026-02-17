@@ -8,6 +8,12 @@ const previewStatsJsonPath = resolve(
 
 it('Entry for Chromatic should be correct', async () => {
   const content = await import(previewStatsJsonPath)
+  const acceptedReasonTokens = [
+    './storybook-config-entry.js + 1 modules',
+    './storybook-config-entry.js',
+    './storybook-stories.js',
+    'storybook-stories.js',
+  ]
   const lazyModule = content.modules.filter((module: any) => {
     const reasons = module.reasons || []
     const moduleNames: string[] = reasons.map(
@@ -15,8 +21,8 @@ it('Entry for Chromatic should be correct', async () => {
     )
     const isLazy = module?.id?.includes('lazy recursive')
     if (isLazy) {
-      return moduleNames.find((name) =>
-        name.includes('./storybook-config-entry.js + 1 modules'),
+      return acceptedReasonTokens.some((token) =>
+        moduleNames.some((name) => name.includes(token)),
       )
     }
 
