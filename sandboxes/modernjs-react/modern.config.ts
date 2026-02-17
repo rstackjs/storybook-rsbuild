@@ -1,25 +1,22 @@
 import path from 'node:path'
-import {
-  type AppTools,
-  appTools,
-  type CliPluginFuture,
-  defineConfig,
-} from '@modern-js/app-tools'
+import { appTools, defineConfig } from '@modern-js/app-tools'
 
-// https://modernjs.dev/en/configure/app/usage
-export default defineConfig({
+const runtimeConfig = {
   runtime: {
     router: true,
   },
+}
+
+// https://modernjs.dev/en/configure/app/usage
+export default defineConfig({
+  ...runtimeConfig,
   source: {
     alias: {
       '@my-src': path.resolve(__dirname, 'src'),
     },
   },
   plugins: [
-    appTools({
-      bundler: 'rspack', // Set to 'webpack' to enable webpack
-    }),
+    appTools(),
     {
       name: 'modern-js-rsbuild-plugin',
       setup(api) {
@@ -27,7 +24,7 @@ export default defineConfig({
           console.log('run builder hook')
         })
       },
-    } as CliPluginFuture<AppTools<'shared'>>,
+    },
     {
       name: 'modern-js-plugin',
       setup(api) {
@@ -39,6 +36,6 @@ export default defineConfig({
           }
         })
       },
-    } as CliPluginFuture<AppTools<'shared'>>,
+    },
   ],
 })

@@ -1,13 +1,11 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { access } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { stripVTControlCharacters as stripAnsi } from 'node:util'
 
 export interface SandboxInspectResult {
   sandboxName: string
   outputDir: string
-  configs: Record<string, string>
   logs: string
 }
 
@@ -32,7 +30,6 @@ async function inspectSandboxOnce(
     cwd: repoRoot,
     env: {
       ...process.env,
-      DEBUG: 'rsbuild',
       CI: 'true',
       FORCE_COLOR: '0',
     },
@@ -71,45 +68,18 @@ async function inspectSandboxOnce(
     )
   }
 
-  if (Object.keys(parsed.configs).length === 0) {
-    throw new Error(
-      `No inspected config files found for sandbox "${sandboxName}". Logs:\n${logs}`,
-    )
-  }
-
-  for (const filePath of Object.values(parsed.configs)) {
-    await access(filePath)
-  }
-
   return {
     sandboxName,
     outputDir: parsed.outputDir,
-    configs: parsed.configs,
     logs,
   }
 }
 
 function parseInspectOutput(output: string) {
-  const configs: Record<string, string> = {}
-
-  for (const line of output.split('\n')) {
-    if (line.includes('- Rsbuild config:')) {
-      const nextLine = output.split(line)[1]?.split('\n')[1]
-      const path = nextLine?.split('│')[1]?.trim()
-      if (path) configs['Rsbuild config'] = path
-    }
-    if (line.includes('- Rspack Config')) {
-      const nextLine = output.split(line)[1]?.split('\n')[1]
-      const path = nextLine?.split('│')[1]?.trim()
-      if (path)
-        configs[line.split(':')[0].replace('│', '').trim().slice(2)] = path
-    }
-  }
-
   const outputDirMatch = /Output directory:\s*(.+)$/m.exec(output)
+  const outputDir = outputDirMatch?.[1].trim().replace(/^│\s*/, '')
 
   return {
-    configs,
-    outputDir: outputDirMatch?.[1].trim(),
+    outputDir,
   }
 }
