@@ -1,9 +1,8 @@
 import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from '@rstest/core'
 import { runCorePreset } from './helpers/runCorePreset'
 
-const workspaceRoot = fileURLToPath(new URL('..', import.meta.url))
+const workspaceRoot = resolve(__dirname, '..')
 
 interface CaseItem {
   name: string

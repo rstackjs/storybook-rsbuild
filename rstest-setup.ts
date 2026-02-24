@@ -1,10 +1,10 @@
 // Code taken from https://github.com/storybookjs/storybook/blob/next/code/vitest-setup.ts.
-import '@testing-library/jest-dom/vitest'
 
 import path from 'node:path'
+import { expect, rs } from '@rstest/core'
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers'
 import { createSnapshotSerializer } from 'path-serializer'
 import { dedent } from 'ts-dedent'
-import { expect, vi } from 'vitest'
 
 const ROOT = path.resolve(__dirname)
 
@@ -50,10 +50,11 @@ const throwMessage = (type: any, message: any) => {
 const throwWarning = (message: any) => throwMessage('warn: ', message)
 const throwError = (message: any) => throwMessage('error: ', message)
 
-vi.spyOn(console, 'warn').mockImplementation(throwWarning)
-vi.spyOn(console, 'error').mockImplementation(throwError)
+rs.spyOn(console, 'warn').mockImplementation(throwWarning)
+rs.spyOn(console, 'error').mockImplementation(throwError)
 
 expect.extend({
+  ...jestDomMatchers,
   toMatchPaths(regex: RegExp, paths: string[]) {
     const matched = paths.map((p) => !!p.match(regex))
 

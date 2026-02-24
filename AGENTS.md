@@ -10,7 +10,7 @@ When working on code in some specific package, use the Read tool to load that pa
 
 - Use **pnpm** for all package management commands.
 - Use **Biome** for formatting and linting (indentation: 2 spaces, single quotes, minimal semicolons).
-- Use **Vitest** for unit testing.
+- Use **Rstest** for unit testing.
 - Follow the **kebab-case** convention for directories, filenames, and package names.
 - Use explicit `.ts`/`.tsx` extensions.
 - Colocate sandbox helpers with their owning packages.
@@ -31,7 +31,7 @@ When working on code in some specific package, use the Read tool to load that pa
 pnpm exec biome check --write path/to/file.tsx
 
 # Run tests for a single file (preferred)
-pnpm exec vitest run path/to/file.test.ts
+pnpm exec rstest path/to/file.test.ts
 
 # Run e2e tests for a specific sandbox
 pnpm e2e <sandbox>.spec.ts
@@ -54,7 +54,7 @@ pnpm build:sandboxes
 **Allowed without prompt:**
 
 - Read files, list files.
-- Run `biome check` or `vitest` on single files.
+- Run `biome check` or `rstest` on single files.
 - Create new test files.
 - Update existing non-critical code.
 
@@ -76,7 +76,7 @@ pnpm build:sandboxes
 
 ### Testing & Sandbox Workflow
 
-- Write Vitest coverage beside sources using `.test.ts(x)` or within `__tests__/`.
+- Write Rstest coverage beside sources using `.test.ts(x)` or within `__tests__/`.
 - Use `@testing-library/jest-dom` for DOM assertions.
 - **Playwright Debugging**:
   - Use `pnpm e2e <sandbox>.spec.ts` to reproduce locally.

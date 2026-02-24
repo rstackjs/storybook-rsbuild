@@ -1,11 +1,10 @@
 import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { Rspack } from '@rsbuild/core'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, rs } from '@rstest/core'
 import type { RsbuildBuilderOptions } from '../../src/preview/iframe-rsbuild.config'
 import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'
 
-const fixtureDir = fileURLToPath(new URL('../fixtures/', import.meta.url))
+const fixtureDir = resolve(__dirname, '../fixtures')
 const fixtureRsbuildConfig = resolve(fixtureDir, 'rsbuild.config.ts')
 
 const storybookEntries = ['storybook-entry.js']
@@ -57,7 +56,7 @@ const createOptions = (
     ['previewAnnotations', []],
   ])
 
-  const apply = vi.fn(
+  const apply = rs.fn(
     async (name: string, defaultValue?: unknown): Promise<unknown> => {
       if (name === 'mdxLoaderOptions') {
         return defaultValue
@@ -72,7 +71,7 @@ const createOptions = (
   )
 
   const cache = {
-    get: vi.fn((_key: string, fallback: number) => fallback),
+    get: rs.fn((_key: string, fallback: number) => fallback),
   } as unknown as Required<RsbuildBuilderOptions>['cache']
 
   const options: Partial<RsbuildBuilderOptions> = {
@@ -148,8 +147,8 @@ describe('iframe-rsbuild.config', () => {
     expect(typeof rspackTool).toBe('function')
 
     const baseConfig = {} as any
-    const addRules = vi.fn()
-    const appendRules = vi.fn()
+    const addRules = rs.fn()
+    const appendRules = rs.fn()
 
     const result = (rspackTool as any)(baseConfig, {
       addRules,

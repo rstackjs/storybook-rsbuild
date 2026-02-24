@@ -1,19 +1,40 @@
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
-import { runSandboxInspect } from './helpers/runSandboxInspect'
+import { resolve } from 'node:path'
+import { describe, expect, it } from '@rstest/core'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value != null && typeof value === 'object' && Array.isArray(value) === false
 
-const readPreviewStatsModules = async (
-  sandboxName: string,
-): Promise<Record<string, unknown>[]> => {
-  const inspectResult = await runSandboxInspect(sandboxName)
-  const previewStatsJsonPath = join(
-    inspectResult.outputDir,
-    'preview-stats.json',
+const normalizeModuleRef = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  return value.replace(/^\.\//, '')
+}
+
+const hasModuleEntry = (
+  moduleInfo: Record<string, unknown>,
+  moduleName: string,
+): boolean => {
+  const moduleId = normalizeModuleRef(moduleInfo.id)
+  const normalizedName = normalizeModuleRef(moduleInfo.name)
+
+  return (
+    moduleId === moduleName &&
+    normalizedName != null &&
+    normalizedName.startsWith(moduleName)
   )
+}
+
+const previewStatsJsonPath = resolve(
+  __dirname,
+  '../sandboxes/react-18/storybook-static/preview-stats.json',
+)
+
+const readPreviewStatsModules = async (): Promise<
+  Record<string, unknown>[]
+> => {
   const previewStatsJson = JSON.parse(
     await readFile(previewStatsJsonPath, 'utf8'),
   ) as unknown
@@ -27,25 +48,21 @@ const readPreviewStatsModules = async (
 
 describe('chromatic stats integration', () => {
   it('emits preview stats with modules list for Chromatic', async () => {
-    const modules = await readPreviewStatsModules('react-18')
+    const modules = await readPreviewStatsModules()
 
     expect(modules.length).toBeGreaterThan(0)
   })
 
   it('keeps storybook-config-entry in module graph', async () => {
-    const modules = await readPreviewStatsModules('react-18')
+    const modules = await readPreviewStatsModules()
 
-    const plainConfigEntry = modules.find(
-      (moduleInfo) =>
-        moduleInfo.id === './storybook-config-entry.js' &&
-        moduleInfo.name === './storybook-config-entry.js',
+    const plainConfigEntry = modules.find((moduleInfo) =>
+      hasModuleEntry(moduleInfo, 'storybook-config-entry.js'),
     )
     expect(plainConfigEntry).toBeDefined()
 
-    const storiesEntry = modules.find(
-      (moduleInfo) =>
-        moduleInfo.id === './storybook-stories.js' &&
-        moduleInfo.name === './storybook-stories.js',
+    const storiesEntry = modules.find((moduleInfo) =>
+      hasModuleEntry(moduleInfo, 'storybook-stories.js'),
     )
     expect(storiesEntry).toBeDefined()
 

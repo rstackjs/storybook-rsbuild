@@ -1,12 +1,10 @@
 // Code taken from https://github.com/storybookjs/storybook/blob/next/code/vitest-setup.ts.
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import '@testing-library/jest-dom/vitest'
-
+import { resolve } from 'node:path'
+import { expect } from '@rstest/core'
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers'
 import { createSnapshotSerializer } from 'path-serializer'
-import { expect } from 'vitest'
 
-const workspaceRoot = dirname(fileURLToPath(new URL('./', import.meta.url)))
+const workspaceRoot = resolve(__dirname)
 
 expect.addSnapshotSerializer(
   createSnapshotSerializer({
@@ -14,3 +12,5 @@ expect.addSnapshotSerializer(
     workspace: workspaceRoot,
   }),
 )
+
+expect.extend(jestDomMatchers)

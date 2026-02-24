@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it } from '@rstest/core'
 
 const previewStatsJsonPath = resolve(
   __dirname,
@@ -7,7 +7,9 @@ const previewStatsJsonPath = resolve(
 )
 
 it('Entry for Chromatic should be correct', async () => {
-  const content = await import(previewStatsJsonPath)
+  const { default: content } = (await import(previewStatsJsonPath, {
+    with: { type: 'json' },
+  })) as { default: Record<string, any> }
   const acceptedReasonTokens = [
     './storybook-config-entry.js + 1 modules',
     './storybook-config-entry.js',
