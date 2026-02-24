@@ -16,6 +16,7 @@ import type {
 import type { AddonOptions } from './types'
 
 type BaseOptions = Parameters<RsbuildFinal>[1]
+type BuilderAdapterParams = Parameters<typeof builderPluginAdapterBasic>[0]
 
 const MODERN_META_NAME = 'modern-js'
 const MODERN_CONFIG_FILE = 'modern.config.ts'
@@ -64,13 +65,12 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   await checkDependency()
 
   const cwd = process.cwd()
-  const { config: resolveConfig, getAppContext } = await createStorybookOptions<
-    AppTools<'shared'>
-  >({
-    cwd,
-    configFile: options.configPath || MODERN_CONFIG_FILE,
-    metaName: MODERN_META_NAME,
-  })
+  const { config: resolveConfig, getAppContext } =
+    await createStorybookOptions<AppTools>({
+      cwd,
+      configFile: options.configPath || MODERN_CONFIG_FILE,
+      metaName: MODERN_META_NAME,
+    })
 
   const nonStandardConfig = {
     ...resolveConfig,
@@ -85,9 +85,9 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   )
 
   const appContext = getAppContext()
-  const adapterParams = {
-    appContext,
-    normalizedConfig: resolveConfig as AppNormalizedConfig<'rspack'>,
+  const adapterParams: BuilderAdapterParams = {
+    appContext: appContext as BuilderAdapterParams['appContext'],
+    normalizedConfig: resolveConfig as AppNormalizedConfig,
   }
 
   // Inject the extra rsbuild plugins

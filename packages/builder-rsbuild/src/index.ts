@@ -11,6 +11,7 @@ import type {
   Preset,
   StorybookConfigRaw,
 } from 'storybook/internal/types'
+import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
 import rsbuildConfig, {
   type RsbuildBuilderOptions,
@@ -49,7 +50,7 @@ export const executor = {
   },
 }
 
-const isObject = (val: unknown): val is Record<string, any> =>
+const isObject = (val: unknown): val is Record<string, unknown> =>
   val != null && typeof val === 'object' && Array.isArray(val) === false
 
 function nonNullables<T>(value: T): value is NonNullable<T> {
@@ -228,7 +229,7 @@ export const build: ({ options }: BuilderStartOptions) => Promise<Stats> =
     const [{ close }] = await Promise.all([rsbuildBuild.build(), previewFiles])
 
     await close()
-    return stats!
+    return withStatsJsonCompat(stats!)
   }
 
 export const corePresets = [join(__dirname, './preview-preset.js')]
