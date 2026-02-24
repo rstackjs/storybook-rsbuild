@@ -45,7 +45,7 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/vue3": "^10.2.3",
+    "@storybook/vue3": "^10.2.11",
     "storybook-builder-rsbuild": "workspace:*",
     "vue-docgen-api": "^4.79.2",
     "vue-docgen-loader": "^2.0.1"
@@ -53,7 +53,7 @@
   "devDependencies": {
     "@rsbuild/core": "^2.0.0-beta.4",
     "@types/node": "^22.0.0",
-    "storybook": "10.2.3",
+    "storybook": "10.2.11",
     "typescript": "^5.9.3",
     "vue": "^3.5.27"
   },
