@@ -13,7 +13,7 @@
     "upgrade": "modern upgrade"
   },
   "dependencies": {
-    "@modern-js/runtime": "2.70.4",
+    "@modern-js/runtime": "3.0.2",
     "@module-federation/modern-js-v3": "2.0.1",
     "antd": "^5.29.3",
     "react": "18.3.1",
