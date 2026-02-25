@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, rs } from '@rstest/core'
 import {
   withChromaticMinimalContract,
   withStatsJsonCompat,
@@ -71,7 +71,7 @@ describe('chromatic stats compat', () => {
   })
 
   it('wraps toJson and normalizes the returned stats json', () => {
-    const toJson = vi.fn(() => createConcatenatedStatsJson())
+    const toJson = rs.fn(() => createConcatenatedStatsJson())
     const compatStats = withStatsJsonCompat({ toJson })
 
     const normalized = compatStats.toJson?.({

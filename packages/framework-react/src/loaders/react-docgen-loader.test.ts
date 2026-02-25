@@ -2,33 +2,40 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, rs } from '@rstest/core'
+import * as docgenResolverActual from './docgen-resolver' with {
+  rstest: 'importActual',
+}
 import { getReactDocgenImporter } from './react-docgen-loader'
 
-const reactDocgenMock = vi.hoisted(() => {
+const { reactDocgenActual } = rs.hoisted(() => {
   return {
-    makeFsImporter: vi.fn().mockImplementation((fn) => fn),
+    reactDocgenActual: require('react-docgen') as typeof import('react-docgen'),
   }
 })
 
-const reactDocgenResolverMock = vi.hoisted(() => {
+const reactDocgenMock = rs.hoisted(() => {
   return {
-    defaultLookupModule: vi.fn(),
+    makeFsImporter: rs.fn().mockImplementation((fn) => fn),
   }
 })
 
-vi.mock('./docgen-resolver', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('path')>()
+const reactDocgenResolverMock = rs.hoisted(() => {
   return {
-    ...actual,
+    defaultLookupModule: rs.fn(),
+  }
+})
+
+rs.mock('./docgen-resolver', () => {
+  return {
+    ...docgenResolverActual,
     defaultLookupModule: reactDocgenResolverMock.defaultLookupModule,
   }
 })
 
-vi.mock('react-docgen', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('path')>()
+rs.mock('react-docgen', () => {
   return {
-    ...actual,
+    ...reactDocgenActual,
     makeFsImporter: reactDocgenMock.makeFsImporter,
   }
 })
@@ -47,7 +54,7 @@ describe('getReactDocgenImporter function', () => {
 
   it('should map the request', () => {
     const mappedFile = './mapped-file.tsx'
-    const matchPath = vi.fn().mockReturnValue(mappedFile)
+    const matchPath = rs.fn().mockReturnValue(mappedFile)
     const filename = './src/components/Button.tsx'
     const basedir = '/src'
     const imported = getReactDocgenImporter(matchPath)

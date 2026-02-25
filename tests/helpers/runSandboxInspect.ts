@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { stripVTControlCharacters as stripAnsi } from 'node:util'
 
 export interface SandboxInspectResult {
@@ -9,7 +9,7 @@ export interface SandboxInspectResult {
   logs: string
 }
 
-const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
+const repoRoot = resolve(__dirname, '../..')
 const inspectCache = new Map<string, Promise<SandboxInspectResult>>()
 
 export function runSandboxInspect(
