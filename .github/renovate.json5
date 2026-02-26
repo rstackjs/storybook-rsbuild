@@ -33,6 +33,12 @@
 			"separateMultipleMajor": false
 		},
 		{
+			"groupName": "rspack (stable and beta only)",
+			"groupSlug": "rspack-stable-beta",
+			"matchPackageNames": ["@rspack/core", "@rspack/cli"],
+			"allowedVersions": "/^\\d+\\.\\d+\\.\\d+(-beta.*)?$/"
+		},
+		{
 			"groupName": "rspress",
 			"matchPackageNames": ["@rspress/**"],
 			"groupSlug": "rspress",
