@@ -13,14 +13,14 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
-    "vue": "^3.5.27"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.1",
-    "@rsbuild/core": "^2.0.0-beta.4",
+    "@rsbuild/core": "^2.0.0-beta.6",
     "@rsbuild/plugin-sass": "^1.5.0",
-    "@rsbuild/plugin-vue": "1.2.5",
-    "@rslib/core": "^0.19.4",
+    "@rsbuild/plugin-vue": "1.2.6",
+    "@rslib/core": "^0.19.6",
     "@storybook/addon-docs": "10.2.11",
     "@storybook/addon-onboarding": "10.2.11",
     "@storybook/vue3": "10.2.11",
