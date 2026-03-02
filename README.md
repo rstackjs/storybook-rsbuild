@@ -31,6 +31,14 @@ Read the full documentation at **[storybook.rsbuild.rs](https://storybook.rsbuil
 | [storybook-web-components-rsbuild](./packages/framework-web-components)     | [![npm](https://img.shields.io/npm/v/storybook-web-components-rsbuild?style=flat-square&color=ff4785)](https://npmjs.com/package/storybook-web-components-rsbuild)     | Web Components framework integration   |
 | [storybook-react-native-web-rsbuild](./packages/framework-react-native-web) | [![npm](https://img.shields.io/npm/v/storybook-react-native-web-rsbuild?style=flat-square&color=ff4785)](https://npmjs.com/package/storybook-react-native-web-rsbuild) | React Native Web framework integration |
 
+## Agent Skills
+
+Using an AI coding agent ([Claude Code](https://code.claude.com), [Codex](https://openai.com/index/codex/), [OpenCode](https://opencode.ai), etc.)? Install our agent skills for guided setup and migration:
+
+```bash
+npx skills add rstackjs/agent-skills --skill storybook-rsbuild
+```
+
 ## Credits
 
 Some code is adapted from [storybookjs/storybook](https://github.com/storybookjs/storybook).
