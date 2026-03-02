@@ -1,23 +1,26 @@
+import get from '@api/lambda/index'
 import { Button, type ButtonProps } from 'antd'
-import React from 'react'
-import '@my-src/alias'
+import type React from 'react'
+import { useState } from 'react'
 
 interface AntdButtonProps extends ButtonProps {
   myButtonExtra: string
 }
 
-/**
- * An extended Ant Design button with an extra string.
- */
 export const AntdButton: React.FC<AntdButtonProps> = ({
   children,
   myButtonExtra,
   ...props
 }) => {
+  const [data, setData] = useState<{ message: string } | null>(null)
+
   return (
-    <Button {...props}>
-      {children}
-      {myButtonExtra}
-    </Button>
+    <div>
+      <Button {...props} onClick={() => get().then(setData)}>
+        {children}
+        {myButtonExtra}
+      </Button>
+      res: {data?.message || 'Loading...'}
+    </div>
   )
 }

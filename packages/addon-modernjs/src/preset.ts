@@ -4,7 +4,7 @@ import {
   builderPluginAdapterHooks,
   parseRspackConfig as parseToRsbuildConfig,
 } from '@modern-js/app-tools/builder'
-import { createStorybookOptions } from '@modern-js/plugin-v2/cli'
+import { createStorybookOptions } from '@modern-js/plugin/cli'
 // TODO: better import from `@modern-js/app-tools/builder`
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import findUp from 'find-up'
