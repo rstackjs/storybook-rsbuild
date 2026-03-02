@@ -1,6 +1,5 @@
 import { defineConfig } from '@rspress/core'
 import { pluginAlgolia } from '@rspress/plugin-algolia'
-import { pluginLlms } from '@rspress/plugin-llms'
 import { pluginSitemap } from '@rspress/plugin-sitemap'
 import { pluginTwoslash } from '@rspress/plugin-twoslash'
 import {
@@ -21,13 +20,13 @@ export default defineConfig({
       verificationContent: '8D19FD11BAF8DB11',
     }),
     pluginFontOpenSans(),
-    pluginLlms(),
     pluginTwoslash(),
     pluginSitemap({
       siteUrl,
     }),
   ],
   root: 'docs',
+  lang: 'en',
   title: 'Storybook Rsbuild',
   description: siteDescription,
   icon: '/storybook-rsbuild.svg',
@@ -35,7 +34,14 @@ export default defineConfig({
     light: '/storybook-rsbuild-dark-text.svg',
     dark: '/storybook-rsbuild-light-text.svg',
   },
+  llms: true,
+  search: {
+    codeBlocks: true,
+  },
   markdown: {
+    link: {
+      checkDeadLinks: true,
+    },
     shiki: {
       langs: ['ts', 'tsx', 'json'],
       langAlias: {
@@ -59,6 +65,10 @@ export default defineConfig({
         content: 'https://github.com/rstackjs/storybook-rsbuild',
       },
     ],
+    editLink: {
+      docRepoBaseUrl:
+        'https://github.com/rstackjs/storybook-rsbuild/tree/main/website/docs',
+    },
   },
   builderConfig: {
     plugins: [
