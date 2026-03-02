@@ -1,0 +1,258 @@
+import { PackageManagerTabs } from '@theme'
+
+# Migration
+
+This guide covers migrating an existing Storybook project from the **webpack5** or **Vite** framework to **Storybook Rsbuild** (e.g. `storybook-react-rsbuild`).
+
+:::info Storybook versions
+
+Match your Storybook version to the correct storybook-rsbuild release:
+
+| Storybook | Storybook Rsbuild |
+| --------- | ----------------- |
+| v10       | `^3`              |
+| v9        | `^2`              |
+| v8        | `^1`              |
+
+:::
+
+## From Storybook Webpack5 Framework
+
+If your `.storybook/main.ts` uses a webpack5 framework package (e.g. `@storybook/react-webpack5`, `@storybook/vue3-webpack5`), follow this section.
+
+### 1. Replace packages
+
+Uninstall the old webpack5 framework package, and install the Rsbuild equivalent along with `@rsbuild/core`.
+
+For example, to migrate a React project:
+
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild -D" />
+
+Then remove the old packages:
+
+<PackageManagerTabs command="remove @storybook/builder-webpack5 @storybook/react-webpack5" />
+
+The framework package (e.g. `storybook-react-rsbuild`) includes `storybook-builder-rsbuild` as a dependency — you do **not** need to install the builder separately.
+
+#### Package mapping
+
+| Old (webpack5)                        | New (Rsbuild)                        |
+| ------------------------------------- | ------------------------------------ |
+| `@storybook/react-webpack5`           | `storybook-react-rsbuild`           |
+| `@storybook/vue3-webpack5`            | `storybook-vue3-rsbuild`            |
+| `@storybook/html-webpack5`            | `storybook-html-rsbuild`            |
+| `@storybook/web-components-webpack5`  | `storybook-web-components-rsbuild`  |
+
+### 2. Update `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+// Before
+// import type { StorybookConfig } from '@storybook/react-webpack5'
+// After
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  // Before: framework: '@storybook/react-webpack5',
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+### 3. Convert `webpackFinal` to `rsbuildFinal`
+
+:::warning Use `mergeRsbuildConfig` for modifications
+Always use [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) from `@rsbuild/core` to modify the config. Directly mutating properties like `config.tools.rspack = {...}` may not work because internal configs can be arrays of functions/objects, and direct assignment may be silently ignored.
+:::
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Before:
+  // webpackFinal: async (config) => {
+  //   config.resolve.alias['@components'] = path.resolve(__dirname, '../src/components')
+  //   config.module.rules.push({ test: /\.svg$/, use: ['@svgr/webpack'] })
+  //   return config
+  // },
+
+  // After:
+  rsbuildFinal: async (config) => {
+    return mergeRsbuildConfig(config, {
+      source: {
+        alias: {
+          '@components': './src/components',
+        },
+      },
+      // For SVG, use @rsbuild/plugin-svgr
+    })
+  },
+}
+
+export default config
+```
+
+### 4. Handle webpack-dependent addons
+
+Some Storybook addons use `webpackFinal` internally. Move them from `addons` to `webpackAddons`:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Regular addons (framework-agnostic)
+  addons: [
+    '@storybook/addon-docs',
+    '@storybook/addon-onboarding',
+  ],
+  // Addons that depend on webpack loaders/plugins
+  webpackAddons: [
+    '@storybook/addon-coverage',
+  ],
+}
+
+export default config
+```
+
+The `webpackAddons` field runs each addon's `webpackFinal` hook and translates the resulting webpack config into Rspack config automatically.
+
+### 5. Convert common webpack patterns
+
+| webpack pattern                       | Rsbuild equivalent                                      |
+| ------------------------------------- | ------------------------------------------------------- |
+| `config.resolve.alias`                | `source.alias` in `rsbuildFinal`                        |
+| `config.resolve.extensions`           | `source.extensions` (Rsbuild has sensible defaults)     |
+| `config.module.rules` (loaders)       | `tools.rspack` or Rsbuild plugins                       |
+| `config.plugins` (webpack plugins)    | `tools.rspack` for Rspack plugins                       |
+| `DefinePlugin`                        | `source.define`                                         |
+| `css-loader` / `style-loader`         | Built-in, use `tools.cssLoader` if customizing          |
+| `sass-loader`                         | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
+| `less-loader`                         | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
+| `file-loader` / `url-loader`          | Built-in asset modules                                  |
+| SVGR                                  | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
+
+:::tip Rspack plugin compatibility
+Not all webpack plugins are compatible with Rspack. Check the [Rspack compatibility guide](https://rspack.rs/guide/compatibility/plugin) for details.
+:::
+
+---
+
+## From Storybook Vite Framework
+
+If your `.storybook/main.ts` uses a Vite framework package (e.g. `@storybook/react-vite`, `@storybook/vue3-vite`), follow this section.
+
+### 1. Replace packages
+
+Uninstall the old Vite framework package, and install the Rsbuild equivalent along with `@rsbuild/core`.
+
+For example, to migrate a React project:
+
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild -D" />
+
+Then remove the old packages:
+
+<PackageManagerTabs command="remove @storybook/builder-vite @storybook/react-vite" />
+
+#### Package mapping
+
+| Old (Vite)                            | New (Rsbuild)                        |
+| ------------------------------------- | ------------------------------------ |
+| `@storybook/react-vite`              | `storybook-react-rsbuild`           |
+| `@storybook/vue3-vite`               | `storybook-vue3-rsbuild`            |
+| `@storybook/html-vite`               | `storybook-html-rsbuild`            |
+| `@storybook/web-components-vite`     | `storybook-web-components-rsbuild`  |
+
+### 2. Update `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+// Before
+// import type { StorybookConfig } from '@storybook/react-vite'
+// After
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  // Before: framework: '@storybook/react-vite',
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+### 3. Convert `viteFinal` to `rsbuildFinal`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Before:
+  // viteFinal: async (config) => {
+  //   config.resolve.alias['@'] = path.resolve(__dirname, '../src')
+  //   return config
+  // },
+
+  // After:
+  rsbuildFinal: async (config) => {
+    return mergeRsbuildConfig(config, {
+      source: {
+        alias: {
+          '@': './src',
+        },
+      },
+    })
+  },
+}
+
+export default config
+```
+
+### 4. Convert common Vite patterns
+
+| Vite pattern                  | Rsbuild equivalent                                      |
+| ----------------------------- | ------------------------------------------------------- |
+| `resolve.alias`               | `source.alias` in `rsbuildFinal`                        |
+| `plugins: [react()]`         | Auto-configured by framework package                    |
+| `css.preprocessorOptions`    | `@rsbuild/plugin-sass` or `@rsbuild/plugin-less`       |
+| `define`                      | `source.define`                                         |
+| `server.proxy`               | `server.proxy`                                          |
+| `build.target`               | `output.target`                                         |
+
+:::tip Vite plugins are not compatible
+Vite plugins cannot be used with Rsbuild. Find equivalent Rsbuild plugins at the [Rsbuild plugin list](https://rsbuild.rs/plugins/list/).
+:::
+
+---
+
+## Verification
+
+After migration, verify:
+
+1. `npx storybook dev` starts without errors
+2. All stories render correctly
+3. HMR works (edit a component, see it update)
+4. `npx storybook build` completes successfully
+5. Addons function correctly (especially docs, controls, actions)
+
+## Debugging
+
+Enable Rsbuild debug mode to inspect the generated config:
+
+```bash
+DEBUG=rsbuild storybook dev
+```
+
+Check the CLI output to see where the Rsbuild and Rspack configs are written.

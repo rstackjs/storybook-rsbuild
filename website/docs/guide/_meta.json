@@ -12,5 +12,6 @@
     "name": "integrations",
     "label": "Integrations"
   },
+  "migration",
   "faq"
 ]

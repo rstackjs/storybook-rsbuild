@@ -8,37 +8,12 @@ import {
   Search as PluginAlgoliaSearch,
   ZH_LOCALES,
 } from '@rspress/plugin-algolia/runtime'
-import {
-  LlmsContainer,
-  LlmsCopyButton,
-  LlmsViewOptions,
-} from '@rspress/plugin-llms/runtime'
 import { NavIcon } from '@rstack-dev/doc-ui/nav-icon'
 
 export * from '@rspress/core/theme-original'
 
 export const Layout = () => {
   return <BaseLayout beforeNavTitle={<NavIcon />} />
-}
-
-export function getCustomMDXComponent() {
-  const { h1: H1, ...mdxComponents } = BaseGetCustomMDXComponent()
-
-  const MyH1 = ({ ...props }) => {
-    return (
-      <>
-        <H1 {...props} />
-        <LlmsContainer>
-          <LlmsCopyButton />
-          <LlmsViewOptions />
-        </LlmsContainer>
-      </>
-    )
-  }
-  return {
-    ...mdxComponents,
-    h1: MyH1,
-  }
 }
 
 export const Search = () => {
