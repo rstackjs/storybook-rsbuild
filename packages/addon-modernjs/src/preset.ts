@@ -4,7 +4,6 @@ import {
   builderPluginAdapterHooks,
   parseRspackConfig as parseToRsbuildConfig,
 } from '@modern-js/app-tools/builder'
-import { createStorybookOptions } from '@modern-js/plugin/cli'
 // TODO: better import from `@modern-js/app-tools/builder`
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import findUp from 'find-up'
@@ -20,6 +19,32 @@ type BuilderAdapterParams = Parameters<typeof builderPluginAdapterBasic>[0]
 
 const MODERN_META_NAME = 'modern-js'
 const MODERN_CONFIG_FILE = 'modern.config.ts'
+
+type CreateStorybookOptions = <_T>(options: {
+  cwd: string
+  configFile: string
+  metaName: string
+}) => Promise<{
+  config: AppNormalizedConfig & { builderPlugins?: unknown }
+  getAppContext: () => unknown
+}>
+
+const loadCreateStorybookOptions =
+  async (): Promise<CreateStorybookOptions> => {
+    try {
+      // @ts-expect-error Optional peer dependency for Modern.js v3 projects.
+      return (await import('@modern-js/plugin/cli')).createStorybookOptions
+    } catch {
+      try {
+        // @ts-expect-error Optional peer dependency for Modern.js v2 projects.
+        return (await import('@modern-js/plugin-v2/cli')).createStorybookOptions
+      } catch {
+        throw new Error(
+          'Cannot resolve Modern.js Storybook plugin entry. Install @modern-js/app-tools@^3 with @modern-js/plugin, or @modern-js/app-tools@^2 with @modern-js/plugin-v2, then retry.',
+        )
+      }
+    }
+  }
 
 /**
  * Get @rsbuild/core version from different sources
@@ -65,6 +90,7 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   await checkDependency()
 
   const cwd = process.cwd()
+  const createStorybookOptions = await loadCreateStorybookOptions()
   const { config: resolveConfig, getAppContext } =
     await createStorybookOptions<AppTools>({
       cwd,
