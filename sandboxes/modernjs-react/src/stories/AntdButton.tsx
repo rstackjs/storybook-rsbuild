@@ -1,7 +1,7 @@
-import get from '@api/lambda/index'
 import { Button, type ButtonProps } from 'antd'
 import type React from 'react'
 import { useState } from 'react'
+import { getMessage } from '../get-message'
 
 interface AntdButtonProps extends ButtonProps {
   myButtonExtra: string
@@ -16,7 +16,7 @@ export const AntdButton: React.FC<AntdButtonProps> = ({
 
   return (
     <div>
-      <Button {...props} onClick={() => get().then(setData)}>
+      <Button {...props} onClick={() => getMessage().then(setData)}>
         {children}
         {myButtonExtra}
       </Button>

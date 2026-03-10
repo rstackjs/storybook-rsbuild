@@ -1,9 +1,6 @@
 import './index.css'
 import { useLang } from '@rspress/core/runtime'
-import {
-  getCustomMDXComponent as BaseGetCustomMDXComponent,
-  Layout as BaseLayout,
-} from '@rspress/core/theme-original'
+import { Layout as BaseLayout } from '@rspress/core/theme-original'
 import {
   Search as PluginAlgoliaSearch,
   ZH_LOCALES,

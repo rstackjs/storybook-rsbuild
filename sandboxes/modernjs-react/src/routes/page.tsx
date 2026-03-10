@@ -1,5 +1,5 @@
-import get from '@api/lambda/index'
 import { Helmet } from '@modern-js/runtime/head'
+import { getMessage } from '../get-message'
 import './index.css'
 
 const Index = () => (
@@ -13,7 +13,7 @@ const Index = () => (
       />
     </Helmet>
     <main>
-      <div className="title" onClick={() => get().then(console.log)}>
+      <div className="title" onClick={() => getMessage().then(console.log)}>
         Welcome to
         <img
           className="logo"
