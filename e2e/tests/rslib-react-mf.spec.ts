@@ -13,13 +13,18 @@ if (!sandbox) {
 }
 
 const DEV_SERVER_READY_INDICATOR = 'built in'
+const RESERVED_PORTS = new Set(sandboxes.map(({ port }) => port))
 
 test.describe(sandbox.name, () => {
   let server: Awaited<ReturnType<typeof launchSandbox>> | null = null
   let devServer: DevServerHandle | null = null
 
   test.beforeAll(async () => {
-    const remotePort = (await getPort()).toString()
+    const remotePort = (
+      await getPort({
+        exclude: [...RESERVED_PORTS],
+      })
+    ).toString()
 
     devServer = await launchDevServer({
       cwd: path.resolve(sandbox.relativeDir),

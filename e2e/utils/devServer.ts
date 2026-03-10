@@ -1,7 +1,7 @@
 import { type SpawnOptionsWithoutStdio, spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { setTimeout as delay } from 'node:timers/promises'
-import kill from 'tree-kill'
+import { killProcessTree } from './process'
 
 const DEFAULT_READY_TIMEOUT_MS = 120_000
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 10_000
@@ -177,39 +177,4 @@ async function stopChild(
     await killProcessTree(child.pid, 'SIGKILL')
     await once(child, 'exit')
   }
-}
-
-async function killProcessTree(
-  pid: number | undefined,
-  signal: NodeJS.Signals,
-): Promise<void> {
-  if (!pid) {
-    return
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    kill(pid, signal, (error) => {
-      if (
-        !error ||
-        ('code' in error && error.code === 'ESRCH') ||
-        isIgnorableWindowsKillError(error)
-      ) {
-        resolve()
-        return
-      }
-
-      reject(error)
-    })
-  })
-}
-
-function isIgnorableWindowsKillError(error: Error): boolean {
-  if (process.platform !== 'win32') {
-    return false
-  }
-
-  return (
-    error.message.includes('There is no running instance of the task.') ||
-    error.message.includes('The operation attempted is not supported.')
-  )
 }

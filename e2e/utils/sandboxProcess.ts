@@ -5,8 +5,8 @@ import { request as httpsRequest } from 'node:https'
 import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { URL } from 'node:url'
-import kill from 'tree-kill'
 import type { SandboxDefinition } from '../sandboxes'
+import { killProcessTree } from './process'
 
 const SERVER_READY_TIMEOUT_MS = 120_000
 const SERVER_POLL_INTERVAL_MS = 500
@@ -89,41 +89,6 @@ export async function launchSandbox(
       }
     },
   }
-}
-
-async function killProcessTree(
-  pid: number | undefined,
-  signal: NodeJS.Signals,
-): Promise<void> {
-  if (!pid) {
-    return
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    kill(pid, signal, (error) => {
-      if (
-        !error ||
-        ('code' in error && error.code === 'ESRCH') ||
-        isIgnorableWindowsKillError(error)
-      ) {
-        resolve()
-        return
-      }
-
-      reject(error)
-    })
-  })
-}
-
-function isIgnorableWindowsKillError(error: Error): boolean {
-  if (process.platform !== 'win32') {
-    return false
-  }
-
-  return (
-    error.message.includes('There is no running instance of the task.') ||
-    error.message.includes('The operation attempted is not supported.')
-  )
 }
 
 async function waitForServer(
