@@ -16,6 +16,7 @@ When working on code in some specific package, use the Read tool to load that pa
 - Colocate sandbox helpers with their owning packages.
 - Update relevant `sandboxes/` when adding or modifying features.
 - After any `rebase`, `merge`, or `stash pop` that changes dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`), run `pnpm install` before any validation command (`build`, `test`, `e2e`, `lint`).
+- After editing any dependency manifest (`package.json`, `pnpm-workspace.yaml`, `.npmrc`) or adding/removing dependencies, run `pnpm install` and commit the resulting `pnpm-lock.yaml` changes in the same branch before pushing.
 
 ### Don't
 
@@ -24,6 +25,7 @@ When working on code in some specific package, use the Read tool to load that pa
 - Do not manually sort imports (Biome handles this).
 - Do not introduce new heavy dependencies without approval.
 - Do not commit code that fails `pnpm lint` or `pnpm test`.
+- Do not push dependency manifest changes without the matching `pnpm-lock.yaml` update.
 
 ### Commands
 
@@ -87,10 +89,16 @@ pnpm build:sandboxes
 
 - Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
 - Subject line under 72 characters.
+- Before pushing updates to a branch or PR, first verify dependency manifests and `pnpm-lock.yaml` are in sync, then locally run the CI-relevant validation commands for the changes and fix failures instead of relying on CI to catch them.
 - **PR Checklist**:
   - `pnpm lint` passes.
+  - `pnpm check` passes.
+  - `pnpm check-dependency-version` passes.
   - `pnpm build` passes.
   - `pnpm build:sandboxes` passes.
+  - `pnpm test` passes.
+  - `pnpm build:test` passes.
+  - `pnpm e2e` passes.
   - Snapshots updated only for intentional changes.
 
 ### When Stuck
