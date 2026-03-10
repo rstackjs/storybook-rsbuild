@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" run build",
-    "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "build:sandboxes": "pnpm --filter \"./sandboxes/*\" run build:storybook",
+    "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "bump": "bumpp",
     "check": "pnpm --parallel --filter \"./packages/**\" run check",
     "check-dependency-version": "pnpm tsx ./scripts/check-dependency-version.mts",
@@ -35,11 +35,13 @@
     "bumpp": "^10.4.0",
     "check-dependency-version-consistency": "^5.0.1",
     "cross-env": "^10.1.0",
+    "get-port": "^7.1.0",
     "jiti": "^2.6.1",
     "nano-staged": "^0.9.0",
     "path-serializer": "^0.5.1",
     "simple-git-hooks": "^2.13.1",
     "sort-package-json": "^2.15.1",
+    "tree-kill": "^1.2.2",
     "ts-dedent": "^2.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

@@ -3,6 +3,9 @@ import { pluginReact } from '@rsbuild/plugin-react'
 import { pluginSass } from '@rsbuild/plugin-sass'
 import { defineConfig, type LibConfig } from '@rslib/core'
 
+const mfRemotePort = process.env.MF_REMOTE_PORT ?? '3001'
+const mfRemoteBaseUrl = `http://localhost:${mfRemotePort}/mf`
+
 const shared: LibConfig = {
   bundle: false,
   dts: {
@@ -46,10 +49,10 @@ export default defineConfig({
         distPath: {
           root: './dist/mf',
         },
-        assetPrefix: 'http://localhost:3001/mf',
+        assetPrefix: mfRemoteBaseUrl,
       },
       dev: {
-        assetPrefix: 'http://localhost:3001/mf',
+        assetPrefix: mfRemoteBaseUrl,
       },
       plugins: [
         pluginModuleFederation({
@@ -71,7 +74,7 @@ export default defineConfig({
   ],
   // just for dev
   server: {
-    port: 3001,
+    port: Number(mfRemotePort),
   },
   plugins: [
     pluginReact({

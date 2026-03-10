@@ -11,6 +11,7 @@ export const sandboxes: SandboxDefinition[] = [
     name: 'modernjs-react',
     relativeDir: 'sandboxes/modernjs-react',
     port: 6101,
+    env: { SB_RSBUILD_TEST_MINIMAL_DEV: 'true' },
   },
   {
     name: 'modernjs-react-mf-host',

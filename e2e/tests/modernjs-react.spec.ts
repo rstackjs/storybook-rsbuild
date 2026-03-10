@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { previewFrame, waitForPreviewReady } from '../utils/assertions'
+import { previewFrame, previewIframe } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 const sandbox = sandboxes.find((entry) => entry.name === 'modernjs-react')
@@ -29,22 +29,20 @@ test.describe(sandbox.name, () => {
       throw new Error('Storybook server failed to start')
     }
 
-    // Use 'domcontentloaded' instead of 'networkidle' to avoid flakiness
-    // with HMR/WebSocket connections that keep the network active
-    await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
+    // Navigate directly to the docs entry to avoid relying on Storybook's
+    // async default selection on cold starts.
+    await page.goto(
+      `${currentServer.url}?path=/docs/example-antdbutton--docs`,
+      {
+        waitUntil: 'domcontentloaded',
+      },
+    )
 
-    // Use the robust waiting mechanism that handles HMR rebuilds
-    await waitForPreviewReady(page)
+    await previewIframe(page).waitFor({ state: 'visible', timeout: 60_000 })
 
-    // This sandbox uses autodocs, so it loads Docs view by default
-    // Verify the AntdButton docs page renders
     const frame = previewFrame(page)
-    const docsRoot = frame.locator('#storybook-docs:not([hidden])')
-    await expect(docsRoot).toBeVisible()
-
-    // Verify the title is present (autodocs generates h1 from component name)
-    const title = docsRoot.locator('h1')
-    await expect(title).toBeVisible()
-    await expect(title).toHaveText('AntdButton')
+    const docsBody = frame.locator('body')
+    await expect(docsBody).toContainText('AntdButton', { timeout: 30_000 })
+    await expect(docsBody).toContainText('myButtonExtra', { timeout: 30_000 })
   })
 })

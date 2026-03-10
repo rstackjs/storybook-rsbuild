@@ -5,6 +5,7 @@ import { request as httpsRequest } from 'node:https'
 import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { URL } from 'node:url'
+import kill from 'tree-kill'
 import type { SandboxDefinition } from '../sandboxes'
 
 const SERVER_READY_TIMEOUT_MS = 120_000
@@ -37,12 +38,19 @@ export async function launchSandbox(
   const child = spawn('pnpm', pnpmArgs, spawnOptions)
 
   const prefix = `[${definition.name}]`
+  let stopping = false
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk) => {
+    if (stopping) {
+      return
+    }
     process.stdout.write(`${prefix} ${chunk}`)
   })
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk) => {
+    if (stopping) {
+      return
+    }
     process.stderr.write(`${prefix} ${chunk}`)
   })
 
@@ -68,18 +76,39 @@ export async function launchSandbox(
       if (child.exitCode !== null) {
         return
       }
+      stopping = true
       const exitPromise = once(child, 'exit')
-      child.kill('SIGTERM')
+      await killProcessTree(child.pid, 'SIGTERM')
       const result = await Promise.race([
         exitPromise.then(() => 'exit'),
         delay(SERVER_SHUTDOWN_TIMEOUT_MS).then(() => 'timeout'),
       ])
       if (result === 'timeout') {
-        child.kill('SIGKILL')
+        await killProcessTree(child.pid, 'SIGKILL')
         await once(child, 'exit')
       }
     },
   }
+}
+
+async function killProcessTree(
+  pid: number | undefined,
+  signal: NodeJS.Signals,
+): Promise<void> {
+  if (!pid) {
+    return
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    kill(pid, signal, (error) => {
+      if (!error || ('code' in error && error.code === 'ESRCH')) {
+        resolve()
+        return
+      }
+
+      reject(error)
+    })
+  })
 }
 
 async function waitForServer(

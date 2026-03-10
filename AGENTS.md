@@ -15,6 +15,7 @@ When working on code in some specific package, use the Read tool to load that pa
 - Use explicit `.ts`/`.tsx` extensions.
 - Colocate sandbox helpers with their owning packages.
 - Update relevant `sandboxes/` when adding or modifying features.
+- After any `rebase`, `merge`, or `stash pop` that changes dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`), run `pnpm install` before any validation command (`build`, `test`, `e2e`, `lint`).
 
 ### Don't
 
@@ -60,7 +61,7 @@ pnpm build:sandboxes
 
 **Ask first:**
 
-- `pnpm install` or adding new dependencies.
+- `pnpm install` or adding new dependencies, except when a `rebase`, `merge`, or `stash pop` changed dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) - then `pnpm install` is mandatory before validation.
 - `git push`.
 - Deleting files or large code blocks.
 - Running full project builds (`pnpm build`, `pnpm build:sandboxes`) unless explicitly requested or necessary for validation.

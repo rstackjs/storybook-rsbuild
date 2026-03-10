@@ -11,6 +11,8 @@ const getAbsolutePath = (value: string): any => {
   )
 }
 
+const mfRemotePort = process.env.MF_REMOTE_PORT ?? '3001'
+
 const config: StorybookConfig = {
   stories: [
     '../stories/**/*.mdx',
@@ -32,8 +34,7 @@ const config: StorybookConfig = {
       name: '@module-federation/storybook-addon/preset',
       options: {
         remotes: {
-          'rslib-module':
-            'rslib-module@http://localhost:3001/mf/mf-manifest.json',
+          'rslib-module': `rslib-module@http://localhost:${mfRemotePort}/mf/mf-manifest.json`,
         },
       },
     },

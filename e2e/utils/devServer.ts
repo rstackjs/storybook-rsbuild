@@ -1,6 +1,7 @@
 import { type SpawnOptionsWithoutStdio, spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { setTimeout as delay } from 'node:timers/promises'
+import kill from 'tree-kill'
 
 const DEFAULT_READY_TIMEOUT_MS = 120_000
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 10_000
@@ -53,13 +54,14 @@ export async function launchDevServer(
   let resolveReady: (() => void) | null = null
   let readySignalled = false
   let stdoutBuffer = ''
+  let stopping = false
 
   child.stdout?.setEncoding('utf-8')
   child.stderr?.setEncoding('utf-8')
 
   const readyPromise = new Promise<void>((resolve, reject) => {
     let settled = false
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const finish = (callback: () => void) => {
       if (settled) {
@@ -108,6 +110,9 @@ export async function launchDevServer(
   })
 
   child.stdout?.on('data', (chunk) => {
+    if (stopping) {
+      return
+    }
     if (prefix) {
       process.stdout.write(`${prefix}${chunk}`)
     } else {
@@ -127,6 +132,9 @@ export async function launchDevServer(
   })
 
   child.stderr?.on('data', (chunk) => {
+    if (stopping) {
+      return
+    }
     if (prefix) {
       process.stderr.write(`${prefix}${chunk}`)
     } else {
@@ -137,12 +145,14 @@ export async function launchDevServer(
   try {
     await readyPromise
   } catch (error) {
+    stopping = true
     await stopChild(child, shutdownTimeoutMs)
     throw error
   }
 
   return {
     stop: async () => {
+      stopping = true
       await stopChild(child, shutdownTimeoutMs)
     },
   }
@@ -157,14 +167,34 @@ async function stopChild(
   }
 
   const exitPromise = once(child, 'exit')
-  child.kill('SIGTERM')
+  await killProcessTree(child.pid, 'SIGTERM')
   const result = await Promise.race([
     exitPromise.then(() => 'exit' as const),
     delay(shutdownTimeoutMs).then(() => 'timeout' as const),
   ])
 
   if (result === 'timeout') {
-    child.kill('SIGKILL')
+    await killProcessTree(child.pid, 'SIGKILL')
     await once(child, 'exit')
   }
+}
+
+async function killProcessTree(
+  pid: number | undefined,
+  signal: NodeJS.Signals,
+): Promise<void> {
+  if (!pid) {
+    return
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    kill(pid, signal, (error) => {
+      if (!error || ('code' in error && error.code === 'ESRCH')) {
+        resolve()
+        return
+      }
+
+      reject(error)
+    })
+  })
 }
