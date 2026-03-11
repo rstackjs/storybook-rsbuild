@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   preview:
-    if: github.repository == 'rspack-contrib/storybook-rsbuild'
+    if: github.repository == 'rstackjs/storybook-rsbuild'
     runs-on: ubuntu-latest
 
     steps:

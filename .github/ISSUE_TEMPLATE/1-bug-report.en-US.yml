@@ -9,7 +9,7 @@ body:
         Thanks for taking the time to report this issue! Before submitting, please note:
 
          - Confirm that your problem cannot be solved by official documentation.
-         - Make sure you searched in the [Issues](https://github.com/rspack-contrib/storybook-rsbuild/issues) and didn't find the same issue.
+         - Make sure you searched in the [Issues](https://github.com/rstackjs/storybook-rsbuild/issues) and didn't find the same issue.
          - If it's not bug report, please use the "💡 Feature Request" issue template instead.
 
   - type: textarea
