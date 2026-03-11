@@ -9,7 +9,7 @@ body:
         Thanks for submitting new feature requests! Before submitting, please note:
 
          - Confirmed that this is a common feature and cannot be implemented through existing APIs.
-         - Make sure you searched in the [Issues](https://github.com/rspack-contrib/storybook-rsbuild/issues) and didn't find the same request.
+         - Make sure you searched in the [Issues](https://github.com/rstackjs/storybook-rsbuild/issues) and didn't find the same request.
 
   - type: textarea
     id: description
