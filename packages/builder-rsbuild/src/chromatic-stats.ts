@@ -161,14 +161,7 @@ const collectModuleEntries = (
       continue
     }
 
-    if (
-      typeof entry.name === 'string' &&
-      (entry.id !== undefined ||
-        Array.isArray(entry.reasons) ||
-        Array.isArray(entry.modules))
-    ) {
-      collected.push(entry)
-    }
+    collected.push(entry)
 
     if (Array.isArray(entry.children)) {
       collectModuleEntries(entry.children, collected)
@@ -195,28 +188,8 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
   const flattenedModules: Record<string, unknown>[] = []
   collectModuleEntries(modules, flattenedModules)
 
-  const additionalModules: ChromaticModule[] = []
-  const visited = new Set<string>(
-    modules
-      .filter(isRecord)
-      .map((moduleInfo) => {
-        const name =
-          typeof moduleInfo.name === 'string' ? moduleInfo.name : undefined
-        const id =
-          typeof moduleInfo.id === 'string' ||
-          typeof moduleInfo.id === 'number' ||
-          moduleInfo.id === null
-            ? moduleInfo.id
-            : undefined
-
-        if (!name) {
-          return null
-        }
-
-        return `${String(id)}::${name}`
-      })
-      .filter((moduleKey): moduleKey is string => Boolean(moduleKey)),
-  )
+  const normalizedModules: ChromaticModule[] = []
+  const visited = new Set<string>()
 
   for (const moduleInfo of flattenedModules) {
     const normalizedModule = toChromaticModule(moduleInfo)
@@ -230,7 +203,7 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
     }
 
     visited.add(moduleKey)
-    additionalModules.push(normalizedModule)
+    normalizedModules.push(normalizedModule)
 
     if (
       isConcatenatedModuleName(normalizedModule.name) &&
@@ -244,7 +217,7 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
         }
 
         visited.add(nestedModuleKey)
-        additionalModules.push({
+        normalizedModules.push({
           id: nestedModule.name,
           name: nestedModule.name,
           ...(Array.isArray(normalizedModule.reasons) &&
@@ -256,9 +229,7 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
     }
   }
 
-  if (additionalModules.length > 0) {
-    normalizedStatsJson.modules = [...modules, ...additionalModules]
-  }
+  normalizedStatsJson.modules = normalizedModules
 
   return normalizedStatsJson
 }
@@ -274,9 +245,9 @@ export const withStatsJsonCompat = <T extends StatsWithToJson>(stats: T): T => {
     if (options == null || typeof options === 'object') {
       const statsJson = originalToJson(
         {
-          all: true,
           modules: true,
           reasons: true,
+          nestedModules: true,
           ...(options as Record<string, unknown>),
         },
         forToString,
