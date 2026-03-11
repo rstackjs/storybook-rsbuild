@@ -19,6 +19,10 @@ type ChromaticStatsJson = {
   modules: ChromaticModule[]
 }
 
+type StatsWithCallableToJson = {
+  toJson: (options?: unknown, forToString?: unknown) => unknown
+}
+
 const createStatsJsonWithInvalidModules = (): Record<string, unknown> => {
   const changedSourcePath = join(
     process.cwd(),
@@ -102,9 +106,7 @@ describe('chromatic stats compat', () => {
     const toJson = rs.fn(() => createConcatenatedStatsJson())
     const compatStats = withStatsJsonCompat({
       toJson,
-    } as {
-      toJson: (options?: unknown, forToString?: unknown) => unknown
-    })
+    } as StatsWithCallableToJson)
 
     const normalized = compatStats.toJson?.({
       hash: false,
