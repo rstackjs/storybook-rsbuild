@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@modern-js/app-tools": "^3.0.4",
-    "@modern-js/tsconfig": "2.70.4",
+    "@modern-js/tsconfig": "3.0.5",
     "@module-federation/storybook-addon": "^5.0.5",
     "@rsbuild/core": "^2.0.0-beta.4",
     "@storybook/addon-docs": "10.2.17",
