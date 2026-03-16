@@ -484,8 +484,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(@module-federation/runtime-tools@2.0.1)(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(core-js@3.48.0)(encoding@0.1.13)(lightningcss@1.30.2)(react-dom@18.3.1(react@18.3.1))(react-server-dom-rspack@0.0.1-alpha.3(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.57.0)(ts-node@10.9.2(@swc/core@1.15.11(@swc/helpers@0.5.18))(@types/node@22.19.1)(typescript@5.9.3))(tsconfig-paths@4.2.0)(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.15.11(@swc/helpers@0.5.18))(esbuild@0.27.0))
       '@modern-js/tsconfig':
-        specifier: 2.70.4
-        version: 2.70.4
+        specifier: 3.0.5
+        version: 3.0.5
       '@rsbuild/core':
         specifier: ^2.0.0-beta.4
         version: 2.0.0-beta.4(@module-federation/runtime-tools@2.0.1)(core-js@3.48.0)
@@ -545,8 +545,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(@module-federation/runtime-tools@2.0.1)(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(core-js@3.48.0)(encoding@0.1.13)(lightningcss@1.30.2)(react-dom@18.3.1(react@18.3.1))(react-server-dom-rspack@0.0.1-alpha.3(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.57.0)(ts-node@10.9.2(@swc/core@1.15.11(@swc/helpers@0.5.18))(@types/node@22.19.1)(typescript@5.9.3))(tsconfig-paths@4.2.0)(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.15.11(@swc/helpers@0.5.18))(esbuild@0.27.0))
       '@modern-js/tsconfig':
-        specifier: 2.70.4
-        version: 2.70.4
+        specifier: 3.0.5
+        version: 3.0.5
       '@module-federation/storybook-addon':
         specifier: ^5.0.5
         version: 5.0.5(@module-federation/sdk@0.24.0)(@nx/module-federation@22.4.4(@babel/traverse@7.28.6)(@swc/core@1.15.11(@swc/helpers@0.5.18))(@swc/helpers@0.5.18)(esbuild@0.27.0)(nx@22.4.4(@swc/core@1.15.11(@swc/helpers@0.5.18)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@rsbuild/core@2.0.0-beta.4(@module-federation/runtime-tools@2.0.1)(core-js@3.48.0))(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(webpack-virtual-modules@0.6.2)(webpack@5.104.1(@swc/core@1.15.11(@swc/helpers@0.5.18))(esbuild@0.27.0))
@@ -606,8 +606,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(@module-federation/runtime-tools@2.0.1)(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(core-js@3.48.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react-server-dom-rspack@0.0.1-alpha.3(@rspack/core@2.0.0-beta.2(@module-federation/runtime-tools@2.0.1)(@swc/helpers@0.5.18))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(rollup@4.57.0)(ts-node@10.9.2(@swc/core@1.15.11(@swc/helpers@0.5.18))(@types/node@22.19.1)(typescript@5.9.3))(tsconfig-paths@4.2.0)(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.15.11(@swc/helpers@0.5.18)))
       '@modern-js/tsconfig':
-        specifier: 2.70.4
-        version: 2.70.4
+        specifier: 3.0.5
+        version: 3.0.5
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -3171,8 +3171,8 @@ packages:
       tsconfig-paths:
         optional: true
 
-  '@modern-js/tsconfig@2.70.4':
-    resolution: {integrity: sha512-k61VGgEkIuzBEuikXv3Yf4aC6I33I2Auk+NmvoeewED3rD56a9EKJRMFJU+nhvGy/T6HjQcg+egzmLkw5xZyOw==}
+  '@modern-js/tsconfig@3.0.5':
+    resolution: {integrity: sha512-8gWddW1CuNeiHI47/aV7wSpD2mOI9EQQSURZeFXNWEo88/WErTgoUV1+HTh608wMQhvbHGbLNrC7XKFl8WxDvA==}
 
   '@modern-js/types@2.70.4':
     resolution: {integrity: sha512-P3Pe6S34GwJMQOYOHQx/mkcu8oEPwLU+Y3LwKslMNa43ooIgx0NEUzwl/N93bapw3LnoCQpwAOK0qQALaXnd9A==}
@@ -14511,7 +14511,7 @@ snapshots:
       - react-dom
       - utf-8-validate
 
-  '@modern-js/tsconfig@2.70.4': {}
+  '@modern-js/tsconfig@3.0.5': {}
 
   '@modern-js/types@2.70.4': {}
 
