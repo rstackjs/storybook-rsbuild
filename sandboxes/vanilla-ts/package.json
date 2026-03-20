@@ -10,8 +10,8 @@
     "storybook": "storybook dev -p 6006"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^5.0.1",
-    "@rsbuild/core": "^2.0.0-beta.4",
+    "@chromatic-com/storybook": "^5.0.2",
+    "@rsbuild/core": "^2.0.0-canary-20260309140114",
     "@storybook/addon-docs": "10.2.19",
     "@storybook/addon-onboarding": "10.2.19",
     "@storybook/html": "10.2.19",
