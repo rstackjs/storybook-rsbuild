@@ -46,5 +46,17 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "pnpm": {
+    "overrides": {
+      "@storybook/addon-docs": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/addon-onboarding": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/core-webpack": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/html": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/react": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/vue3": "0.0.0-pr-34370-sha-b4eae34c",
+      "@storybook/web-components": "0.0.0-pr-34370-sha-b4eae34c",
+      "storybook": "0.0.0-pr-34370-sha-b4eae34c"
+    }
+  }
 }

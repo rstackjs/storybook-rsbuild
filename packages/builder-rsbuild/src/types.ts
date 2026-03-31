@@ -24,7 +24,22 @@ export interface TypescriptOptions extends TypeScriptOptionsBase {
   checkOptions?: PluginTypeCheckerOptions
 }
 
-export type RsbuildBuilder = Builder<RsbuildConfig, RsbuildStats>
+export interface ModuleNode {
+  file: string
+  type: 'js' | 'css' | 'asset'
+  importers: Set<ModuleNode>
+  importedModules: Set<ModuleNode>
+}
+
+export type ModuleGraph = Map<ModuleNode['file'], Set<ModuleNode>>
+
+export type OnModuleGraphChange = (
+  cb: (moduleGraph: ModuleGraph) => void,
+) => () => void
+
+export type RsbuildBuilder = Builder<RsbuildConfig, RsbuildStats> & {
+  onModuleGraphChange?: OnModuleGraphChange
+}
 
 export type RsbuildFinal = (
   config: RsbuildConfig,

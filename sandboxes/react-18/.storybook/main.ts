@@ -22,6 +22,9 @@ const config: StorybookConfig = {
     name: getAbsolutePath('storybook-react-rsbuild'),
     options: {},
   },
+  features: {
+    changeDetection: true,
+  },
   typescript: {
     reactDocgen: 'react-docgen-typescript',
     reactDocgenTypescriptOptions: {
