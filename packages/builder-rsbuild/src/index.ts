@@ -11,13 +11,14 @@ import type {
   Preset,
   StorybookConfigRaw,
 } from 'storybook/internal/types'
+import { buildModuleGraph, mergeModuleGraphs } from './build-module-graph'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
 import rsbuildConfig, {
   type RsbuildBuilderOptions,
 } from './preview/iframe-rsbuild.config'
 import { applyReactShims } from './react-shims'
-import type { RsbuildBuilder } from './types'
+import type { ModuleGraph, RsbuildBuilder } from './types'
 
 export * from './preview/virtual-module-mapping'
 export * from './types'
@@ -127,9 +128,39 @@ export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
 }
 
 let server: RsbuildDevServer
+const moduleGraphListeners = new Set<(moduleGraph: ModuleGraph) => void>()
+
+const notifyModuleGraphListeners = (stats: StatsOrMultiStats) => {
+  if (!stats) {
+    return
+  }
+
+  const moduleGraph = mergeModuleGraphs(
+    'stats' in stats
+      ? stats.stats.map((childStats) =>
+          buildModuleGraph(childStats.compilation),
+        )
+      : [buildModuleGraph(stats.compilation)],
+  )
+
+  for (const listener of moduleGraphListeners) {
+    listener(moduleGraph)
+  }
+}
 
 export async function bail(): Promise<void> {
+  moduleGraphListeners.clear()
   return server?.close()
+}
+
+export const onModuleGraphChange: NonNullable<
+  RsbuildBuilder['onModuleGraphChange']
+> = (cb) => {
+  moduleGraphListeners.add(cb)
+
+  return () => {
+    moduleGraphListeners.delete(cb)
+  }
 }
 
 export const start: RsbuildBuilder['start'] = async ({
@@ -160,8 +191,16 @@ export const start: RsbuildBuilder['start'] = async ({
   const waitFirstCompileDone = new Promise<StatsOrMultiStats>((resolve) => {
     rsbuildBuild.onDevCompileDone(({ stats, isFirstCompile }) => {
       if (!isFirstCompile) {
+        if (moduleGraphListeners.size > 0) {
+          notifyModuleGraphListeners(stats)
+        }
         return
       }
+
+      if (moduleGraphListeners.size > 0) {
+        notifyModuleGraphListeners(stats)
+      }
+
       resolve(stats)
     })
   })

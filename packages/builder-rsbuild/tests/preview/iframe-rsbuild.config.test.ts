@@ -20,6 +20,8 @@ type LazyCompilationOption = Rspack.Configuration['lazyCompilation']
 
 const createOptions = (
   lazyCompilation: LazyCompilationOption | 'unset' = false,
+  changeDetection = false,
+  stories = storiesConfig,
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
@@ -50,7 +52,7 @@ const createOptions = (
     ],
     ['docs', {}],
     ['entries', storybookEntries],
-    ['stories', storiesConfig],
+    ['stories', stories],
     ['tags', {}],
     ['build', { test: {} }],
     ['previewAnnotations', []],
@@ -88,7 +90,7 @@ const createOptions = (
       check: false,
       skipCompiler: true,
     },
-    features: {},
+    features: { changeDetection },
     cache,
     configDir: fixtureDir,
     build: {},
@@ -137,8 +139,10 @@ describe('iframe-rsbuild.config', () => {
 
   const runRspackTool = async (
     lazyCompilation: LazyCompilationOption | 'unset',
+    changeDetection = false,
+    stories = storiesConfig,
   ) => {
-    const { options } = createOptions(lazyCompilation)
+    const { options } = createOptions(lazyCompilation, changeDetection, stories)
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
     )
@@ -183,6 +187,71 @@ describe('iframe-rsbuild.config', () => {
   it('passes through lazyCompilation options object', async () => {
     const { rspackConfig } = await runRspackTool({ entries: true })
     expect(rspackConfig.lazyCompilation).toEqual({ entries: true })
+  })
+
+  it('excludes story modules from lazy compilation when changeDetection is enabled', async () => {
+    const { rspackConfig } = await runRspackTool('unset', true)
+
+    expect(rspackConfig.lazyCompilation).toEqual({
+      entries: false,
+      test: expect.any(Function),
+    })
+
+    expect(
+      rspackConfig.lazyCompilation.test({
+        nameForCondition: () =>
+          resolve(fixtureDir, 'stories/Button.stories.tsx'),
+      }),
+    ).toBe(false)
+    expect(
+      rspackConfig.lazyCompilation.test({
+        nameForCondition: () => resolve(fixtureDir, 'stories/Button.tsx'),
+      }),
+    ).toBe(true)
+  })
+
+  it('composes an existing lazyCompilation.test when changeDetection is enabled', async () => {
+    const existingTest = rs.fn(() => true)
+    const { rspackConfig } = await runRspackTool(
+      { entries: true, test: existingTest },
+      true,
+    )
+
+    expect(
+      rspackConfig.lazyCompilation.test({
+        nameForCondition: () =>
+          resolve(fixtureDir, 'stories/Button.stories.tsx'),
+      }),
+    ).toBe(false)
+    expect(existingTest).not.toHaveBeenCalled()
+
+    expect(
+      rspackConfig.lazyCompilation.test({
+        nameForCondition: () => resolve(fixtureDir, 'stories/Button.tsx'),
+      }),
+    ).toBe(true)
+    expect(existingTest).toHaveBeenCalledTimes(1)
+  })
+
+  it('matches story files outside the working directory when changeDetection is enabled', async () => {
+    const externalStory = resolve(
+      process.cwd(),
+      '../external/src/Button.stories.tsx',
+    )
+
+    const { rspackConfig } = await runRspackTool('unset', true, [
+      {
+        directory: '../../../../../external/src',
+        files: '*.stories.tsx',
+        titlePrefix: '',
+      },
+    ])
+
+    expect(
+      rspackConfig.lazyCompilation.test({
+        nameForCondition: () => externalStory,
+      }),
+    ).toBe(false)
   })
 
   it('appends raw query fallback rule for asset/source imports', async () => {

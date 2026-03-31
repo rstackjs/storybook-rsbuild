@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { loadConfig, mergeRsbuildConfig } from '@rsbuild/core'
@@ -7,6 +7,7 @@ import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
 // @ts-expect-error (I removed this on purpose, because it's incorrect)
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
 import { pluginHtmlMinifierTerser } from 'rsbuild-plugin-html-minifier-terser'
+import slash from 'slash'
 import {
   getBuilderOptions,
   isPreservingSymlinks,
@@ -76,6 +77,63 @@ const storybookPaths: Record<string, string> = {
 
 export type RsbuildBuilderOptions = Options & {
   typescriptOptions: TypescriptOptions
+  features?: Options['features'] & {
+    changeDetection?: boolean
+  }
+}
+
+const matchesStoriesByPath = (
+  filePath: string,
+  workingDir: string,
+  stories: Awaited<ReturnType<typeof normalizeStories>>,
+) => {
+  const relativePath = slash(relative(workingDir, filePath))
+  const importPath = relativePath.startsWith('.')
+    ? relativePath
+    : `./${relativePath}`
+
+  return stories.some((specifier) => {
+    const matcher = new RegExp(specifier.importPathMatcher)
+    return matcher.test(importPath)
+  })
+}
+
+const mergeLazyCompilationTest = (
+  lazyCompilation: Rspack.Configuration['lazyCompilation'],
+  options: {
+    workingDir: string
+    stories: Awaited<ReturnType<typeof normalizeStories>>
+  },
+): Rspack.Configuration['lazyCompilation'] => {
+  if (lazyCompilation === false) {
+    return false
+  }
+
+  const existingOptions = lazyCompilation === true ? {} : lazyCompilation
+  const existingTest = existingOptions?.test
+
+  return {
+    ...(existingOptions ?? {}),
+    test: (module: Rspack.Module) => {
+      const filePath = module.nameForCondition()
+      if (
+        filePath &&
+        matchesStoriesByPath(filePath, options.workingDir, options.stories)
+      ) {
+        return false
+      }
+
+      if (!existingTest) {
+        return true
+      }
+
+      if (existingTest instanceof RegExp) {
+        return filePath ? existingTest.test(filePath) : false
+      }
+
+      return existingTest(module)
+    },
+  }
 }
 
 export default async (
@@ -164,6 +222,16 @@ export default async (
               entries: false,
             }
           : builderOptions.lazyCompilation
+
+      if (features?.changeDetection) {
+        lazyCompilationConfig = mergeLazyCompilationTest(
+          lazyCompilationConfig,
+          {
+            workingDir,
+            stories,
+          },
+        )
+      }
     }
   }
 
