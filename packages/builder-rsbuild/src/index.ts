@@ -131,6 +131,10 @@ let server: RsbuildDevServer
 const moduleGraphListeners = new Set<(moduleGraph: ModuleGraph) => void>()
 
 const notifyModuleGraphListeners = (stats: StatsOrMultiStats) => {
+  if (!stats) {
+    return
+  }
+
   const moduleGraph = mergeModuleGraphs(
     'stats' in stats
       ? stats.stats.map((childStats) =>

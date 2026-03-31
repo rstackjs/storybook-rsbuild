@@ -77,6 +77,9 @@ const storybookPaths: Record<string, string> = {
 
 export type RsbuildBuilderOptions = Options & {
   typescriptOptions: TypescriptOptions
+  features?: Options['features'] & {
+    changeDetection?: boolean
+  }
 }
 
 const matchesStoriesByPath = (
