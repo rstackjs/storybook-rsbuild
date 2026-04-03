@@ -14,9 +14,9 @@
     "lit": "^3.3.2"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^5.0.1",
-    "@rsbuild/core": "^2.0.0-beta.4",
-    "@rsbuild/plugin-vue": "1.2.5",
+    "@chromatic-com/storybook": "^5.1.1",
+    "@rsbuild/core": "^2.0.0-rc.0",
+    "@rsbuild/plugin-vue": "1.2.7",
     "@storybook/addon-docs": "10.3.4",
     "@storybook/addon-onboarding": "10.3.4",
     "@storybook/web-components": "10.3.4",
