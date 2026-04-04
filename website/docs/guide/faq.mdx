@@ -2,7 +2,9 @@
 
 ## Deploy Storybook to a subdirectory or subpath
 
-The default Vite and webpack builders emit relative asset paths, but Rsbuild recommends absolute paths for deployment (see the [asset prefix tips](https://rsbuild.rs/config/output/asset-prefix#path-types:~:text=on%20file%20location.-,TIP,-It%27s%20not%20recommended)). To deploy Storybook at `https://example.com/sb-path`, set [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix).
+The Rsbuild builder currently uses an absolute asset prefix (`/`) by default. When you deploy the built Storybook to a non-root path (e.g. `https://example.com/sb-path/`), the assets inside `iframe.html` will fail to load because they reference absolute paths like `/static/js/…`.
+
+To fix this, set [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix) via `rsbuildFinal`:
 
 ```js
 import { mergeRsbuildConfig } from '@rsbuild/core'
@@ -19,6 +21,29 @@ const config: StorybookConfig = {
   // --snip--
 }
 ```
+
+If you only need the build to work from any subpath without knowing the exact path ahead of time, use a relative prefix:
+
+```js
+rsbuildFinal: (config) => {
+  return mergeRsbuildConfig(config, {
+    output: {
+      assetPrefix: './',
+    },
+  })
+}
+```
+
+> [!NOTE]
+> The official Vite and webpack Storybook builders use relative paths (`base: './'` and `publicPath: ''` respectively) by default. We plan to align the Rsbuild builder to the same behavior in a future release.
+
+## `Template.toString()` shows compiled code in Docs source snippet
+
+When using the CSF 2 `Template.bind({})` pattern and `Template.toString()` to display source code in the Docs addon, the snippet shows bundler-compiled output instead of your original source.
+
+This is expected — `Function.prototype.toString()` serializes the **runtime** function, which has already been transformed by the bundler. This is not specific to the Rsbuild builder; the same happens with webpack and Vite.
+
+Storybook recommends using the [CSF 3 format](https://storybook.js.org/docs/api/csf) with the automatic source snippet feature, or manually providing source code through [docs source parameters](https://storybook.js.org/docs/api/doc-blocks/doc-block-source). See the [Storybook Docs documentation](https://storybook.js.org/docs/writing-docs/autodocs) for more details.
 
 ## Build errors from unexpected files
 
