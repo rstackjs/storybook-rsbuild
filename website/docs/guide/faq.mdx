@@ -2,7 +2,15 @@
 
 ## Deploy Storybook to a subdirectory or subpath
 
-The default Vite and webpack builders emit relative asset paths, but Rsbuild recommends absolute paths for deployment (see the [asset prefix tips](https://rsbuild.rs/config/output/asset-prefix#path-types:~:text=on%20file%20location.-,TIP,-It%27s%20not%20recommended)). To deploy Storybook at `https://example.com/sb-path`, set [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix).
+> Since v3.3.3. In v3.3.2 and earlier, the default `assetPrefix` was `'/'` (absolute), which required manual configuration for subdirectory deployment.
+
+The Rsbuild builder uses relative asset paths by default — the same as the official Vite (`base: './'`) and webpack (`publicPath: ''`) builders. Storybook can be deployed to any subdirectory (e.g., `https://example.com/storybook/`) without extra configuration.
+
+## Serving static assets from a CDN
+
+> Since v3.3.3. In v3.3.2 and earlier, this was not supported.
+
+To serve Storybook's JS/CSS bundles from a separate CDN origin (e.g., `https://cdn.example.com/assets/`), set [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix) to the CDN URL:
 
 ```js
 import { mergeRsbuildConfig } from '@rsbuild/core'
@@ -12,13 +20,45 @@ const config: StorybookConfig = {
   rsbuildFinal: (config) => {
     return mergeRsbuildConfig(config, {
       output: {
-        assetPrefix: '/sb-path/',
+        assetPrefix: 'https://cdn.example.com/',
       },
     })
   },
   // --snip--
 }
 ```
+
+The preview template correctly handles absolute URLs, so JS/CSS bundles will be loaded from the CDN while `iframe.html` can remain on the origin server. Note that the CDN must serve appropriate [CORS headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) since the bundles are loaded via ES module imports.
+
+> [!NOTE]
+> This is an improvement over the [official webpack5 builder](https://github.com/storybookjs/storybook/issues/23481), which does not support CDN asset hosting due to its template always prepending `./` to import paths.
+
+## CSS `url()` references to static assets
+
+> In v3.3.2 and earlier, CSS `url()` worked correctly when served from the root path because the default `assetPrefix` was `'/'`. Since v3.3.3, the default changed to `''` (relative) for subdirectory support, which introduces this limitation.
+
+When CSS files reference other assets via `url()` (e.g., `background: url('./image.png')`), the generated paths may resolve incorrectly in the production build. This happens because Rspack emits `url()` paths relative to the output root, but the browser resolves them relative to the CSS file's location. This is a known trade-off of using relative paths, and the [official Storybook builders have the same limitation](https://github.com/storybookjs/storybook/issues/23447).
+
+If your stories rely on CSS `url()` references, you can switch to absolute paths via [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix):
+
+```js
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  // --snip--
+  rsbuildFinal: (config) => {
+    return mergeRsbuildConfig(config, {
+      output: {
+        assetPrefix: '/',
+      },
+    })
+  },
+  // --snip--
+}
+```
+
+> [!NOTE]
+> Setting `assetPrefix: '/'` fixes CSS `url()` references when served from the root path, but breaks subdirectory deployment. Choose the option that fits your deployment scenario.
 
 ## `Template.toString()` shows compiled code in Docs source snippet
 

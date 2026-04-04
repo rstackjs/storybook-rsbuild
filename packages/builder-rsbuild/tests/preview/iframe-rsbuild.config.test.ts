@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Rspack } from '@rsbuild/core'
 import { describe, expect, it, rs } from '@rstest/core'
@@ -20,6 +21,7 @@ type LazyCompilationOption = Rspack.Configuration['lazyCompilation']
 
 const createOptions = (
   lazyCompilation: LazyCompilationOption | 'unset' = false,
+  configType: 'DEVELOPMENT' | 'PRODUCTION' = 'DEVELOPMENT',
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
@@ -75,7 +77,7 @@ const createOptions = (
   } as unknown as Required<RsbuildBuilderOptions>['cache']
 
   const options: Partial<RsbuildBuilderOptions> = {
-    configType: 'DEVELOPMENT',
+    configType,
     quiet: true,
     outputDir: 'storybook-static',
     packageJson: { version: '8.0.0-test' },
@@ -192,6 +194,55 @@ describe('iframe-rsbuild.config', () => {
     expect(appendRules).toHaveBeenCalledWith({
       resourceQuery: /[?&]raw(?:&|=|$)/,
       type: 'asset/source',
+    })
+  })
+
+  // Regression tests for assetPrefix — guards against #66, #72, #75, #224.
+  // The default assetPrefix must be '' (empty string) to produce relative paths,
+  // enabling subpath/CDN deployment without manual config (#224).
+  // Using '/' caused absolute paths that break non-root deployments.
+  // See HANDOFF.md "Failed Approaches" for the full regression chain.
+  describe('assetPrefix defaults to empty string for subpath deployment (#224)', () => {
+    it('sets output.assetPrefix to empty string in dev mode (#72)', async () => {
+      const { options } = createOptions(false, 'DEVELOPMENT')
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+      expect(config.output?.assetPrefix).toBe('')
+    })
+
+    it('sets dev.assetPrefix to empty string in dev mode (#72)', async () => {
+      const { options } = createOptions(false, 'DEVELOPMENT')
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+      expect(config.dev?.assetPrefix).toBe('')
+    })
+
+    it('sets output.assetPrefix to empty string in production mode (#224)', async () => {
+      const { options } = createOptions(false, 'PRODUCTION')
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+      expect(config.output?.assetPrefix).toBe('')
+    })
+  })
+
+  // Regression test for preview.ejs template — guards against #75 and #23481 (webpack5).
+  // - Relative paths (default assetPrefix: '') must get './' prefix so they resolve
+  //   correctly in subdirectory deployments.
+  // - Absolute URLs (CDN assetPrefix like 'http://cdn.example.com/') must NOT get
+  //   './' prefix, which would turn them into broken relative paths.
+  describe('preview.ejs handles import paths correctly', () => {
+    it('prepends "./" for relative paths and preserves absolute URLs', () => {
+      const templatePath = resolve(__dirname, '../../templates/preview.ejs')
+      const template = readFileSync(templatePath, 'utf-8')
+
+      // Must contain conditional logic that adds './' only for relative paths
+      expect(template).toContain('"./" + file')
+      // Must handle http:// and protocol-relative // URLs
+      expect(template).toContain('file.startsWith("http")')
+      expect(template).toContain('file.startsWith("//")')
     })
   })
 })

@@ -73,8 +73,11 @@
     <% } %>
     <script type="module">
       import './sb-preview/runtime.js';
+      <%# Diverges from the official webpack5 template which always prepends './',
+          breaking absolute CDN URLs. We preserve absolute URLs as-is to support
+          CDN deployment via assetPrefix. See https://github.com/storybookjs/storybook/issues/23481 %>
       <% htmlWebpackPlugin.files.js.forEach(file => { %>
-      import '<%= file %>';
+      import '<%= file.startsWith("http") || file.startsWith("//") ? file : "./" + file %>';
       <% }); %>
     </script>    
   </body>
