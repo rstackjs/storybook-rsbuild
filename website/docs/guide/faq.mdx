@@ -20,6 +20,14 @@ const config: StorybookConfig = {
 }
 ```
 
+## `Template.toString()` shows compiled code in Docs source snippet
+
+When using the CSF 2 `Template.bind({})` pattern and `Template.toString()` to display source code in the Docs addon, the snippet shows bundler-compiled output instead of your original source.
+
+This is expected — `Function.prototype.toString()` serializes the **runtime** function, which has already been transformed by the bundler. This is not specific to the Rsbuild builder; the same happens with webpack and Vite.
+
+Storybook recommends using the [CSF 3 format](https://storybook.js.org/docs/api/csf) with the automatic source snippet feature, or manually providing source code through [docs source parameters](https://storybook.js.org/docs/api/doc-blocks/doc-block-source). See the [Storybook Docs documentation](https://storybook.js.org/docs/writing-docs/autodocs) for more details.
+
 ## Build errors from unexpected files
 
 > [!NOTE]
