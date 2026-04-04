@@ -231,18 +231,16 @@ describe('iframe-rsbuild.config', () => {
   // Regression test for preview.ejs template — guards against #75 and #23481 (webpack5).
   // - Relative paths (default assetPrefix: '') must get './' prefix so they resolve
   //   correctly in subdirectory deployments.
-  // - Absolute URLs (CDN assetPrefix like 'http://cdn.example.com/') must NOT get
-  //   './' prefix, which would turn them into broken relative paths.
+  // - Absolute/root-relative URLs must NOT get './' prefix.
   describe('preview.ejs handles import paths correctly', () => {
-    it('prepends "./" for relative paths and preserves absolute URLs', () => {
+    it('prepends "./" only for bare relative paths, preserves absolute and root-relative URLs', () => {
       const templatePath = resolve(__dirname, '../../templates/preview.ejs')
       const template = readFileSync(templatePath, 'utf-8')
 
       // Must contain conditional logic that adds './' only for relative paths
       expect(template).toContain('"./" + file')
-      // Must handle http:// and protocol-relative // URLs
-      expect(template).toContain('file.startsWith("http")')
-      expect(template).toContain('file.startsWith("//")')
+      // Must use a regex that matches http(s)://, //, and root-relative /
+      expect(template).toMatch(/\^.https.*\\\//)
     })
   })
 })
