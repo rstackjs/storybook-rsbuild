@@ -237,7 +237,7 @@ export default async (
   const rsbuildConfig = mergeRsbuildConfig(contentFromConfig, {
     output: {
       cleanDistPath: false,
-      assetPrefix: '/',
+      assetPrefix: '',
       dataUriLimit: {
         media: 10000,
       },
@@ -266,7 +266,7 @@ export default async (
       publicDir: false,
     },
     dev: {
-      assetPrefix: '/',
+      assetPrefix: '',
       progressBar: !quiet,
       hmr: shouldDisableHmr ? false : undefined,
     },

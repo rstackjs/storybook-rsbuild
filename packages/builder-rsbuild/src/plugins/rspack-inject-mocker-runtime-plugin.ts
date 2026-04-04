@@ -39,8 +39,7 @@ export class RspackInjectMockerRuntimePlugin {
         (data, cb) => {
           try {
             const runtimeScriptContent = getMockerRuntime()
-            // Must suffix with './'.
-            const runtimeAssetName = './mocker-runtime-injected.js'
+            const runtimeAssetName = 'mocker-runtime-injected.js'
 
             const Sources = compiler.webpack?.sources
             if (!Sources?.RawSource) {

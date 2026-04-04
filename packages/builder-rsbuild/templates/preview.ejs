@@ -73,8 +73,9 @@
     <% } %>
     <script type="module">
       import './sb-preview/runtime.js';
+      <%/* Diverges from webpack5 template: preserve absolute/root-relative URLs for CDN deployment (storybookjs/storybook#23481) */%>
       <% htmlWebpackPlugin.files.js.forEach(file => { %>
-      import '<%= file %>';
+      import '<%= /^(https?:)?\//.test(file) ? file : "./" + file %>';
       <% }); %>
     </script>    
   </body>
