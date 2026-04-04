@@ -29,10 +29,9 @@ interface LynxViewElement extends HTMLElement {
 // Only connect to the HMR endpoint during development.
 // In production builds there is no /__lynx_hmr__ handler, so EventSource
 // would reconnect endlessly generating noise in the network tab.
-if (
-  import.meta.webpackHot ||
-  (globalThis as any).__webpack_dev_server_client__
-) {
+// Rsbuild replaces process.env.NODE_ENV at build time, so the entire
+// block is removed via dead-code elimination in production bundles.
+if (process.env.NODE_ENV !== 'production') {
   try {
     const es = new EventSource('/__lynx_hmr__')
     es.addEventListener('message', (e) => {
