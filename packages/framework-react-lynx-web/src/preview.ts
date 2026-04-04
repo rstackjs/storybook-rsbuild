@@ -26,19 +26,27 @@ interface LynxViewElement extends HTMLElement {
 // Note: we must use a cache-busting URL instead of reload() because
 // @lynx-js/web-core's loadTemplate.js caches templates by URL string.
 // reload() reuses the same URL and would serve the stale cached template.
-try {
-  const es = new EventSource('/__lynx_hmr__')
-  es.addEventListener('message', (e) => {
-    if (e.data !== 'content-changed') return
-    const lynxView = document.querySelector(
-      'lynx-view',
-    ) as LynxViewElement | null
-    if (!lynxView?.url) return
-    const baseUrl = lynxView.url.split('?')[0]
-    lynxView.url = `${baseUrl}?t=${Date.now()}`
-  })
-} catch {
-  /* not in dev mode, ignore */
+// Only connect to the HMR endpoint during development.
+// In production builds there is no /__lynx_hmr__ handler, so EventSource
+// would reconnect endlessly generating noise in the network tab.
+if (
+  import.meta.webpackHot ||
+  (globalThis as any).__webpack_dev_server_client__
+) {
+  try {
+    const es = new EventSource('/__lynx_hmr__')
+    es.addEventListener('message', (e) => {
+      if (e.data !== 'content-changed') return
+      const lynxView = document.querySelector(
+        'lynx-view',
+      ) as LynxViewElement | null
+      if (!lynxView?.url) return
+      const baseUrl = lynxView.url.split('?')[0]
+      lynxView.url = `${baseUrl}?t=${Date.now()}`
+    })
+  } catch {
+    /* SSE not available, ignore */
+  }
 }
 
 /**
