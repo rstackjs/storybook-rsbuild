@@ -213,6 +213,7 @@ function runRspeedyBuild(projectRoot: string, configPath?: string): void {
       cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, FORCE_COLOR: '1' },
+      shell: process.platform === 'win32',
     })
     console.log('[lynx] Build complete.')
   } catch (err: any) {
@@ -390,6 +391,7 @@ function startRspeedyDev(
       cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, FORCE_COLOR: '1' },
+      shell: process.platform === 'win32',
     })
 
     let settled = false
