@@ -1,0 +1,145 @@
+.Background {
+  position: fixed;
+  background: radial-gradient(
+    71% 62% at 46% 36%,
+    rgba(18, 229, 229, 0) 15%,
+    rgba(239, 155, 255, 0.3) 56%,
+    #ff6448 100%
+  );
+  box-shadow: 0px 13px 29px 0px #ffd28db2 inset;
+  border-radius: 50%;
+  width: 200vw;
+  height: 200vw;
+  top: -80vw;
+  left: -50vw;
+}
+
+.App {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+}
+
+text {
+  color: #ffffff;
+}
+
+/* ── Banner ── */
+
+.Banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.Logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.Logo--react {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  animation: Logo--spin infinite 20s linear;
+}
+
+.Logo--lynx {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  animation: Logo--pulse infinite 2s ease-in-out;
+}
+
+@keyframes Logo--spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes Logo--pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.Title {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.Subtitle {
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Counter ── */
+
+.Counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 100;
+  margin-bottom: 24px;
+}
+
+.Counter__value {
+  font-size: 64px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.Counter__btn {
+  padding: 10px 40px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.Counter__btn--primary {
+  background-color: #1ea7fd;
+}
+
+.Counter__btn--secondary {
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.Counter__btn-text {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Content ── */
+
+.Content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 100;
+}
+
+.Hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
