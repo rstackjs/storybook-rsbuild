@@ -46,13 +46,45 @@ export const previewAnnotations: PresetProperty<'previewAnnotations'> = async (
 
 export const core: PresetProperty<'core'> = async (config, options) => {
   const framework = await options.presets.apply('framework')
+  const builderOptions =
+    typeof framework === 'string' ? {} : framework.options.builder || {}
 
   return {
     ...config,
     builder: {
       name: fileURLToPath(import.meta.resolve('storybook-builder-rsbuild')),
-      options:
-        typeof framework === 'string' ? {} : framework.options.builder || {},
+      // Disable lazyCompilation by default.
+      //
+      // Why: `@lynx-js/web-core` spawns a Web Worker via
+      // `new Worker(new URL('@lynx-js/web-worker-runtime', import.meta.url))`.
+      // That worker bundle dynamically imports `@lynx-js/web-mainthread-apis`,
+      // which in turn imports wasm-bindgen output:
+      //   import * as wasm from './standard_bg.wasm'
+      // Rspack processes that import via `experiments.asyncWebAssembly` (on by
+      // default in rspack 1.x+) and generates a call to the runtime helper
+      // `__webpack_require__.v(...)` — the async wasm loader.
+      //
+      // Builder-rsbuild enables lazy compilation in dev with
+      // `{ entries: false }` (entries eager, dynamic imports lazy). With lazy
+      // compilation, the wasm-bearing chunk sits behind a
+      // `lazy-compilation-proxy` at initial compile time, so rspack doesn't
+      // propagate the `instantiateWasm` runtime requirement into the worker's
+      // initial runtime — `__webpack_require__.v` is therefore NEVER installed
+      // in the worker. Later, when the worker actually requests the lazy chunk
+      // and tries to instantiate wasm, it crashes with:
+      //   TypeError: __webpack_require__.v is not a function
+      //
+      // Production builds don't lazy-compile, so the runtime requirement is
+      // computed normally and the helper is installed — which is why
+      // `storybook build` works but `storybook dev` does not.
+      //
+      // The preview iframe for a component library is small enough that the
+      // DX cost of eager compilation is negligible. Users can still opt back
+      // in via `framework.options.builder.lazyCompilation` if they need it.
+      options: {
+        lazyCompilation: false,
+        ...builderOptions,
+      },
     },
     renderer: fileURLToPath(
       import.meta.resolve('@storybook/web-components/preset'),
@@ -65,34 +97,26 @@ function resolveProjectRoot(configDir: string): string {
 }
 
 /**
- * Serve pre-built `.web.bundle` artifacts when the user is NOT running
- * rspeedy in-process (i.e., they have no `lynx.config` we can pick up). We
- * delegate to Storybook's `staticDirs` mechanism instead of hand-rolling a
- * dev middleware: it handles content-types, range requests, and directory
- * traversal protection via sirv, and works in both dev and build modes.
- *
- * In the in-process case (`lynxConfig` present), bundles are served via the
- * proxy (dev) or copied via `output.copy` (build) inside `rsbuildFinal`,
- * because they don't exist on disk until rspeedy actually runs.
+ * Resolve the user's `lynx.config.*`. Missing config is a hard error:
+ * 100% of `@lynx-js/react` examples in lynx-family/lynx-examples ship a
+ * `lynx.config.*`, so there is no real-world "no-config" path for us to
+ * support. Do not resurrect a `staticDirs` fallback — its config-filename
+ * whitelist would have to be kept manually in sync with rspeedy's own
+ * `CONFIG_FILES`, which is a silent-breakage trap.
  */
-export const staticDirs: PresetProperty<'staticDirs'> = async (
-  input = [],
-  options,
-) => {
-  const framework = await options.presets.apply('framework')
-  const frameworkOptions: FrameworkOptions =
-    typeof framework === 'string' ? {} : framework.options || {}
-
-  const projectRoot = resolveProjectRoot(options.configDir)
-  const lynxConfigPath = findLynxConfig(
-    projectRoot,
-    frameworkOptions.lynxConfigPath,
+function requireLynxConfig(
+  projectRoot: string,
+  configPath: string | undefined,
+): string {
+  const resolved = findLynxConfig(projectRoot, configPath)
+  if (resolved) return resolved
+  throw new Error(
+    `[storybook-react-lynx-web-rsbuild] No lynx.config.{ts,js,mts,mjs} ` +
+      `found at ${projectRoot}. Create one that invokes ` +
+      `\`pluginReactLynx()\` and re-run Storybook. If your config lives ` +
+      `elsewhere, pass \`framework.options.lynxConfigPath\` in your ` +
+      `.storybook/main.ts.`,
   )
-  if (lynxConfigPath) return input
-
-  const distDir = join(projectRoot, 'dist')
-  const bundlePrefix = normalizeBundlePrefix(frameworkOptions.lynxBundlePrefix)
-  return [...input, { from: distDir, to: bundlePrefix }]
 }
 
 function findLynxConfig(
@@ -106,9 +130,8 @@ function findLynxConfig(
 
   // Keep this list aligned with rspeedy's own auto-discovery in
   // packages/rspeedy/core/src/config/loadConfig.ts (CONFIG_FILES). If they
-  // diverge, a user with `lynx.config.mts` will fall through to the
-  // pre-built static-bundles path even though they expect us to invoke
-  // rspeedy in-process.
+  // diverge, a user with `lynx.config.mts` will get the "no config found"
+  // error above even though rspeedy itself would have picked it up.
   for (const name of [
     'lynx.config.ts',
     'lynx.config.js',
@@ -154,6 +177,22 @@ function normalizeBundlePrefix(raw: string | undefined): string {
  * rspack populated from its watcher before the current rebuild ran). Any
  * source file change that ends in a CSS-family extension counts — TSX/TS
  * edits alone return `false` and let rsbuild's WebSocket HMR handle them.
+ *
+ * Caveat — this reads an **undocumented internal** rspack Stats field.
+ * `compilation.modifiedFiles` has been present and stable in rspack since
+ * ~0.5.x, but it is not in `@rspack/core`'s public API surface. If a
+ * future rspack rename or removal makes it `undefined`, we fall back to
+ * `return false` (never broadcast), which degrades CSS edits to "no
+ * auto-reload" — annoying but harmless, because rsbuild's embedded
+ * WebSocket HMR client still handles them inside the `.web.bundle`.
+ *
+ * The **critical** property of this function is that it must return
+ * `false` for a pure JS/TSX rebuild. If it returns `true` there, the SSE
+ * broadcast fires, `preview.ts` tears down `<lynx-view>`, and the user's
+ * interactive state (counter value, form input, etc.) is wiped — the
+ * exact opposite of what Fast Refresh is supposed to preserve. Do **not**
+ * reintroduce a "reload on unknown" fallback here; see prior regression
+ * in the git history.
  */
 function hasCssChange(stats: unknown): boolean {
   // Duck-typed against Rspack.Stats | Rspack.MultiStats to avoid a
@@ -306,21 +345,28 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
 
   const projectRoot = resolveProjectRoot(options.configDir)
   const bundlePrefix = normalizeBundlePrefix(frameworkOptions.lynxBundlePrefix)
-  const lynxConfig = findLynxConfig(
+  // Hard-error if there's no lynx.config — see `requireLynxConfig`.
+  const lynxConfig = requireLynxConfig(
     projectRoot,
     frameworkOptions.lynxConfigPath,
   )
 
   const isDev = options.configType !== 'PRODUCTION'
 
+  // `source.include` forces rsbuild to transpile files inside the
+  // `@lynx-js/*` namespace. Those packages ship as ESM with syntax
+  // (optional chaining in older target, top-level await, etc.) that
+  // depends on the host project's target; rsbuild's default
+  // `node_modules` exclusion would hand them to the runtime unprocessed
+  // and produce "Unexpected token" errors at evaluation time.
   const baseConfig = mergeRsbuildConfig(config, {
     source: {
       include: [/[\\/]node_modules[\\/]@lynx-js[\\/]/],
     },
   })
 
-  // Dev + lynx config: in-process rspeedy dev server, proxied via Rsbuild.
-  if (lynxConfig && isDev) {
+  // Dev: in-process rspeedy dev server, proxied via Rsbuild.
+  if (isDev) {
     const origin = await setupRspeedyDev(projectRoot, lynxConfig)
     const state = getRspeedyState()
 
@@ -376,8 +422,8 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
     })
   }
 
-  // Build + lynx config: run rspeedy build (in-process), copy bundles into
-  // Storybook output as static assets. The source directory comes from
+  // Build: run rspeedy build (in-process), copy bundles into Storybook
+  // output as static assets. The source directory comes from
   // `rspeedy.context.distPath` so a user-customized `output.distPath.root`
   // is honored.
   //
@@ -392,28 +438,22 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   //     (The collision surface with storybook's own emitted files is
   //     empty by construction: storybook uses `static/{js,css,wasm}`
   //     while lynx uses `static/{image,font,svg}`.)
-  if (lynxConfig && !isDev) {
-    const rspeedyDistDir = await runRspeedyBuild(projectRoot, lynxConfig)
+  const rspeedyDistDir = await runRspeedyBuild(projectRoot, lynxConfig)
 
-    return mergeRsbuildConfig(baseConfig, {
-      output: {
-        copy: [
-          {
-            from: '**/*.web.bundle',
-            context: rspeedyDistDir,
-            to: `${bundlePrefix.slice(1)}/`,
-          },
-          {
-            from: 'static/**/*',
-            context: rspeedyDistDir,
-            to: '',
-          },
-        ],
-      },
-    })
-  }
-
-  // Without lynx config: bundles are served via the `staticDirs` preset
-  // export above (declarative; works in both dev and build modes).
-  return baseConfig
+  return mergeRsbuildConfig(baseConfig, {
+    output: {
+      copy: [
+        {
+          from: '**/*.web.bundle',
+          context: rspeedyDistDir,
+          to: `${bundlePrefix.slice(1)}/`,
+        },
+        {
+          from: 'static/**/*',
+          context: rspeedyDistDir,
+          to: '',
+        },
+      ],
+    },
+  })
 }

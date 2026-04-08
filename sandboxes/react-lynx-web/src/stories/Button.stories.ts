@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components'
+import type { Meta, StoryObj } from 'storybook-react-lynx-web-rsbuild'
 
 const meta = {
   title: 'Example/Button',
