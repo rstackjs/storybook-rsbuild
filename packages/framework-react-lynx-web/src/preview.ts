@@ -1,17 +1,16 @@
-// @ts-expect-error -- ?inline import resolves CSS to a string at build time
-import webElementsCSS from '@lynx-js/web-elements/index.css?inline'
 import { simulateDOMContentLoaded } from 'storybook/preview-api'
 
-// Inject web-elements CSS as a <link> element in document.head.
-// <lynx-view> copies document <link rel="stylesheet"> into its shadow DOM
-// via inject-head-links. Without this, layout CSS (linear.css, flex toggles)
-// is not available inside the shadow root.
-const webElementsLink = document.createElement('link')
-webElementsLink.rel = 'stylesheet'
-webElementsLink.href = URL.createObjectURL(
-  new Blob([webElementsCSS], { type: 'text/css' }),
-)
-document.head.appendChild(webElementsLink)
+// NOTE: Side-effect imports of `@lynx-js/web-core` and `@lynx-js/web-elements/all`
+// live in a SEPARATE preview entry (`./preview-runtime.ts`) and NOT this file.
+// Why: `@lynx-js/web-core` uses top-level await (WASM init), which makes any
+// importer an async module in webpack/rspack. Storybook's composeConfigs
+// reads `render`/`renderToCanvas` synchronously via `__webpack_require__` —
+// for async modules that returns a Promise, not the exports object, so the
+// getters return `undefined` and our `render` silently loses to the renderer
+// default (`@storybook/web-components`), producing the confusing
+// "component annotation is missing" error. Keeping this file sync preserves
+// the exports; the async runtime file is listed earlier in previewAnnotations
+// by preset.ts so its side effects still run.
 
 interface LynxViewElement extends HTMLElement {
   url: string
@@ -20,20 +19,32 @@ interface LynxViewElement extends HTMLElement {
   updateGlobalProps(data: Record<string, unknown>): void
 }
 
-// Subscribe to rspeedy rebuild events via SSE and force-reload <lynx-view>.
-// The trigger is driven by rspeedy's compiler `onDevCompileDone` hook (in
-// preset.ts), which broadcasts on every rebuild — this covers both TSX and
-// CSS edits, since pluginReactLynx disables per-asset HMR for the `web` env
-// (see lynx-stack packages/rspeedy/plugin-react/src/entry.ts).
+// Dev-only CSS hot reload for <lynx-view>.
 //
-// `?t=` cache-bust workaround: @lynx-js/web-core's TemplateManager caches
-// bundles by URL string and exposes no public invalidation API. Until
-// upstream ships one, mutating the URL is the only way to force re-fetch.
-// Tracking issue: TODO upstream link.
+// What has HMR out of the box, what doesn't:
+//   - **JS edits**: rsbuild's standard WebSocket HMR client is embedded in the
+//     web bundle (pluginReactLynx only skips its *own* HMR prepends for the
+//     `web` env — see lynx-stack
+//     `packages/rspeedy/plugin-react/src/entry.ts`). Background-thread edits
+//     therefore get real HMR with state preservation, no full reload.
+//   - **CSS / main-thread script edits**: there is no upstream HMR path.
+//     Without this shim, a CSS change shows only after a hard refresh.
 //
-// Rsbuild replaces process.env.NODE_ENV at build time, so the entire block
-// is dead-code-eliminated in production bundles (no /__lynx_hmr__ handler
-// exists in prod, and an EventSource would reconnect endlessly).
+// The SSE server in preset.ts filters rebuilds to CSS-only before pinging
+// here (via `stats.compilation.modifiedFiles`), so JS-only rebuilds skip
+// this path entirely and rsbuild's HMR handles them without interference.
+//
+// `?t=` cache-bust: @lynx-js/web-core's TemplateManager keys its bundle
+// cache by URL string (`#bundles: Map<string, DecodedTemplate>` in
+// `packages/web-platform/web-core/ts/client/mainthread/TemplateManager.ts`,
+// `fetchBundle` at ≈ L47 returns the cached entry on hit) and exposes no
+// public invalidation API. Mutating the URL query is the only way to force
+// a re-fetch from outside web-core.
+//
+// Rsbuild replaces `process.env.NODE_ENV` at build time, so this whole
+// block is dead-code-eliminated in production — otherwise the prod bundle
+// would open an EventSource to a non-existent `/__lynx_hmr__` handler and
+// reconnect endlessly.
 if (process.env.NODE_ENV !== 'production') {
   try {
     const es = new EventSource('/__lynx_hmr__')
@@ -59,20 +70,34 @@ function reloadLynxView(view: LynxViewElement) {
 }
 
 /**
- * Create a fresh, **detached** <lynx-view> element with url + globalProps set
- * BEFORE it's connected to the DOM.
+ * Build a **detached** <lynx-view> with its `url` attribute already set, so
+ * `connectedCallback` sees a url on its very first run.
  *
- * Why: web-core's LynxView#render() is gated on `!#rendering && #connected`.
- * If connectedCallback fires while `#url` is undefined, render() sets
- * `#rendering = true` and kicks off a queueMicrotask whose only path that
- * resets `#rendering` lives inside `if (this.#url)`. With no url, the task
- * no-ops and `#rendering` stays `true` forever, so a *subsequent* `.url = x`
- * assignment triggers another render() call that immediately bails on the
- * `!#rendering` guard. Result: the first story visit is blank.
+ * TODO: remove this dance once upstream fixes the LynxView `#rendering`
+ * latch. Until then, the ordering below is load-bearing — appending first
+ * and assigning `.url = x` after silently produces a blank shadow root on
+ * the first story visit.
  *
- * Setting `url` via setAttribute before append populates `#url` through
- * attributeChangedCallback, so when connectedCallback runs it sees a
- * truthy url and the microtask actually loads the bundle.
+ * Background (lynx-stack @ web-core 0.19.x,
+ * `packages/web-platform/web-core/ts/client/mainthread/LynxView.ts`):
+ *
+ *   - `connectedCallback` (≈ L492) calls `#render()` unconditionally.
+ *   - `#render()` (≈ L417) is gated on `!#rendering && #connected`. It
+ *     flips `#rendering = true`, then queues a microtask whose `#url`
+ *     branch (≈ L437) is the *only* path that ever writes
+ *     `#rendering = false` again (≈ L475).
+ *   - `attributeChangedCallback` (≈ L355) writes `#url` synchronously and
+ *     does NOT call `#render()`; only the `url` setter (L187) does.
+ *
+ * Consequence: if the element is appended with no `url` attribute, the
+ * microtask no-ops, `#rendering` stays `true` forever, and a subsequent
+ * `lv.url = 'foo'` triggers `#render()` which immediately bails on the
+ * `!#rendering` guard — the bundle is never fetched.
+ *
+ * Fix: push the url through `setAttribute('url', ...)` *before* appendChild.
+ * `attributeChangedCallback` populates `#url` synchronously, so when
+ * `connectedCallback` fires the first `#render()` reaches the `#url` branch
+ * and resets `#rendering` on the happy path.
  */
 function createLynxView(
   lynxUrl: string,

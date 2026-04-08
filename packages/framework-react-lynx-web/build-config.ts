@@ -11,6 +11,11 @@ const config: BuildEntries = {
         exportEntries: ['./preview'],
         entryPoint: './src/preview.ts',
       },
+      {
+        exportEntries: ['./preview-runtime'],
+        entryPoint: './src/preview-runtime.ts',
+        dts: false,
+      },
     ],
     node: [
       {
