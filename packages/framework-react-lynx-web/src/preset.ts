@@ -1,9 +1,35 @@
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import type { ServerResponse } from 'node:http'
+import { createRequire } from 'node:module'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import type { PresetProperty } from 'storybook/internal/types'
 import type { FrameworkOptions, StorybookConfig } from './types'
+
+/**
+ * Resolve `@lynx-js/rspeedy` from the user's project, not from the framework's
+ * own node_modules. This matters because pnpm can install multiple rspeedy
+ * variants under different peer-dep contexts; the user's `pluginReactLynx`
+ * (and the rest of their lynx.config) is bound to the rspeedy instance in
+ * THEIR project. If we import the framework's own copy we get a different
+ * module instance and the React Lynx loader/plugin chain silently no-ops
+ * (manifesting as JSX parse errors).
+ */
+async function importUserRspeedy(
+  projectRoot: string,
+): Promise<typeof import('@lynx-js/rspeedy')> {
+  // `require.resolve('@lynx-js/rspeedy')` fails: the package is pure-ESM
+  // with no CJS `main`. We resolve `./package.json` (which IS in the
+  // package's `exports` field) and then point at the stable ESM entry
+  // `./dist/index.js`. We don't read the exports field at runtime because
+  // it has been stable since 0.10.x and reading + parsing JSON adds nothing
+  // beyond a runtime-detection illusion of safety.
+  const require = createRequire(join(projectRoot, 'package.json'))
+  const pkgJsonPath = require.resolve('@lynx-js/rspeedy/package.json')
+  const entryAbs = join(dirname(pkgJsonPath), 'dist/index.js')
+  return import(pathToFileURL(entryAbs).href)
+}
 
 export const previewAnnotations: PresetProperty<'previewAnnotations'> = async (
   input = [],
@@ -31,6 +57,37 @@ function resolveProjectRoot(configDir: string): string {
   return resolve(configDir, '..')
 }
 
+/**
+ * Serve pre-built `.web.bundle` artifacts when the user is NOT running
+ * rspeedy in-process (i.e., they have no `lynx.config` we can pick up). We
+ * delegate to Storybook's `staticDirs` mechanism instead of hand-rolling a
+ * dev middleware: it handles content-types, range requests, and directory
+ * traversal protection via sirv, and works in both dev and build modes.
+ *
+ * In the in-process case (`lynxConfig` present), bundles are served via the
+ * proxy (dev) or copied via `output.copy` (build) inside `rsbuildFinal`,
+ * because they don't exist on disk until rspeedy actually runs.
+ */
+export const staticDirs: PresetProperty<'staticDirs'> = async (
+  input = [],
+  options,
+) => {
+  const framework = await options.presets.apply('framework')
+  const frameworkOptions: FrameworkOptions =
+    typeof framework === 'string' ? {} : framework.options || {}
+
+  const projectRoot = resolveProjectRoot(options.configDir)
+  const lynxConfigPath = findLynxConfig(
+    projectRoot,
+    frameworkOptions.lynxConfigPath,
+  )
+  if (lynxConfigPath) return input
+
+  const distDir = join(projectRoot, 'dist')
+  const bundlePrefix = frameworkOptions.lynxBundlePrefix ?? '/lynx-bundles'
+  return [...input, { from: distDir, to: bundlePrefix }]
+}
+
 function findLynxConfig(
   projectRoot: string,
   configPath?: string,
@@ -40,11 +97,140 @@ function findLynxConfig(
     return existsSync(abs) ? abs : undefined
   }
 
-  for (const name of ['lynx.config.ts', 'lynx.config.js', 'lynx.config.mjs']) {
+  // Keep this list aligned with rspeedy's own auto-discovery in
+  // packages/rspeedy/core/src/config/loadConfig.ts (CONFIG_FILES). If they
+  // diverge, a user with `lynx.config.mts` will fall through to the
+  // pre-built static-bundles path even though they expect us to invoke
+  // rspeedy in-process.
+  for (const name of [
+    'lynx.config.ts',
+    'lynx.config.js',
+    'lynx.config.mts',
+    'lynx.config.mjs',
+  ]) {
     const abs = join(projectRoot, name)
     if (existsSync(abs)) return abs
   }
   return undefined
+}
+
+interface RspeedyState {
+  /** http origin of the rspeedy dev server (only set in dev mode). */
+  origin?: string
+  /** SSE clients listening for rspeedy rebuild reload events. */
+  sseClients: ServerResponse[]
+  /** Cached promise so concurrent presets share one rspeedy instance. */
+  setupPromise?: Promise<void>
+}
+
+const RSPEEDY_STATE_KEY = Symbol.for(
+  'storybook-react-lynx-web-rsbuild.rspeedy.state',
+)
+
+function getRspeedyState(): RspeedyState {
+  const g = globalThis as unknown as Record<symbol, RspeedyState>
+  if (!g[RSPEEDY_STATE_KEY]) {
+    g[RSPEEDY_STATE_KEY] = { sseClients: [] }
+  }
+  return g[RSPEEDY_STATE_KEY]
+}
+
+/**
+ * Load the user's rspeedy config. Stories load `.web.bundle` artifacts via
+ * the proxy, so the runtime `environment: ['web']` filter (passed to
+ * `createRspeedy`) is sufficient — we don't need to mutate the config.
+ */
+async function loadUserRspeedyConfig(
+  projectRoot: string,
+  lynxConfigPath: string,
+) {
+  const { loadConfig } = await importUserRspeedy(projectRoot)
+  const { content } = await loadConfig({
+    cwd: projectRoot,
+    configPath: lynxConfigPath,
+  })
+  return content
+}
+
+/**
+ * Lazily start (or reuse) an in-process rspeedy dev server. Returns the
+ * origin URL once the first compile has completed and the server is listening.
+ */
+async function setupRspeedyDev(
+  projectRoot: string,
+  lynxConfigPath: string,
+): Promise<string> {
+  const state = getRspeedyState()
+  if (state.origin) return state.origin
+
+  if (!state.setupPromise) {
+    state.setupPromise = (async () => {
+      const { createRspeedy } = await importUserRspeedy(projectRoot)
+      const rspeedyConfig = await loadUserRspeedyConfig(
+        projectRoot,
+        lynxConfigPath,
+      )
+
+      // NOTE: do NOT pass `callerName` — passing it disables rspeedy's
+      // default plugin chain (including pluginReactLynx's JSX/TSX loader
+      // registration), causing entry compilation to fail with
+      // "JavaScript parse error: Expression expected".
+      const rspeedy = await createRspeedy({
+        cwd: projectRoot,
+        rspeedyConfig,
+        environment: ['web'],
+      })
+
+      // Drive HMR reload broadcasts from rspeedy's compiler hook. We fire on
+      // every non-first rebuild — the lynx web runtime has no per-asset HMR
+      // (pluginReactLynx disables it for the `web` env, see lynx-stack
+      // packages/rspeedy/plugin-react/src/entry.ts), so any source change
+      // requires a full <lynx-view> reload regardless of which file changed.
+      rspeedy.onDevCompileDone(({ isFirstCompile }) => {
+        if (isFirstCompile) return
+        for (const client of state.sseClients) {
+          client.write('data: content-changed\n\n')
+        }
+      })
+
+      const { urls, port } = await rspeedy.startDevServer({
+        getPortSilently: true,
+      })
+      const origin = urls[0] ?? `http://localhost:${port}`
+      state.origin = origin
+      console.log(`[lynx] rspeedy dev server ready at ${origin}`)
+    })()
+  }
+
+  await state.setupPromise
+  return state.origin!
+}
+
+/**
+ * Run an in-process rspeedy production build that emits .web.bundle
+ * artifacts into the project's resolved dist directory. Returns the
+ * resolved dist directory so callers can copy from the right location
+ * instead of hardcoding `<projectRoot>/dist`.
+ */
+async function runRspeedyBuild(
+  projectRoot: string,
+  lynxConfigPath: string,
+): Promise<string> {
+  const { createRspeedy } = await importUserRspeedy(projectRoot)
+  const rspeedyConfig = await loadUserRspeedyConfig(projectRoot, lynxConfigPath)
+
+  console.log('[lynx] Building Lynx components...')
+  const rspeedy = await createRspeedy({
+    cwd: projectRoot,
+    rspeedyConfig,
+    environment: ['web'],
+  })
+  await rspeedy.build()
+  console.log('[lynx] Build complete.')
+  // `rspeedy.context.distPath` is the resolved output dir (honors a
+  // user-customized `output.distPath.root`). See lynx-stack
+  // packages/rspeedy/core/src/create-rspeedy.ts:153.
+  return rspeedy.context.distPath
 }
 
 export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
@@ -63,7 +249,6 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   )
 
   const isDev = options.configType !== 'PRODUCTION'
-  const distDir = join(projectRoot, 'dist')
 
   const baseConfig = mergeRsbuildConfig(config, {
     source: {
@@ -71,49 +256,43 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
     },
   })
 
-  // Dev + lynx config: proxy to rspeedy dev server with HMR support
+  // Dev + lynx config: in-process rspeedy dev server, proxied via Rsbuild.
   if (lynxConfig && isDev) {
-    const sseClients: import('node:http').ServerResponse[] = []
-    const rspeedyDevOrigin = await startRspeedyDev(
-      projectRoot,
-      sseClients,
-      lynxConfig,
-    )
+    const origin = await setupRspeedyDev(projectRoot, lynxConfig)
+    const state = getRspeedyState()
 
     return mergeRsbuildConfig(baseConfig, {
+      server: {
+        proxy: {
+          [bundlePrefix]: {
+            target: origin,
+            changeOrigin: true,
+            pathRewrite: { [`^${bundlePrefix}`]: '' },
+          },
+          '/.rspeedy': {
+            target: origin,
+            changeOrigin: true,
+          },
+        },
+      },
       dev: {
         setupMiddlewares: [
           (middlewares) => {
+            // SSE endpoint: preview.ts subscribes for rebuild reload events.
             middlewares.unshift((req, res, next) => {
-              // SSE endpoint: preview.ts subscribes to rebuild events
-              if (req.url === '/__lynx_hmr__') {
-                res.writeHead(200, {
-                  'Content-Type': 'text/event-stream',
-                  'Cache-Control': 'no-cache',
-                  Connection: 'keep-alive',
-                  'Access-Control-Allow-Origin': '*',
-                })
-                res.write('data: connected\n\n')
-                sseClients.push(res)
-                req.on('close', () => {
-                  const idx = sseClients.indexOf(res)
-                  if (idx !== -1) sseClients.splice(idx, 1)
-                })
-                return
-              }
-              // Proxy bundle requests (injects HMR polyfill)
-              if (req.url?.startsWith(bundlePrefix)) {
-                return proxyToRspeedy(
-                  rspeedyDevOrigin,
-                  req.url.slice(bundlePrefix.length),
-                  res,
-                )
-              }
-              // Proxy HMR hot-update requests (CSS/JS) to rspeedy
-              if (req.url?.startsWith('/.rspeedy/')) {
-                return pipeToRspeedy(rspeedyDevOrigin, req.url, res)
-              }
-              next()
+              if (req.url !== '/__lynx_hmr__') return next()
+              res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+              })
+              res.write('data: connected\n\n')
+              state.sseClients.push(res)
+              req.on('close', () => {
+                const idx = state.sseClients.indexOf(res)
+                if (idx !== -1) state.sseClients.splice(idx, 1)
+              })
             })
           },
         ],
@@ -121,21 +300,24 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
     })
   }
 
-  // Build + lynx config: run rspeedy build, copy bundles into Storybook output
+  // Build + lynx config: run rspeedy build (in-process), copy bundles into
+  // Storybook output as static assets. The source directory comes from
+  // `rspeedy.context.distPath` so a user-customized `output.distPath.root`
+  // is honored.
   if (lynxConfig && !isDev) {
-    await runRspeedyBuild(projectRoot, lynxConfig)
+    const rspeedyDistDir = await runRspeedyBuild(projectRoot, lynxConfig)
 
     return mergeRsbuildConfig(baseConfig, {
       output: {
         copy: [
           {
             from: '**/*.web.bundle',
-            context: distDir,
+            context: rspeedyDistDir,
             to: `${bundlePrefix.slice(1)}/`,
           },
           {
             from: 'static/**/*',
-            context: distDir,
+            context: rspeedyDistDir,
             to: `${bundlePrefix.slice(1)}/`,
           },
         ],
@@ -143,357 +325,7 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
     })
   }
 
-  // Dev without lynx config: serve pre-built bundles from dist/ as static files
-  if (!lynxConfig && isDev) {
-    return mergeRsbuildConfig(baseConfig, {
-      dev: {
-        setupMiddlewares: [
-          (middlewares: any) => {
-            middlewares.unshift(
-              (
-                req: any,
-                res: import('node:http').ServerResponse,
-                next: () => void,
-              ) => {
-                if (!req.url?.startsWith(bundlePrefix)) {
-                  return next()
-                }
-
-                const fs = require('node:fs') as typeof import('node:fs')
-                const path = require('node:path') as typeof import('node:path')
-                const bundlePath = req.url
-                  .slice(bundlePrefix.length)
-                  .replace(/^\//, '')
-                const filePath = path.resolve(distDir, bundlePath)
-
-                // Prevent directory traversal outside distDir
-                if (!filePath.startsWith(distDir + path.sep)) {
-                  res.statusCode = 403
-                  res.end('Forbidden')
-                  return
-                }
-
-                if (!fs.existsSync(filePath)) {
-                  res.statusCode = 404
-                  res.end(
-                    `Lynx bundle not found: ${bundlePath}\nEnsure your lynx.config entry names match story parameters.lynx.url paths.`,
-                  )
-                  return
-                }
-
-                const content = fs.readFileSync(filePath)
-                res.setHeader('Content-Type', 'application/json')
-                res.setHeader('Access-Control-Allow-Origin', '*')
-                res.end(content)
-              },
-            )
-          },
-        ],
-      },
-    })
-  }
-
-  // Build without lynx config: nothing to configure
+  // Without lynx config: bundles are served via the `staticDirs` preset
+  // export above (declarative; works in both dev and build modes).
   return baseConfig
-}
-
-/**
- * Run rspeedy build (blocking) to produce static bundles for Storybook build.
- */
-function runRspeedyBuild(projectRoot: string, configPath?: string): void {
-  const { execFileSync } =
-    require('node:child_process') as typeof import('node:child_process')
-
-  const args = ['rspeedy', 'build', '--environment', 'web']
-  if (configPath) args.push('--config', configPath)
-
-  console.log('[lynx] Building Lynx components...')
-  try {
-    execFileSync('npx', args, {
-      cwd: projectRoot,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, FORCE_COLOR: '1' },
-      shell: process.platform === 'win32',
-    })
-    console.log('[lynx] Build complete.')
-  } catch (err: any) {
-    const msg = err.stderr?.toString() || err.message
-    console.error('[lynx] Build failed:', msg)
-    throw new Error(`rspeedy build failed: ${msg}`)
-  }
-}
-
-/**
- * Simple reverse proxy — pipes the rspeedy response directly to the client.
- * Used for HMR hot-update files (CSS/JS) that don't need polyfill injection.
- */
-function pipeToRspeedy(
-  origin: string,
-  path: string,
-  res: import('node:http').ServerResponse,
-) {
-  const http = require('node:http') as typeof import('node:http')
-  http
-    .get(`${origin}${path}`, (proxyRes) => {
-      res.statusCode = proxyRes.statusCode ?? 200
-      const ct = proxyRes.headers['content-type']
-      if (ct) res.setHeader('Content-Type', ct)
-      res.setHeader('Access-Control-Allow-Origin', '*')
-      proxyRes.pipe(res)
-    })
-    .on('error', (err) => {
-      console.error('[lynx] Proxy to rspeedy dev failed:', err.message)
-      res.statusCode = 502
-      res.end(`Failed to proxy to rspeedy dev server: ${err.message}`)
-    })
-}
-
-/**
- * Polyfill for `lynx.requireModuleAsync` in web environment.
- * The Rspack HMR runtime (from @lynx-js/chunk-loading-webpack-plugin) uses
- * `lynx.requireModuleAsync(url, callback)` to fetch hot-update manifests
- * and chunks. This API exists in Lynx native but not in the web runtime.
- * We polyfill it with `fetch()` so HMR works inside <lynx-view>'s
- * iframe (main thread) and Web Worker (background thread).
- *
- * The rspeedy origin is injected so relative URLs (e.g. `.rspeedy/Button/...`)
- * resolve correctly even inside blob-URL Workers where `location` is unusable.
- */
-function makeRequireModuleAsyncPolyfill(rspeedyOrigin: string): string {
-  return `
-if (typeof lynx !== 'undefined') {
-  // Expose lynx on the global object so hot-update modules evaluated via
-  // new Function() (which runs in the global scope, outside the bundle's
-  // closure) can access it. Without this, ReferenceError: lynx is not defined.
-  if (typeof self !== 'undefined' && !self.lynx) self.lynx = lynx;
-  if (typeof globalThis !== 'undefined' && !globalThis.lynx) globalThis.lynx = lynx;
-
-  var __rspeedyOrigin = ${JSON.stringify(rspeedyOrigin)};
-  lynx.requireModuleAsync = function(url, callback) {
-    if (url.indexOf('://') === -1) { url = __rspeedyOrigin + '/' + url; }
-    var fetchFn = typeof fetch === 'function' ? fetch : globalThis.fetch;
-    fetchFn(url).then(function(response) {
-      if (!response.ok) {
-        callback(new Error('HTTP ' + response.status + ' for ' + url));
-        return;
-      }
-      var ct = response.headers.get('content-type') || '';
-      if (ct.indexOf('json') !== -1) {
-        response.json().then(
-          function(data) { callback(null, data); },
-          function(err) { callback(err); }
-        );
-      } else {
-        response.text().then(function(text) {
-          var module = { exports: {} };
-          try {
-            var fn = new Function('module', 'exports', text);
-            fn(module, module.exports);
-            callback(null, module.exports);
-          } catch(e) { callback(e); }
-        }, function(err) { callback(err); });
-      }
-    })['catch'](function(err) { callback(err); });
-  };
-}
-`
-}
-
-/**
- * Proxy a bundle request to the rspeedy dev server.
- * Injects `lynx.requireModuleAsync` polyfill into the bundle JS sections
- * so that Rspack's HMR runtime can fetch hot-update files via `fetch()`.
- */
-function proxyToRspeedy(
-  origin: string,
-  bundlePath: string,
-  res: import('node:http').ServerResponse,
-) {
-  const http = require('node:http') as typeof import('node:http')
-  const polyfill = makeRequireModuleAsyncPolyfill(origin)
-  const url = `${origin}${bundlePath}`
-
-  http
-    .get(url, (proxyRes) => {
-      if ((proxyRes.statusCode ?? 200) !== 200) {
-        res.statusCode = proxyRes.statusCode ?? 502
-        res.setHeader('Access-Control-Allow-Origin', '*')
-        proxyRes.pipe(res)
-        return
-      }
-
-      // Collect the full response to inject the polyfill
-      const chunks: Buffer[] = []
-      proxyRes.on('data', (chunk: Buffer) => chunks.push(chunk))
-      proxyRes.on('end', () => {
-        try {
-          const body = Buffer.concat(chunks).toString('utf-8')
-          const bundle = JSON.parse(body)
-
-          // Inject polyfill into lepusCode (main thread JS)
-          if (
-            bundle.lepusCode?.root &&
-            typeof bundle.lepusCode.root === 'string'
-          ) {
-            bundle.lepusCode.root = polyfill + bundle.lepusCode.root
-          }
-
-          // Inject polyfill into manifest (background thread JS)
-          if (bundle.manifest && typeof bundle.manifest === 'object') {
-            for (const key of Object.keys(bundle.manifest)) {
-              if (typeof bundle.manifest[key] === 'string') {
-                bundle.manifest[key] = polyfill + bundle.manifest[key]
-              }
-            }
-          }
-
-          const modified = JSON.stringify(bundle)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.setHeader('Access-Control-Allow-Origin', '*')
-          res.end(modified)
-        } catch {
-          // If JSON parsing fails, just forward the original response
-          const original = Buffer.concat(chunks)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.setHeader('Access-Control-Allow-Origin', '*')
-          res.end(original)
-        }
-      })
-    })
-    .on('error', (err) => {
-      console.error('[lynx] Proxy to rspeedy dev failed:', err.message)
-      res.statusCode = 502
-      res.end(`Failed to proxy to rspeedy dev server: ${err.message}`)
-    })
-}
-
-/**
- * Start rspeedy dev server and return its origin URL (e.g. "http://192.168.1.1:3000").
- * Blocks until the first build is complete so Storybook can render immediately.
- * After the initial build, monitors stdout for subsequent rebuilds and notifies
- * all connected SSE clients so the browser can reload <lynx-view>.
- */
-function startRspeedyDev(
-  projectRoot: string,
-  sseClients?: import('node:http').ServerResponse[],
-  configPath?: string,
-): Promise<string> {
-  const { spawn } =
-    require('node:child_process') as typeof import('node:child_process')
-
-  return new Promise((resolve, reject) => {
-    const args = ['rspeedy', 'dev', '--environment', 'web']
-    if (configPath) args.push('--config', configPath)
-
-    const child = spawn('npx', args, {
-      cwd: projectRoot,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, FORCE_COLOR: '1' },
-      shell: process.platform === 'win32',
-    })
-
-    let settled = false
-    // Track whether the current rebuild involves a CSS file.
-    // JS changes are handled by Lynx's internal HMR (WebSocket from within
-    // lynx-view connects to rspeedy directly). CSS changes can't be applied
-    // inside the shadow DOM by the HMR runtime, so only CSS rebuilds trigger
-    // a full <lynx-view> reload via SSE.
-    let pendingCssRebuild = false
-
-    const cleanup = () => {
-      child.kill()
-    }
-    process.on('exit', cleanup)
-    process.on('SIGINT', cleanup)
-    process.on('SIGTERM', cleanup)
-
-    const removeListeners = () => {
-      process.removeListener('exit', cleanup)
-      process.removeListener('SIGINT', cleanup)
-      process.removeListener('SIGTERM', cleanup)
-    }
-
-    // Timeout after 30s
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true
-        child.kill()
-        removeListeners()
-        reject(new Error('rspeedy dev server did not start within 30s'))
-      }
-    }, 30000)
-    timer.unref()
-
-    const onData = (data: Buffer) => {
-      const msg = data.toString().trim()
-      if (msg) console.log(`[lynx] ${msg}`)
-
-      if (!settled) {
-        // rspeedy prints URLs like "http://192.168.1.1:3000/Button.web.bundle"
-        // Extract the origin from the first http URL we see
-        const match = msg.match(/https?:\/\/[^\s/]+:\d+/)
-        if (match) {
-          settled = true
-          clearTimeout(timer)
-          const origin = match[0]
-          console.log(`[lynx] rspeedy dev server ready at ${origin}`)
-          resolve(origin)
-        }
-      } else if (sseClients) {
-        // Rspeedy prints "building <file>" when a rebuild starts.
-        if (/building\s.*\.css/.test(msg)) {
-          pendingCssRebuild = true
-        }
-
-        // Rspeedy prints "ready  built in X.XXs" (with ANSI codes) on rebuild.
-        // Only CSS rebuilds trigger SSE (full <lynx-view> reload) because
-        // Lynx's CSS HMR can't apply styleInfo updates inside the shadow DOM.
-        // JS changes are handled by Lynx's internal HMR (state-preserving).
-        if (/ready\s.*built in/.test(msg) || /\[32mready/.test(msg)) {
-          if (pendingCssRebuild) {
-            console.log('[lynx] CSS rebuild detected, notifying SSE clients')
-            for (const client of sseClients) {
-              client.write('data: content-changed\n\n')
-            }
-          }
-          pendingCssRebuild = false
-        }
-      }
-    }
-
-    child.stdout?.on('data', onData)
-    child.stderr?.on('data', (data: Buffer) => {
-      const msg = data.toString().trim()
-      if (msg) console.error(`[lynx] ${msg}`)
-      // Also check stderr for URL (rspeedy may print there)
-      if (!settled) {
-        const match = msg.match(/https?:\/\/[^\s/]+:\d+/)
-        if (match) {
-          settled = true
-          clearTimeout(timer)
-          resolve(match[0])
-        }
-      }
-    })
-
-    child.on('error', (err) => {
-      if (!settled) {
-        settled = true
-        clearTimeout(timer)
-        removeListeners()
-        reject(new Error(`Failed to start rspeedy dev server: ${err.message}`))
-      }
-    })
-
-    child.on('exit', (code) => {
-      if (!settled) {
-        settled = true
-        clearTimeout(timer)
-        removeListeners()
-        reject(new Error(`rspeedy dev exited with code ${code}`))
-      }
-    })
-  })
 }

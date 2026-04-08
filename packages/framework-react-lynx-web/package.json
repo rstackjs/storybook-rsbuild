@@ -63,6 +63,7 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
+    "@lynx-js/rspeedy": ">=0.10.0",
     "@lynx-js/web-core": ">=0.6.0",
     "@lynx-js/web-elements": ">=0.6.0",
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
