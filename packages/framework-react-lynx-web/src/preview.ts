@@ -20,17 +20,20 @@ interface LynxViewElement extends HTMLElement {
   updateGlobalProps(data: Record<string, unknown>): void
 }
 
-// Subscribe to rspeedy rebuild events via SSE (server relays rspeedy's
-// WebSocket). The Lynx web runtime can't apply CSS hot-updates inside the
-// shadow DOM, so we reload the <lynx-view> to pick up the new styles.
-// Note: we must use a cache-busting URL instead of reload() because
-// @lynx-js/web-core's loadTemplate.js caches templates by URL string.
-// reload() reuses the same URL and would serve the stale cached template.
-// Only connect to the HMR endpoint during development.
-// In production builds there is no /__lynx_hmr__ handler, so EventSource
-// would reconnect endlessly generating noise in the network tab.
-// Rsbuild replaces process.env.NODE_ENV at build time, so the entire
-// block is removed via dead-code elimination in production bundles.
+// Subscribe to rspeedy rebuild events via SSE and force-reload <lynx-view>.
+// The trigger is driven by rspeedy's compiler `onDevCompileDone` hook (in
+// preset.ts), which broadcasts on every rebuild — this covers both TSX and
+// CSS edits, since pluginReactLynx disables per-asset HMR for the `web` env
+// (see lynx-stack packages/rspeedy/plugin-react/src/entry.ts).
+//
+// `?t=` cache-bust workaround: @lynx-js/web-core's TemplateManager caches
+// bundles by URL string and exposes no public invalidation API. Until
+// upstream ships one, mutating the URL is the only way to force re-fetch.
+// Tracking issue: TODO upstream link.
+//
+// Rsbuild replaces process.env.NODE_ENV at build time, so the entire block
+// is dead-code-eliminated in production bundles (no /__lynx_hmr__ handler
+// exists in prod, and an EventSource would reconnect endlessly).
 if (process.env.NODE_ENV !== 'production') {
   try {
     const es = new EventSource('/__lynx_hmr__')
@@ -39,9 +42,7 @@ if (process.env.NODE_ENV !== 'production') {
       const lynxView = document.querySelector(
         'lynx-view',
       ) as LynxViewElement | null
-      if (!lynxView?.url) return
-      const baseUrl = lynxView.url.split('?')[0]
-      lynxView.url = `${baseUrl}?t=${Date.now()}`
+      if (lynxView?.url) reloadLynxView(lynxView)
     })
   } catch {
     /* SSE not available, ignore */
@@ -49,7 +50,29 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 /**
- * Create a fresh <lynx-view> element with initial globalProps.
+ * Force <lynx-view> to re-fetch its template, bypassing web-core's URL cache.
+ * See note on `?t=` above.
+ */
+function reloadLynxView(view: LynxViewElement) {
+  const baseUrl = view.url.split('?')[0]
+  view.url = `${baseUrl}?t=${Date.now()}`
+}
+
+/**
+ * Create a fresh, **detached** <lynx-view> element with url + globalProps set
+ * BEFORE it's connected to the DOM.
+ *
+ * Why: web-core's LynxView#render() is gated on `!#rendering && #connected`.
+ * If connectedCallback fires while `#url` is undefined, render() sets
+ * `#rendering = true` and kicks off a queueMicrotask whose only path that
+ * resets `#rendering` lives inside `if (this.#url)`. With no url, the task
+ * no-ops and `#rendering` stays `true` forever, so a *subsequent* `.url = x`
+ * assignment triggers another render() call that immediately bails on the
+ * `!#rendering` guard. Result: the first story visit is blank.
+ *
+ * Setting `url` via setAttribute before append populates `#url` through
+ * attributeChangedCallback, so when connectedCallback runs it sees a
+ * truthy url and the microtask actually loads the bundle.
  */
 function createLynxView(
   lynxUrl: string,
@@ -60,24 +83,9 @@ function createLynxView(
     'style',
     'display: block; width: 100%; min-height: 200px;',
   )
-
-  // Set globalProps via both property and attribute before the element connects.
-  // The attribute triggers attributeChangedCallback which writes to #globalProps,
-  // and the property setter also writes to #globalProps directly.
   lynxView.setAttribute('global-props', JSON.stringify(globalProps))
   lynxView.globalProps = globalProps
-
-  // Defer url assignment: <lynx-view>#render() internally uses queueMicrotask
-  // after connectedCallback. On initial page load, Storybook may call
-  // renderToCanvas multiple times, each time clearing innerHTML (disconnecting
-  // the element). By deferring to setTimeout, we ensure the element is in its
-  // final connected state before triggering the render.
-  setTimeout(() => {
-    if (lynxView.isConnected && !lynxView.url) {
-      lynxView.url = lynxUrl
-    }
-  }, 50)
-
+  lynxView.setAttribute('url', lynxUrl)
   return lynxView
 }
 
@@ -137,7 +145,9 @@ export function renderToCanvas(
     }
   }
 
-  // Fresh render: clear canvas and mount the new element.
+  // Fresh render: clear canvas and mount the new element. The <lynx-view>
+  // returned by storyFn already has `url` set, so appendChild triggers
+  // connectedCallback → #render() → bundle fetch in one shot.
   canvasElement.innerHTML = ''
   const element = storyFn()
   if (element instanceof Node) {
