@@ -35,7 +35,8 @@
     "./preview": {
       "types": "./dist/preview.d.ts",
       "default": "./dist/preview.js"
-    }
+    },
+    "./preview-runtime": "./dist/preview-runtime.js"
   },
   "files": [
     "dist/**/*",
@@ -70,7 +71,7 @@
     "storybook": "^10.1.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.6.0"
   },
   "publishConfig": {
     "access": "public"
@@ -80,7 +81,8 @@
       "./src/node/index.ts",
       "./src/index.ts",
       "./src/preset.ts",
-      "./src/preview.ts"
+      "./src/preview.ts",
+      "./src/preview-runtime.ts"
     ],
     "platform": "node"
   }
