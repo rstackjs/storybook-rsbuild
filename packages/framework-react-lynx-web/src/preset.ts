@@ -119,6 +119,36 @@ function requireLynxConfig(
   )
 }
 
+/**
+ * Discover a user-authored Storybook dispatcher file under `configDir`.
+ * Mirrors Storybook's own `.storybook/preview.*` convention so zero config
+ * is needed in the common case. Users who want a custom location can still
+ * rely on `entry:` / `url:` escape hatches.
+ */
+const STORYBOOK_PREVIEW_NAMES = [
+  'lynx-preview.tsx',
+  'lynx-preview.ts',
+  'lynx-preview.jsx',
+  'lynx-preview.js',
+] as const
+
+function findStorybookPreviewFile(configDir: string): string | undefined {
+  for (const name of STORYBOOK_PREVIEW_NAMES) {
+    const abs = resolve(configDir, name)
+    if (existsSync(abs)) return abs
+  }
+  return undefined
+}
+
+/**
+ * Synthetic entry key under which the dispatcher file gets registered in
+ * rspeedy's `source.entry`. Exposed as a constant because both the preset
+ * injection and the `__LYNX_STORYBOOK_ENTRY__` URL computation need it.
+ * The leading/trailing underscores make an accidental collision with a
+ * user-authored entry name extremely unlikely.
+ */
+const STORYBOOK_ENTRY_KEY = '__storybook__'
+
 function findLynxConfig(
   projectRoot: string,
   configPath?: string,
@@ -249,12 +279,40 @@ async function loadUserRspeedyConfig(
 }
 
 /**
+ * Statically extract the bundle entry names from a parsed rspeedy config.
+ * Mirrors the rspack/rsbuild rules that map `source.entry` to bundle file
+ * names: a `string` or `string[]` collapses to the implicit name `main`,
+ * a record uses its keys, and missing entry falls back to `main`.
+ *
+ * Used to populate `__LYNX_AVAILABLE_BUNDLES__` so the preview's missing-
+ * url error can show a copy-paste-ready list, and so `parameters.lynx.entry`
+ * shortcut can validate against a known set without round-tripping through
+ * rspeedy stats. This is intentionally static-only — we never want to
+ * block `rsbuildFinal` on a full rspeedy compile just to discover names.
+ */
+function extractEntryNames(rspeedyConfig: unknown): string[] {
+  const entry = (rspeedyConfig as { source?: { entry?: unknown } }).source
+    ?.entry
+  if (entry == null) return ['main']
+  if (typeof entry === 'string' || Array.isArray(entry)) return ['main']
+  if (typeof entry === 'object') {
+    return Object.keys(entry as Record<string, unknown>)
+  }
+  return []
+}
+
+/**
  * Lazily start (or reuse) an in-process rspeedy dev server. Returns the
  * origin URL once the first compile has completed and the server is listening.
+ *
+ * `rspeedyConfig` is passed in (rather than re-loaded inside) so that
+ * `rsbuildFinal` can read it once for both `extractEntryNames` and the
+ * dev/build setup paths — config evaluation runs the user's `lynx.config.ts`
+ * through jiti and is not free.
  */
 async function setupRspeedyDev(
   projectRoot: string,
-  lynxConfigPath: string,
+  rspeedyConfig: unknown,
 ): Promise<string> {
   const state = getRspeedyState()
   if (state.origin) return state.origin
@@ -262,10 +320,6 @@ async function setupRspeedyDev(
   if (!state.setupPromise) {
     state.setupPromise = (async () => {
       const { createRspeedy } = await importUserRspeedy(projectRoot)
-      const rspeedyConfig = await loadUserRspeedyConfig(
-        projectRoot,
-        lynxConfigPath,
-      )
 
       // NOTE: do NOT pass `callerName` — passing it disables rspeedy's
       // default plugin chain (including pluginReactLynx's JSX/TSX loader
@@ -273,7 +327,9 @@ async function setupRspeedyDev(
       // "JavaScript parse error: Expression expected".
       const rspeedy = await createRspeedy({
         cwd: projectRoot,
-        rspeedyConfig,
+        rspeedyConfig: rspeedyConfig as Parameters<
+          typeof createRspeedy
+        >[0]['rspeedyConfig'],
         environment: ['web'],
       })
 
@@ -316,15 +372,16 @@ async function setupRspeedyDev(
  */
 async function runRspeedyBuild(
   projectRoot: string,
-  lynxConfigPath: string,
+  rspeedyConfig: unknown,
 ): Promise<string> {
   const { createRspeedy } = await importUserRspeedy(projectRoot)
-  const rspeedyConfig = await loadUserRspeedyConfig(projectRoot, lynxConfigPath)
 
   console.log('[lynx] Building Lynx components...')
   const rspeedy = await createRspeedy({
     cwd: projectRoot,
-    rspeedyConfig,
+    rspeedyConfig: rspeedyConfig as Parameters<
+      typeof createRspeedy
+    >[0]['rspeedyConfig'],
     environment: ['web'],
   })
   await rspeedy.build()
@@ -346,10 +403,74 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   const projectRoot = resolveProjectRoot(options.configDir)
   const bundlePrefix = normalizeBundlePrefix(frameworkOptions.lynxBundlePrefix)
   // Hard-error if there's no lynx.config — see `requireLynxConfig`.
-  const lynxConfig = requireLynxConfig(
+  const lynxConfigPath = requireLynxConfig(
     projectRoot,
     frameworkOptions.lynxConfigPath,
   )
+  // Load the rspeedy config once and reuse it for both entry-name
+  // extraction (to seed the preview-side `__LYNX_*` globals) and the
+  // dev/build setup paths (so rspeedy doesn't re-evaluate the user's
+  // `lynx.config.ts` through jiti a second time).
+  const rspeedyConfig = await loadUserRspeedyConfig(projectRoot, lynxConfigPath)
+
+  // Storybook dispatcher auto-injection.
+  //
+  // If the user authored a `.storybook/lynx-preview.{tsx,ts,jsx,js}`, we add
+  // it to rspeedy's `source.entry` map under the synthetic
+  // `__storybook__` key. From there on it compiles like any other rspeedy
+  // entry — `pluginReactLynx`'s JSX/TSX loader, web env, asset handling —
+  // and the resulting `__storybook__.web.bundle` is what
+  // `parameters.lynx.component: 'Name'` points to at render time.
+  //
+  // Injection happens on the rspeedyConfig object BEFORE we hand it to
+  // `createRspeedy` (either via `setupRspeedyDev` or `runRspeedyBuild`),
+  // so by the time rspeedy's own config pipeline runs, the synthetic entry
+  // already exists alongside the user's own entries.
+  //
+  // If `source.entry` is in the `string | string[]` (app-level) form, we
+  // error loudly rather than silently promoting to record form — silent
+  // promotion risks hiding a user typo in their existing entry name.
+  const storybookPreviewPath = findStorybookPreviewFile(options.configDir)
+  if (storybookPreviewPath) {
+    const source = ((
+      rspeedyConfig as { source?: Record<string, unknown> }
+    ).source ??= {})
+    const existingEntry = source.entry
+    if (typeof existingEntry === 'string' || Array.isArray(existingEntry)) {
+      throw new Error(
+        `[storybook-react-lynx-web-rsbuild] Detected a ` +
+          `.storybook/lynx-preview file but ${lynxConfigPath} sets ` +
+          `\`source.entry\` to a ${Array.isArray(existingEntry) ? 'string[]' : 'string'}. ` +
+          `The dispatcher entry needs to be merged into a record-form ` +
+          `\`source.entry\`. Convert it to \`{ main: '…' }\` (or drop it ` +
+          `entirely — the framework will inject \`${STORYBOOK_ENTRY_KEY}\` ` +
+          `for you) and restart Storybook.`,
+      )
+    }
+    source.entry = {
+      ...((existingEntry as Record<string, unknown> | undefined) ?? {}),
+      [STORYBOOK_ENTRY_KEY]: storybookPreviewPath,
+    }
+  }
+
+  const entryNames = extractEntryNames(rspeedyConfig)
+  const availableBundles = entryNames.map(
+    (name) => `${bundlePrefix}/${name}.web.bundle`,
+  )
+  // When the dispatcher entry is present, pre-compute its bundle URL so
+  // `preview.ts` can resolve `parameters.lynx.component` against a known
+  // target. `null` signals "no dispatcher" to the preview; the
+  // `component:` path then surfaces a clear error.
+  const storybookEntryUrl = storybookPreviewPath
+    ? `${bundlePrefix}/${STORYBOOK_ENTRY_KEY}.web.bundle`
+    : null
+  // Static component-name extraction is intentionally skipped for the PoC
+  // (parsing a TSX file to list exports is fiddly and error-prone). The
+  // preview surfaces a generic "unknown component" error at runtime via
+  // the dispatcher fallback + `formatMissingUrlMessage`. Upgrade path:
+  // parse the file or require users to export a named `components` const
+  // we can load with jiti at config-resolve time.
+  const storybookComponents: readonly string[] = []
 
   const isDev = options.configType !== 'PRODUCTION'
 
@@ -359,15 +480,45 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   // depends on the host project's target; rsbuild's default
   // `node_modules` exclusion would hand them to the runtime unprocessed
   // and produce "Unexpected token" errors at evaluation time.
+  //
+  // `source.define` injects compile-time constants consumed by the
+  // framework's `preview.ts`:
+  //   - `__LYNX_BUNDLE_PREFIX__`: the resolved URL prefix (so the entry
+  //     shortcut can stitch `${prefix}/${entry}.web.bundle` without
+  //     hardcoding the default).
+  //   - `__LYNX_AVAILABLE_BUNDLES__`: the static list of bundles the
+  //     framework expects rspeedy to emit, derived from
+  //     `extractEntryNames`. The preview shows this list verbatim in
+  //     the missing-url error so users can copy a known-good URL
+  //     instead of guessing the `.web.bundle` naming convention.
+  //   - `__LYNX_STORYBOOK_ENTRY__`: URL of the auto-injected dispatcher
+  //     bundle, or `null` if the user didn't author a
+  //     `.storybook/lynx-preview.*` file. `parameters.lynx.component`
+  //     resolution short-circuits to an error when this is `null`.
+  //   - `__LYNX_STORYBOOK_COMPONENTS__`: statically-known component
+  //     names registered with the dispatcher. Empty in the current
+  //     PoC — runtime surfaces unknown-component errors via the
+  //     dispatcher fallback.
+  //
+  // `null` for `__LYNX_STORYBOOK_ENTRY__` MUST go through
+  // `JSON.stringify(null)` → `"null"`, otherwise rsbuild interprets a
+  // bare `null` as "delete this define key" and the ambient decl on the
+  // preview side reads as `undefined` instead of `null`.
   const baseConfig = mergeRsbuildConfig(config, {
     source: {
       include: [/[\\/]node_modules[\\/]@lynx-js[\\/]/],
+      define: {
+        __LYNX_BUNDLE_PREFIX__: JSON.stringify(bundlePrefix),
+        __LYNX_AVAILABLE_BUNDLES__: JSON.stringify(availableBundles),
+        __LYNX_STORYBOOK_ENTRY__: JSON.stringify(storybookEntryUrl),
+        __LYNX_STORYBOOK_COMPONENTS__: JSON.stringify(storybookComponents),
+      },
     },
   })
 
   // Dev: in-process rspeedy dev server, proxied via Rsbuild.
   if (isDev) {
-    const origin = await setupRspeedyDev(projectRoot, lynxConfig)
+    const origin = await setupRspeedyDev(projectRoot, rspeedyConfig)
     const state = getRspeedyState()
 
     return mergeRsbuildConfig(baseConfig, {
@@ -438,7 +589,7 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   //     (The collision surface with storybook's own emitted files is
   //     empty by construction: storybook uses `static/{js,css,wasm}`
   //     while lynx uses `static/{image,font,svg}`.)
-  const rspeedyDistDir = await runRspeedyBuild(projectRoot, lynxConfig)
+  const rspeedyDistDir = await runRspeedyBuild(projectRoot, rspeedyConfig)
 
   return mergeRsbuildConfig(baseConfig, {
     output: {

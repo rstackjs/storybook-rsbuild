@@ -15,8 +15,7 @@ npm install storybook-react-lynx-web-rsbuild \
 ```
 
 You also need a `lynx.config.ts` in your project root that invokes
-`pluginReactLynx()` and lists every component you want to render as a
-`source.entry` — see [Usage](#usage).
+`pluginReactLynx()` — see [Usage](#usage).
 
 ## Usage
 
@@ -37,7 +36,8 @@ const config: StorybookConfig = {
 export default config
 ```
 
-In your project root `lynx.config.ts`:
+In your project root `lynx.config.ts` — no `source.entry` required for
+the common case; the framework injects its own dispatcher entry:
 
 ```ts
 import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
@@ -49,28 +49,27 @@ export default defineConfig({
     web: {},
     lynx: {},
   },
-  source: {
-    entry: {
-      // One entry per component you want to render in Storybook.
-      Button: './src/components/button-entry.tsx',
-    },
+})
+```
+
+Create `.storybook/lynx-preview.tsx` and register every component you
+want to expose to stories:
+
+```tsx
+// .storybook/lynx-preview.tsx
+import { createLynxStorybook } from 'storybook-react-lynx-web-rsbuild/runtime'
+
+import { Button } from '../src/components/Button.tsx'
+import '../src/components/Button.css'
+
+createLynxStorybook({
+  components: {
+    Button: () => <Button />,
   },
 })
 ```
 
-Each entry file simply mounts your component:
-
-```tsx
-// src/components/button-entry.tsx
-import { root } from '@lynx-js/react'
-
-import { Button } from './Button.tsx'
-import './Button.css'
-
-root.render(<Button />)
-```
-
-Then write a story that points at the built `.web.bundle`:
+Then write a story and reference the component by name:
 
 ```ts
 // src/components/Button.stories.ts
@@ -80,7 +79,11 @@ const meta = {
   title: 'Example/Button',
   parameters: {
     lynx: {
-      url: '/lynx-bundles/Button.web.bundle',
+      // Matches a key from the `components` map in lynx-preview.tsx.
+      // The framework dispatches to it via a single auto-injected
+      // `__storybook__.web.bundle`, so you don't add a `source.entry`
+      // per component.
+      component: 'Button',
     },
   },
   argTypes: {
@@ -96,6 +99,26 @@ export const Primary: Story = {
   args: { primary: true, label: 'Button' },
 }
 ```
+
+### Escape hatches: `entry` and `url`
+
+For advanced cases — custom prefixes, remote bundles, bundles outside
+the dispatcher — two lower-level forms of `parameters.lynx` are still
+supported. Prefer `component:` above for day-to-day use.
+
+```ts
+// Reference a named rspeedy entry from your own lynx.config.ts:
+parameters: { lynx: { entry: 'LegacyApp' } }
+
+// Or point at any URL directly (remote or otherwise):
+parameters: { lynx: { url: 'https://cdn.example.com/my.web.bundle' } }
+```
+
+Resolution order is `url` → `entry` → `component`. If the active
+`component:` is not registered in `.storybook/lynx-preview.tsx`, the
+runtime dispatcher renders an empty placeholder; if the whole
+`.storybook/lynx-preview.*` file is missing, the preview shows an
+inline error telling you where to create it.
 
 Read Storybook args inside your component via `useGlobalProps()` from
 `@lynx-js/react`. Augment the `GlobalProps` interface for type safety:
@@ -135,8 +158,9 @@ framework: {
 ### `lynxBundlePrefix`
 
 URL prefix under which compiled `.web.bundle` files are served. Defaults
-to `/lynx-bundles`. Your story's `parameters.lynx.url` must start with
-this prefix.
+to `/lynx-bundles`. The dispatcher and the `entry:` shortcut pick this
+up automatically; stories that pass an explicit `parameters.lynx.url`
+must include the matching prefix themselves.
 
 ## Features
 

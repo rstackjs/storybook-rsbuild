@@ -1,5 +1,6 @@
 import { useCallback, useState } from '@lynx-js/react'
 
+import './Button.css'
 import lynxLogo from '../assets/lynx-logo.png'
 import reactLogo from '../assets/react-logo.png'
 

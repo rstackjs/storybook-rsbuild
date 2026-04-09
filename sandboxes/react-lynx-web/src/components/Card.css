@@ -1,0 +1,24 @@
+.Card {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  padding: 24px;
+}
+
+.Card__title {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.Card__body {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  text-align: center;
+  max-width: 80%;
+}

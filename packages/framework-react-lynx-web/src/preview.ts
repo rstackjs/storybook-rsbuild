@@ -1,5 +1,26 @@
 import { simulateDOMContentLoaded } from 'storybook/preview-api'
 
+// Compile-time globals injected by `preset.ts`'s `source.define`. All
+// are static for the life of a Storybook process: they reflect what the
+// framework derived from `framework.options.lynxBundlePrefix`, the keys
+// of `lynx.config.ts → source.entry` at startup, and the presence of a
+// `.storybook/lynx-preview.*` dispatcher file. They are NOT reactive to
+// dev-time edits of `lynx.config.ts` or additions of a dispatcher file
+// after startup (a change requires restarting Storybook anyway, since
+// rspeedy itself only re-reads the file at startup). See `preset.ts`
+// `extractEntryNames` for the static-extraction rationale and the
+// rspack/rsbuild rules (`string`/`string[]` collapse to `'main'`,
+// record uses its keys).
+declare const __LYNX_BUNDLE_PREFIX__: string
+declare const __LYNX_AVAILABLE_BUNDLES__: readonly string[]
+/** URL of the auto-injected dispatcher bundle, or `null` if the user
+ * did not author a `.storybook/lynx-preview.*` file. */
+declare const __LYNX_STORYBOOK_ENTRY__: string | null
+/** Component names registered with the dispatcher. Empty in the
+ * current PoC — runtime surfaces unknown-component errors via the
+ * dispatcher's fallback. */
+declare const __LYNX_STORYBOOK_COMPONENTS__: readonly string[]
+
 // NOTE: Side-effect imports of `@lynx-js/web-core` and `@lynx-js/web-elements/all`
 // live in a SEPARATE preview entry (`./preview-runtime.ts`) and NOT this file.
 // Why: `@lynx-js/web-core` uses top-level await (WASM init), which makes any
@@ -219,22 +240,186 @@ function attachErrorListener(
 }
 
 /**
+ * Resolve the bundle URL for a story from `parameters.lynx`. Three
+ * forms are supported, in priority order:
+ *
+ *   1. `parameters.lynx.url: '/lynx-bundles/Button.web.bundle'` — the
+ *      explicit escape hatch. Useful when a story needs a custom
+ *      prefix, a remote URL, or a bundle that lives outside the
+ *      framework's static asset hosting.
+ *   2. `parameters.lynx.entry: 'Button'` — legacy per-component
+ *      shortcut. The framework stitches
+ *      `${__LYNX_BUNDLE_PREFIX__}/${entry}.web.bundle`. The entry name
+ *      must match a key from `lynx.config.ts → source.entry`. Kept for
+ *      backward compat with the pre-dispatcher hosting model; new
+ *      projects should prefer `component:`.
+ *   3. `parameters.lynx.component: 'Button'` — the dispatcher path.
+ *      Points at the auto-injected `__storybook__.web.bundle` and
+ *      writes the name into `globalProps.__storybookComponent`, which
+ *      the runtime dispatcher from
+ *      `storybook-react-lynx-web-rsbuild/runtime` uses to render the
+ *      right component. Requires a user-authored
+ *      `.storybook/lynx-preview.*` file; otherwise
+ *      `__LYNX_STORYBOOK_ENTRY__` is `null` and resolution surfaces an
+ *      error explaining the missing file.
+ *
+ * The returned shape uses optional *NotFound fields so the caller can
+ * distinguish "no URL at all" from "URL present but the user's hint
+ * points at something we can't find", and render a targeted error.
+ */
+function resolveLynxUrl(parameters: {
+  lynx?: { url?: string; entry?: string; component?: string }
+}): {
+  url: string | undefined
+  entryNotFound?: string
+  componentNotFound?: string
+  storybookEntryMissing?: boolean
+} {
+  const url = parameters?.lynx?.url
+  const entry = parameters?.lynx?.entry
+  const component = parameters?.lynx?.component
+  if (url) return { url }
+  if (entry) {
+    const computed = `${__LYNX_BUNDLE_PREFIX__}/${entry}.web.bundle`
+    const known = __LYNX_AVAILABLE_BUNDLES__.includes(computed)
+    return known ? { url: computed } : { url: computed, entryNotFound: entry }
+  }
+  if (component) {
+    if (__LYNX_STORYBOOK_ENTRY__ == null) {
+      // User asked for the dispatcher path but never authored the
+      // dispatcher file. Return no URL and flag the error so
+      // `formatMissingUrlMessage` can explain how to fix it.
+      return { url: undefined, storybookEntryMissing: true }
+    }
+    // Validate against the static component list when we have one.
+    // The PoC leaves this list empty, so the check no-ops and the
+    // runtime dispatcher surfaces unknown names via its fallback.
+    if (
+      __LYNX_STORYBOOK_COMPONENTS__.length > 0 &&
+      !__LYNX_STORYBOOK_COMPONENTS__.includes(component)
+    ) {
+      return {
+        url: __LYNX_STORYBOOK_ENTRY__,
+        componentNotFound: component,
+      }
+    }
+    return { url: __LYNX_STORYBOOK_ENTRY__ }
+  }
+  return { url: undefined }
+}
+
+/**
+ * Format the missing-url / wrong-entry / wrong-component error message.
+ * Always lists the statically known bundles and (if applicable)
+ * component names so the user can copy a working value rather than
+ * guessing the rspeedy `.web.bundle` naming convention or the
+ * dispatcher's component map keys.
+ */
+function formatMissingUrlMessage(
+  storyId: string,
+  opts: {
+    badEntry?: string
+    badComponent?: string
+    storybookEntryMissing?: boolean
+  } = {},
+): string {
+  const { badEntry, badComponent, storybookEntryMissing } = opts
+
+  if (storybookEntryMissing) {
+    return (
+      `Story "${storyId}" set parameters.lynx.component = ` +
+      `${JSON.stringify(badComponent)}, but no .storybook/lynx-preview ` +
+      `file was found.\n\n` +
+      `Create .storybook/lynx-preview.tsx (or .ts/.jsx/.js) next to ` +
+      `your main.ts, register the dispatcher with ` +
+      `\`createLynxStorybook({ components: { ${badComponent ?? 'Name'}: () => <${badComponent ?? 'Name'} /> } })\`, ` +
+      `and restart Storybook.`
+    )
+  }
+
+  if (badComponent) {
+    const head =
+      `Story "${storyId}" set parameters.lynx.component = ` +
+      `${JSON.stringify(badComponent)}, but the dispatcher does not ` +
+      `know about it.`
+    if (__LYNX_STORYBOOK_COMPONENTS__.length === 0) {
+      return (
+        `${head}\n\n` +
+        `Check the \`components\` object you pass to ` +
+        `\`createLynxStorybook({ components })\` in ` +
+        `.storybook/lynx-preview.*.`
+      )
+    }
+    const list = __LYNX_STORYBOOK_COMPONENTS__
+      .map((name) => `  • component: '${name}'`)
+      .join('\n')
+    return `${head}\n\nAvailable components:\n${list}`
+  }
+
+  const head = badEntry
+    ? `Story "${storyId}" set parameters.lynx.entry = ${JSON.stringify(badEntry)}, ` +
+      `but no matching bundle was found.`
+    : `Story "${storyId}" is missing parameters.lynx.component ` +
+      `(or parameters.lynx.entry / parameters.lynx.url).`
+  if (__LYNX_AVAILABLE_BUNDLES__.length === 0) {
+    return `${head}\n\nNo bundles are exposed by the current lynx.config.ts.`
+  }
+  const list = __LYNX_AVAILABLE_BUNDLES__
+    .map((u) => {
+      const entry = u.slice(
+        __LYNX_BUNDLE_PREFIX__.length + 1,
+        -'.web.bundle'.length,
+      )
+      return `  • entry: '${entry}'   (or url: '${u}')`
+    })
+    .join('\n')
+  return `${head}\n\nAvailable bundles:\n${list}`
+}
+
+/**
  * Default render function for ReactLynx Web stories.
  * Returns a DOM element that renderToCanvas will manage.
  */
 export function render(args: Record<string, unknown>, context: any) {
   const { id, parameters } = context
-  const lynxUrl = parameters?.lynx?.url
+  const {
+    url: lynxUrl,
+    entryNotFound,
+    componentNotFound,
+    storybookEntryMissing,
+  } = resolveLynxUrl(parameters ?? {})
 
-  if (!lynxUrl) {
+  if (!lynxUrl || entryNotFound || componentNotFound || storybookEntryMissing) {
     const el = document.createElement('div')
     el.style.cssText =
-      'padding: 20px; color: #999; font-family: sans-serif; text-align: center;'
-    el.textContent = `Story "${id}" is missing parameters.lynx.url — specify the path to a .web.bundle file.`
+      'padding: 20px; color: #b00020; background: #fff3f3; ' +
+      'border: 1px solid #ffcdd2; border-radius: 6px; margin: 16px; ' +
+      'font-family: ui-monospace, SFMono-Regular, Menlo, monospace; ' +
+      'font-size: 12px; white-space: pre-wrap;'
+    el.textContent = formatMissingUrlMessage(id, {
+      badEntry: entryNotFound,
+      badComponent: componentNotFound ?? parameters?.lynx?.component,
+      storybookEntryMissing,
+    })
     return el
   }
 
-  return createLynxView(lynxUrl, args ?? {})
+  // When the user picks the dispatcher path, write the component name
+  // into `globalProps.__storybookComponent` alongside the story's own
+  // args. The dispatcher (see `./runtime.ts`) reads that key and
+  // renders the matching component; the user's own component reads
+  // everything else.
+  //
+  // Piggy-backing on `globalProps` (rather than a separate channel)
+  // means the existing `updateGlobalProps` reuse path in
+  // `renderToCanvas` forwards the name for free — no new runtime
+  // surface needed. See the `Dispatcher` comment in `./runtime.ts` for
+  // the reactivity model.
+  const component = parameters?.lynx?.component
+  const globalProps = component
+    ? { ...(args ?? {}), __storybookComponent: component }
+    : (args ?? {})
+  return createLynxView(lynxUrl, globalProps)
 }
 
 /**
@@ -294,11 +479,6 @@ export async function renderToCanvas(
   },
   canvasElement: HTMLElement,
 ) {
-  // TODO(verify): `whenDefined` race fix was only exercised in `pnpm
-  // storybook` (dev) with a page-reload navigation pattern. Still needs
-  // a pass with `pnpm build:storybook` + static preview, and with
-  // in-manager sidebar navigation between stories (no iframe reload).
-  // The dev + fresh-page path is covered.
   await customElements.whenDefined('lynx-view')
 
   const { storyFn, showMain, forceRemount } = context
@@ -308,24 +488,23 @@ export async function renderToCanvas(
 
   showMain()
 
-  // Reuse path: existing <lynx-view> is loaded and this is not a story switch.
-  // Extract args from the new render call and push them via updateGlobalProps.
+  // Reuse path: same story, args changed (e.g. user wiggled a control).
+  // Storybook does NOT force-remount in this case — the iframe URL updates
+  // via history.replaceState, no reload, and renderToCanvas is called
+  // again with the existing `<lynx-view>` still in `canvasElement`.
   //
-  // TODO(verify): the reuse branch itself has not been re-tested after the
-  // `whenDefined` fix. Two scenarios to cover:
-  //   1. Wiggling a Storybook control on the same story — should hit this
-  //      path and live-update the shadow DOM without tearing down
-  //      `<lynx-view>`. Known-related upstream caveat: a component that
-  //      reads `lynx.__globalProps` non-reactively (as the current sandbox
-  //      Button.tsx does) will not re-render on `updateGlobalProps`
-  //      because there is no React state subscription — the class name
-  //      will stay on whatever primary/secondary value was baked in at
-  //      first render. The reactive path is `useGlobalProps()` from
-  //      `@lynx-js/react`. Framework behavior is still correct; it's a
-  //      user-code pitfall that should probably be documented.
-  //   2. In-manager sidebar click between Primary/Secondary — Storybook
-  //      may or may not pass `forceRemount: true` here; if not, we go
-  //      through `updateGlobalProps` and hit caveat (1).
+  // We push the new args through `updateGlobalProps` instead of replacing
+  // the element. That avoids tearing down the Lynx runtime (worker boot,
+  // WASM init, bundle fetch) and preserves state inside the bundle's
+  // React tree (counters, local state). The lynx-stack main-thread
+  // `updateGlobalProps` calls `__FlushElementTree` / `runWithForce(render)`
+  // which re-renders the bundle's React tree from root, so even
+  // components that read `lynx.__globalProps` non-reactively still pick
+  // up the new value — no `useGlobalProps()` requirement on user code.
+  //
+  // Story switches go through the fresh-render branch below because
+  // Storybook navigates the iframe to a new `?id=` URL, which reloads
+  // the iframe and `existingLynxView` comes back null.
   if (existingLynxView?.url && !forceRemount) {
     const element = storyFn()
     if (element instanceof HTMLElement && element.tagName === 'LYNX-VIEW') {
