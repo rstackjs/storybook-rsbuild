@@ -16,6 +16,10 @@ const config: BuildEntries = {
         entryPoint: './src/preview-runtime.ts',
         dts: false,
       },
+      {
+        exportEntries: ['./runtime'],
+        entryPoint: './src/runtime.ts',
+      },
     ],
     node: [
       {

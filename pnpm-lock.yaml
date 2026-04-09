@@ -311,6 +311,9 @@ importers:
 
   packages/framework-react-lynx-web:
     dependencies:
+      '@lynx-js/react':
+        specifier: '>=0.100.0'
+        version: 0.117.0(@types/react@19.2.14)
       '@lynx-js/rspeedy':
         specifier: '>=0.10.0'
         version: 0.13.6(@rspack/core@1.7.6(@swc/helpers@0.5.21))(typescript@5.9.3)(webpack@5.104.1)
@@ -14947,6 +14950,11 @@ snapshots:
   '@lynx-js/react@0.117.0(@types/react@18.3.28)':
     dependencies:
       '@types/react': 18.3.28
+      preact: '@lynx-js/internal-preact@10.28.4-ee7bb26'
+
+  '@lynx-js/react@0.117.0(@types/react@19.2.14)':
+    dependencies:
+      '@types/react': 19.2.14
       preact: '@lynx-js/internal-preact@10.28.4-ee7bb26'
 
   '@lynx-js/rspeedy@0.13.6(@rspack/core@1.7.6(@swc/helpers@0.5.21))(esbuild@0.27.0)(typescript@5.9.3)(webpack@5.104.1(esbuild@0.27.0))':

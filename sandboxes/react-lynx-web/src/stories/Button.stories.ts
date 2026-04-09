@@ -4,8 +4,7 @@ const meta = {
   title: 'Example/Button',
   parameters: {
     lynx: {
-      // Points to the pre-built Lynx web bundle served via staticDirs
-      url: '/lynx-bundles/Button.web.bundle',
+      component: 'Button',
     },
   },
   argTypes: {
