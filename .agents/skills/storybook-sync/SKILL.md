@@ -83,7 +83,11 @@ Fetch the commit list with diff line counts:
 bash <skill-dir>/scripts/fetch_upstream.sh --summary --days <N>
 ```
 
-Output: `HASH|DATE|AUTHOR|SUBJECT|LINES_ADDED+LINES_DELETED` (one per line, oldest first).
+Output: `HASH|DATE|AUTHOR|SUBJECT|LINES_ADDED+LINES_DELETED` (one per line, oldest first — the script uses `--reverse`).
+
+**Capture the range bounds from the summary output** — the first line's hash is `START_SHA` (oldest commit in range), the last line's hash is `END_SHA` (newest). These are the actual commits the report covers, regardless of whether the user asked for a date range, tag range, or commit range.
+
+This is critical for reproducibility: `END_SHA` is exactly where the next sync run should start from, and `START_SHA` anchors the beginning to a precise ref even when the user specified a fuzzy bound like `--days 30` or `--since 2026-03-12`.
 
 Based on the commit count:
 - **≤ 8 commits** → step 3a (direct analysis)
@@ -168,7 +172,7 @@ Save to `$REPORT_NAME` in the project root.
 ```markdown
 # Storybook Upstream Sync Report
 
-- **Range**: <range description>
+- **Range**: <range-label> ([`<START_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<START_SHA>) → [`<END_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<END_SHA>))
 - **Generated**: YYYY-MM-DD
 - **Upstream branch**: next
 - **Commits scanned**: N (after filtering out version bumps and merges)
@@ -202,6 +206,14 @@ Save to `$REPORT_NAME` in the project root.
 ```
 
 Commits within each priority section should be in chronological order (oldest first).
+
+**Range line**: always pin both ends to precise linked SHAs — never leave "HEAD" or a bare date. Use `START_SHA` and `END_SHA` from step 2 (the first and last hashes of the `--summary` output). The `<range-label>` is a human-readable description of how the user specified the range:
+- `--from v10.0.0 --to v10.1.0` → `v10.0.0..v10.1.0 ([\`abc1234\`](...) → [\`def5678\`](...))`
+- `--from v10.0.0` (open end) → `v10.0.0..next ([\`abc1234\`](...) → [\`def5678\`](...))`
+- `--since 2026-03-12 --until 2026-04-11` → `2026-03-12..2026-04-11 ([\`abc1234\`](...) → [\`def5678\`](...))`
+- `--days 30` → `last 30 days (2026-03-12..2026-04-11) ([\`abc1234\`](...) → [\`def5678\`](...))`
+
+This precision is critical for follow-up syncs — `END_SHA` becomes the exact starting ref (`--from <END_SHA>`) for the next run, regardless of whether the range ended at HEAD, a tag, or a past date.
 
 ### 5. Offer to create an issue
 
