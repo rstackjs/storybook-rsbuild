@@ -1,0 +1,29 @@
+{
+  "name": "@sandboxes/react-lynx-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:lynx": "rspeedy build",
+    "build:storybook": "storybook build",
+    "dev:lynx": "rspeedy dev",
+    "storybook": "storybook dev -p 6010"
+  },
+  "dependencies": {
+    "@lynx-js/react": "^0.117.0"
+  },
+  "devDependencies": {
+    "@lynx-js/react-rsbuild-plugin": "^0.13.0",
+    "@lynx-js/rspeedy": "^0.13.6",
+    "@lynx-js/web-core": "^0.19.9",
+    "@lynx-js/web-elements": "^0.12.0",
+    "@rsbuild/core": "^2.0.0-rc.0",
+    "@storybook/addon-docs": "10.3.4",
+    "@storybook/web-components": "10.3.4",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.28",
+    "storybook": "10.3.4",
+    "storybook-react-lynx-web-rsbuild": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

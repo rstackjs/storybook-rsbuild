@@ -1,0 +1,95 @@
+{
+  "name": "storybook-react-lynx-web-rsbuild",
+  "version": "3.3.2",
+  "description": "Storybook for ReactLynx Web with Rsbuild: Develop ReactLynx components in isolation.",
+  "keywords": [
+    "storybook",
+    "rsbuild",
+    "rspack",
+    "lynx",
+    "reactlynx",
+    "lynx-web"
+  ],
+  "homepage": "https://storybook.rsbuild.rs",
+  "bugs": {
+    "url": "https://github.com/rstackjs/storybook-rsbuild/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rstackjs/storybook-rsbuild",
+    "directory": "packages/framework-react-lynx-web"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./package.json": "./package.json",
+    "./preset": "./dist/preset.js",
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "default": "./dist/preview.js"
+    },
+    "./preview-runtime": "./dist/preview-runtime.js",
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "*.js",
+    "*.d.ts",
+    "!src/**/*"
+  ],
+  "scripts": {
+    "build": "pnpm run prep --production",
+    "check": "jiti ../../scripts/check/check-package.ts",
+    "prep": "jiti ../../scripts/build/build-package.ts",
+    "prepare": "pnpm run build"
+  },
+  "dependencies": {
+    "@storybook/web-components": "^10.3.4",
+    "storybook-builder-rsbuild": "workspace:*"
+  },
+  "devDependencies": {
+    "@lynx-js/web-core": "^0.19.9",
+    "@lynx-js/web-elements": "^0.12.0",
+    "@rsbuild/core": "^2.0.0-rc.0",
+    "@types/node": "^22.0.0",
+    "storybook": "10.3.4",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@lynx-js/react": ">=0.100.0",
+    "@lynx-js/rspeedy": ">=0.10.0",
+    "@lynx-js/web-core": ">=0.6.0",
+    "@lynx-js/web-elements": ">=0.6.0",
+    "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
+    "storybook": "^10.1.0"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bundler": {
+    "entries": [
+      "./src/node/index.ts",
+      "./src/index.ts",
+      "./src/preset.ts",
+      "./src/preview.ts",
+      "./src/preview-runtime.ts",
+      "./src/runtime.ts"
+    ],
+    "platform": "node"
+  }
+}
