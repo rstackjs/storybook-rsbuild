@@ -50,12 +50,12 @@
     "@storybook/html": "^10.3.4",
     "find-up": "^5.0.0",
     "magic-string": "^0.30.21",
-    "resolve": "^1.22.11",
+    "resolve": "^1.22.12",
     "storybook-builder-rsbuild": "workspace:*",
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.0.0-rc.0",
+    "@rsbuild/core": "^2.0.0-rc.2",
     "@types/node": "^22.0.0",
     "@types/resolve": "^1.20.6",
     "storybook": "10.3.4",
