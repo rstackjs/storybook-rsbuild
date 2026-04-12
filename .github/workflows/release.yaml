@@ -35,7 +35,7 @@ jobs:
       - name: Install Dependencies and build
         run: pnpm install --frozen-lockfile
 
-      - uses: actions/github-script@v8
+      - uses: actions/github-script@v9
         id: version_to_release
         with:
           result-encoding: string
