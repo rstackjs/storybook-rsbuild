@@ -1,0 +1,102 @@
+import type { ReactRenderer } from '@storybook/react'
+import type * as React from 'react'
+import type {
+  Addon_DecoratorFunction,
+  LoaderFunction,
+} from 'storybook/internal/types'
+// @ts-expect-error we must ignore types here as during compilation they are not generated yet
+import { createNavigation } from 'storybook-next-rsbuild/navigation.mock'
+// @ts-expect-error we must ignore types here as during compilation they are not generated yet
+import { createRouter } from 'storybook-next-rsbuild/router.mock'
+import { HeadManagerDecorator } from './head-manager/decorator'
+import { ImageDecorator } from './images/decorator'
+import { isNextRouterError } from './next-internals'
+import { RouterDecorator } from './routing/decorator'
+import { StyledJsxDecorator } from './styled-jsx/decorator'
+
+// All module-level side effects are guarded for idempotency so that
+// HMR re-execution doesn't duplicate DOM elements or event listeners.
+
+const ASYNC_CLIENT_ERRORS = [
+  'Only Server Components can be async at the moment.',
+  'A component was suspended by an uncached promise.',
+  'async/await is not yet supported in Client Components',
+]
+
+/** Error thrown by Next.js runtime that should be silenced in Storybook. */
+function isSuppressedError(error: unknown): boolean {
+  return (
+    isNextRouterError(error) ||
+    (typeof error === 'string' &&
+      ASYNC_CLIENT_ERRORS.some((m) => error.includes(m)))
+  )
+}
+
+// Inject the <meta> tag that Next.js's Head component reads
+if (!document.querySelector('meta[name="next-head-count"]')) {
+  const meta = document.createElement('meta')
+  meta.name = 'next-head-count'
+  meta.content = '0'
+  document.head.appendChild(meta)
+}
+
+// Suppress Next.js internal errors from console and window.onerror
+// https://github.com/vercel/next.js/blob/a74deb63e310df473583ab6f7c1783bc609ca236/packages/next/src/client/app-index.tsx#L15
+if (!(globalThis as any).__SB_NEXT_PATCHED) {
+  const origConsoleError = globalThis.console.error
+  globalThis.console.error = (...args: unknown[]) => {
+    if (!isSuppressedError(args[0])) {
+      origConsoleError.apply(globalThis.console, args)
+    }
+  }
+
+  globalThis.addEventListener('error', (ev) => {
+    if (isSuppressedError(ev.error)) ev.preventDefault()
+  })
+
+  ;(globalThis as any).__SB_NEXT_PATCHED = true
+}
+
+const asDecorator = (
+  decorator: (Story: React.FC, context?: any) => React.ReactNode,
+) => decorator as unknown as Addon_DecoratorFunction<ReactRenderer>
+
+export const decorators: Addon_DecoratorFunction<ReactRenderer>[] = [
+  asDecorator(StyledJsxDecorator),
+  asDecorator(ImageDecorator),
+  asDecorator(RouterDecorator),
+  asDecorator(HeadManagerDecorator),
+]
+
+export const loaders: LoaderFunction<ReactRenderer> = async ({
+  globals,
+  parameters,
+}) => {
+  const { router, appDirectory } = parameters.nextjs ?? {}
+  if (appDirectory) {
+    createNavigation(router)
+  } else {
+    createRouter({
+      locale: globals.locale,
+      ...(router as Record<string, unknown>),
+    })
+  }
+}
+
+export const parameters = {
+  docs: {
+    source: {
+      excludeDecorators: true,
+    },
+  },
+  react: {
+    rootOptions: {
+      onCaughtError(error: unknown) {
+        if (isNextRouterError(error)) {
+          return
+        }
+        console.error(error)
+      },
+    },
+  },
+}

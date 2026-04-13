@@ -10,7 +10,7 @@ let mismatch = false
 // === dependencies ===
 const cdvcDep = new CDVC(root, {
   depType: ['dependencies'],
-  ignorePackage: ['@sandboxes/react-16'],
+  ignorePackage: ['@sandboxes/react-16', '@sandboxes/next-react'],
 })
 
 const dep = cdvcDep.hasMismatchingDependencies
@@ -22,7 +22,12 @@ if (dep) {
 // === devDependencies ===
 const cdvcDevDep = new CDVC(root, {
   depType: ['devDependencies'],
-  ignorePackage: ['@sandboxes/react-16', 'website'],
+  ignorePackage: [
+    '@sandboxes/react-16',
+    '@sandboxes/next-react',
+    'storybook-next-rsbuild',
+    'website',
+  ],
 })
 
 const dev = cdvcDevDep.hasMismatchingDependencies
@@ -34,7 +39,7 @@ if (dev) {
 // === peerDependencies ===
 const cdvcPeerDev = new CDVC(root, {
   depType: ['peerDependencies'],
-  ignorePackage: ['storybook-builder-rsbuild'],
+  ignorePackage: ['storybook-builder-rsbuild', 'storybook-next-rsbuild'],
 })
 
 // === optionalDependencies & resolutions ===

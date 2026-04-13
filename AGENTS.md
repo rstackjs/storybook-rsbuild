@@ -77,6 +77,12 @@ pnpm build:sandboxes
 - **`website/`**: Documentation (Rspress).
 - **`scripts/`**: Shared tooling.
 
+### Injected Dependencies in `framework-next`
+
+`packages/framework-next` consumes `storybook-builder-rsbuild` and `storybook-react-rsbuild` via `dependenciesMeta.injected: true`. pnpm hard-links (copies) their built artifacts into `framework-next/node_modules/` instead of symlinking. This is required because `framework-next` pins `@rsbuild/core@1.x` while other packages use `2.x` — injected mode lets each consumer resolve its own peer dep versions independently.
+
+**Caveat:** After modifying and rebuilding `packages/builder-rsbuild` or `packages/framework-react`, you must re-run `pnpm install` to sync the updated artifacts into `framework-next`'s `node_modules/`. A plain `pnpm build` alone will NOT propagate the changes.
+
 ### Testing & Sandbox Workflow
 
 - Write Rstest coverage beside sources using `.test.ts(x)` or within `__tests__/`.
