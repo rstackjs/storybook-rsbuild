@@ -283,28 +283,24 @@ export default async (
         NODE_ENV: JSON.stringify(process.env.NODE_ENV),
       },
     },
-    // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.
-    ...(rspackMajorVersion === 1
-      ? {
-          performance: {
-            chunkSplit: {
-              strategy: 'custom' as const,
-              splitChunks: {
-                chunks: 'all' as const,
-              },
-            },
-            buildCache: cacheConfig,
-          },
-        }
-      : {
-          splitChunks: {
-            preset: 'none' as const,
-            chunks: 'all' as const,
-          },
-          performance: {
-            buildCache: cacheConfig,
-          },
-        }),
+    // Rsbuild v2: use top-level `splitChunks` instead of `performance.chunkSplit`.
+    ...(rspackMajorVersion !== 1 && {
+      splitChunks: {
+        preset: 'none' as const,
+        chunks: 'all' as const,
+      },
+    }),
+    performance: {
+      // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2 but kept
+      // for v1 support and for plugins that still read it (e.g. @rsbuild/plugin-vue@2.0.0-alpha.3).
+      chunkSplit: {
+        strategy: 'custom' as const,
+        splitChunks: {
+          chunks: 'all' as const,
+        },
+      },
+      buildCache: cacheConfig,
+    },
     plugins: [
       shouldCheckTs ? pluginTypeCheck(tsCheckOptions) : null,
       pluginHtmlMinifierTerser(() => ({
