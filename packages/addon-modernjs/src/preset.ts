@@ -5,7 +5,7 @@ import {
   parseRspackConfig as parseToRsbuildConfig,
 } from '@modern-js/app-tools/builder'
 // TODO: better import from `@modern-js/app-tools/builder`
-import { mergeRsbuildConfig } from '@rsbuild/core'
+import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import findUp from 'find-up'
 import { logger } from 'rslog'
 import type {
@@ -124,6 +124,7 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     builderPluginAdapterHooks(adapterParams),
   ]
 
-  const finalConfig = mergeRsbuildConfig(config, rsbuildConfig)
+  // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
+  const finalConfig = mergeRsbuildConfig(config, rsbuildConfig as RsbuildConfig)
   return finalConfig
 }
