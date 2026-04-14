@@ -42,7 +42,7 @@
     "prepare": "pnpm run build"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.0.0-rc.0",
+    "@rsbuild/core": "^2.0.0-rc.2",
     "@rslib/core": "^0.20.3",
     "@types/node": "^22.0.0",
     "storybook": "10.3.5",

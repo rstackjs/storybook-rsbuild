@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
-import { loadConfig, mergeRsbuildConfig } from '@rsbuild/core'
+import { loadConfig, mergeRsbuildConfig, rspack } from '@rsbuild/core'
 import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
 // @ts-expect-error (I removed this on purpose, because it's incorrect)
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
@@ -60,6 +60,8 @@ const getRspackMajorVersion = (version: unknown): number | null => {
   const major = Number.parseInt(version.split('.')[0] ?? '', 10)
   return Number.isNaN(major) ? null : major
 }
+
+const rspackMajorVersion = getRspackMajorVersion(rspack.version)
 
 /** @see https://github.com/web-infra-dev/rsbuild/blob/d8204bb72b5dd32dc736372dff6bb618675a4ad5/packages/core/src/constants.ts#L61 */
 const RAW_QUERY_REGEX = /[?&]raw(?:&|=|$)/
@@ -281,15 +283,28 @@ export default async (
         NODE_ENV: JSON.stringify(process.env.NODE_ENV),
       },
     },
-    performance: {
-      chunkSplit: {
-        strategy: 'custom',
-        splitChunks: {
-          chunks: 'all',
-        },
-      },
-      buildCache: cacheConfig,
-    },
+    // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.
+    ...(rspackMajorVersion === 1
+      ? {
+          performance: {
+            chunkSplit: {
+              strategy: 'custom' as const,
+              splitChunks: {
+                chunks: 'all' as const,
+              },
+            },
+            buildCache: cacheConfig,
+          },
+        }
+      : {
+          splitChunks: {
+            preset: 'none' as const,
+            chunks: 'all' as const,
+          },
+          performance: {
+            buildCache: cacheConfig,
+          },
+        }),
     plugins: [
       shouldCheckTs ? pluginTypeCheck(tsCheckOptions) : null,
       pluginHtmlMinifierTerser(() => ({
@@ -394,7 +409,7 @@ export default async (
           ].filter(Boolean),
         )
 
-        const rspackMajorVersion = getRspackMajorVersion(rspack.version)
+        // Rspack v1 compatible: disable `outputModule` experiment which is not supported in Rspack v1.
         if (rspackMajorVersion === 1) {
           const experiments = (config.experiments ??= {}) as Record<
             string,
