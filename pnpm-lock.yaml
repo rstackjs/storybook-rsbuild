@@ -437,8 +437,8 @@ importers:
         specifier: ^2.0.0-rc.2
         version: 2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)
       '@rsbuild/plugin-vue':
-        specifier: ^2.0.0-alpha.3
-        version: 2.0.0-alpha.3(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(esbuild@0.27.0)(vue@3.5.31(typescript@5.9.3))
+        specifier: 1.2.7
+        version: 1.2.7(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(vue@3.5.31(typescript@5.9.3))
       '@storybook/addon-docs':
         specifier: 10.3.5
         version: 10.3.5(@types/react@19.2.14)(esbuild@0.27.0)(rollup@4.60.1)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@22.19.1)(esbuild@0.27.0)(jiti@2.6.1)(less@4.6.4)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))(webpack@5.104.1(esbuild@0.27.0))
@@ -1014,8 +1014,8 @@ importers:
         specifier: ^1.5.1
         version: 1.5.1(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))
       '@rsbuild/plugin-vue':
-        specifier: ^2.0.0-alpha.3
-        version: 2.0.0-alpha.3(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(esbuild@0.27.0)(vue@3.5.31(typescript@5.9.3))
+        specifier: 1.2.7
+        version: 1.2.7(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(vue@3.5.31(typescript@5.9.3))
       '@rslib/core':
         specifier: ^0.20.3
         version: 0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)(typescript@5.9.3)
@@ -1178,8 +1178,8 @@ importers:
         specifier: ^2.0.0-rc.2
         version: 2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)
       '@rsbuild/plugin-vue':
-        specifier: ^2.0.0-alpha.3
-        version: 2.0.0-alpha.3(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(esbuild@0.27.0)(vue@3.5.31(typescript@5.9.3))
+        specifier: 1.2.7
+        version: 1.2.7(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(vue@3.5.31(typescript@5.9.3))
       '@storybook/addon-docs':
         specifier: 10.3.5
         version: 10.3.5(@types/react@19.2.14)(esbuild@0.27.0)(rollup@4.60.1)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@22.19.1)(esbuild@0.27.0)(jiti@2.6.1)(less@4.6.4)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))(webpack@5.104.1(esbuild@0.27.0))
@@ -4570,10 +4570,13 @@ packages:
       '@rsbuild/core':
         optional: true
 
-  '@rsbuild/plugin-vue@2.0.0-alpha.3':
-    resolution: {integrity: sha512-7NhrFUmIiD+oFOoayHbyh5bRAbxWk/4Wn7HL9rEsmqu0d7dc1LTVuHp/6yvGf9sbmLEZE0TfAwywof+8DFPKRg==}
+  '@rsbuild/plugin-vue@1.2.7':
+    resolution: {integrity: sha512-epDSChyeR4U+gwq2vfTARV9hbfrmdFTdmhBWIcv7MFyckn3yxJhweJVwdx14Wf3d8s1p4XZzDpqmphDyvX443Q==}
     peerDependencies:
-      '@rsbuild/core': ^2.0.0-0
+      '@rsbuild/core': ^1.0.0 || ^2.0.0-0
+    peerDependenciesMeta:
+      '@rsbuild/core':
+        optional: true
 
   '@rslib/core@0.20.3':
     resolution: {integrity: sha512-WImc5z84oKbK0wZI5M4rk6BTK9BeYLk3lfietrR4k9e9Wk81BWR0RtPnRpDsj2+HCy8KZHCG8ZywU2QTqq36OA==}
@@ -18422,19 +18425,15 @@ snapshots:
     optionalDependencies:
       '@rsbuild/core': 2.0.0-rc.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)
 
-  '@rsbuild/plugin-vue@2.0.0-alpha.3(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(esbuild@0.27.0)(vue@3.5.31(typescript@5.9.3))':
+  '@rsbuild/plugin-vue@1.2.7(@rsbuild/core@2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0))(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(vue@3.5.31(typescript@5.9.3))':
     dependencies:
-      '@rsbuild/core': 2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)
       rspack-vue-loader: 17.5.0(@rspack/core@2.0.0-rc.2(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(@swc/helpers@0.5.21))(vue@3.5.31(typescript@5.9.3))
-      webpack: 5.104.1(esbuild@0.27.0)
+    optionalDependencies:
+      '@rsbuild/core': 2.0.0-rc.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.2(node-fetch@3.3.2))(core-js@3.48.0)
     transitivePeerDependencies:
       - '@rspack/core'
-      - '@swc/core'
       - '@vue/compiler-sfc'
-      - esbuild
-      - uglify-js
       - vue
-      - webpack-cli
 
   '@rslib/core@0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@module-federation/runtime-tools@2.3.1(node-fetch@3.3.2))(core-js@3.48.0)(typescript@5.9.3)':
     dependencies:

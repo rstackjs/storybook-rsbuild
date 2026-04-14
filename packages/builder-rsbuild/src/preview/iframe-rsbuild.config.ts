@@ -283,18 +283,28 @@ export default async (
         NODE_ENV: JSON.stringify(process.env.NODE_ENV),
       },
     },
-    performance: {
-      // `performance.chunkSplit` is deprecated in Rsbuild v2 but still functional.
-      // Using it instead of top-level `splitChunks` to keep v1 compatibility and
-      // avoid overriding user-provided chunk splitting config from rsbuild.config.
-      chunkSplit: {
-        strategy: 'custom' as const,
-        splitChunks: {
-          chunks: 'all' as const,
-        },
-      },
-      buildCache: cacheConfig,
-    },
+    // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.
+    ...(rspackMajorVersion === 1
+      ? {
+          performance: {
+            chunkSplit: {
+              strategy: 'custom' as const,
+              splitChunks: {
+                chunks: 'all' as const,
+              },
+            },
+            buildCache: cacheConfig,
+          },
+        }
+      : {
+          splitChunks: {
+            preset: 'none' as const,
+            chunks: 'all' as const,
+          },
+          performance: {
+            buildCache: cacheConfig,
+          },
+        }),
     plugins: [
       shouldCheckTs ? pluginTypeCheck(tsCheckOptions) : null,
       pluginHtmlMinifierTerser(() => ({
