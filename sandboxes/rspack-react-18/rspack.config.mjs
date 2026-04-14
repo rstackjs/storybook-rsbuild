@@ -1,11 +1,12 @@
-const { rspack } = require('@rspack/core')
-const ReactRefreshPlugin = require('@rspack/plugin-react-refresh')
+import { rspack } from '@rspack/core'
+import { ReactRefreshRspackPlugin as ReactRefreshPlugin } from '@rspack/plugin-react-refresh'
+import autoprefixer from 'autoprefixer'
 
 process.env.NODE_ENV = 'development'
 const host = process.env.HOST || 'localhost'
 
 /** @type {import('@rspack/core').Configuration} */
-module.exports = {
+export default {
   mode: 'development',
   devtool: 'inline-source-map',
   // entry: './src/index.tsx',
@@ -69,7 +70,7 @@ module.exports = {
             loader: 'postcss-loader',
             options: {
               postcssOptions: {
-                plugins: [require('autoprefixer')],
+                plugins: [autoprefixer],
               },
             },
           },
@@ -80,13 +81,13 @@ module.exports = {
         type: 'javascript/auto',
         use: [
           {
-            loader: require.resolve('style-loader'),
+            loader: 'style-loader',
             options: {
               esModule: false,
             },
           },
-          require.resolve('css-loader'),
-          require.resolve('less-loader'),
+          'css-loader',
+          'less-loader',
         ],
       },
     ],

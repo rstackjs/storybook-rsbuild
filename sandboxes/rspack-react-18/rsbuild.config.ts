@@ -1,7 +1,7 @@
 import { defineConfig } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
-// @ts-expect-error
-import rspackConfig from './rspack.config.cjs'
+// @ts-expect-error no type declarations
+import rspackConfig from './rspack.config.mjs'
 
 export default defineConfig({
   plugins: [pluginReact()],
