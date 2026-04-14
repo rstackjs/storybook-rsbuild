@@ -8,6 +8,7 @@ export class RspackInjectMockerRuntimePlugin {
     compiler: Rspack.Compiler,
   ): typeof HtmlRspackPlugin | null {
     try {
+      // Rspack v1 compatible: check for both `HtmlRspackPlugin` (v2) and `HtmlWebpackPlugin` (v1) names.
       const pluginConstructor = compiler.options.plugins?.find((plugin) => {
         const name = plugin?.constructor?.name
         return name === 'HtmlRspackPlugin' || name === 'HtmlWebpackPlugin'

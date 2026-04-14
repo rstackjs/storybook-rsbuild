@@ -45,7 +45,7 @@
     "pathe": "^2.0.3"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.0.0-rc.0",
+    "@rsbuild/core": "^2.0.0-rc.2",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"
   },
