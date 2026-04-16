@@ -265,16 +265,11 @@ importers:
       storybook-builder-rsbuild:
         specifier: workspace:*
         version: file:packages/builder-rsbuild(@rsbuild/core@1.6.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))
-      storybook-react-rsbuild:
-        specifier: workspace:*
-        version: file:packages/framework-react(@rsbuild/core@1.6.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rollup@4.60.1)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(webpack@5.104.1)
       styled-jsx:
         specifier: 5.1.6
         version: 5.1.6(react@19.2.4)
     dependenciesMeta:
       storybook-builder-rsbuild:
-        injected: true
-      storybook-react-rsbuild:
         injected: true
     devDependencies:
       '@types/node':
@@ -11866,19 +11861,6 @@ packages:
         optional: true
       react-dom:
         optional: true
-      typescript:
-        optional: true
-
-  storybook-react-rsbuild@file:packages/framework-react:
-    resolution: {directory: packages/framework-react, type: directory}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      '@rsbuild/core': ^1.5.0 || ^2.0.0-0
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      storybook: ^10.1.0
-      typescript: '>= 4.2.x'
-    peerDependenciesMeta:
       typescript:
         optional: true
 
@@ -28122,29 +28104,6 @@ snapshots:
       - msw
       - tslib
       - vite
-
-  storybook-react-rsbuild@file:packages/framework-react(@rsbuild/core@1.6.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rollup@4.60.1)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(webpack@5.104.1):
-    dependencies:
-      '@rollup/pluginutils': 5.3.0(rollup@4.60.1)
-      '@rsbuild/core': 1.6.14
-      '@storybook/react': 10.3.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)
-      '@storybook/react-docgen-typescript-plugin': 1.0.1(typescript@5.9.3)(webpack@5.104.1)
-      find-up: 5.0.0
-      magic-string: 0.30.21
-      react: 19.2.4
-      react-docgen: 8.0.3
-      react-docgen-typescript: 2.4.0(typescript@5.9.3)
-      react-dom: 19.2.4(react@19.2.4)
-      resolve: 1.22.11
-      storybook: 10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      storybook-builder-rsbuild: link:packages/builder-rsbuild
-      tsconfig-paths: 4.2.0
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - rollup
-      - supports-color
-      - webpack
 
   storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@16.14.0(react@16.14.0))(react@16.14.0):
     dependencies:

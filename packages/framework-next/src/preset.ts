@@ -59,7 +59,7 @@ function getStorybookOverrideAliases() {
 function filterNextAliases(
   alias: Record<string, string | string[] | false>,
 ): Record<string, string | string[] | false> {
-  const blocked = ['react', 'react-dom', 'react-server-dom-webpack', 'react/']
+  const blocked = ['react', 'react-dom', 'react-server-dom-webpack']
   const filtered: Record<string, string | string[] | false> = {}
   for (const [key, value] of Object.entries(alias)) {
     if (blocked.some((b) => key === b || key.startsWith(`${b}/`))) continue
@@ -443,14 +443,19 @@ export const rsbuildFinal: NonNullable<
     },
     tools: {
       /**
-       * Phase 1 — strip Rsbuild's CSS pipeline.
+       * Strip Rsbuild's CSS pipeline. Next.js ships its own
+       * `CssExtractRspackPlugin` plus layered rules (`css-loader` with `pure`,
+       * `next-flight-css-loader` for RSC, `next-font-loader` for `next/font`,
+       * plus postcss / lightningcss / sass chains). Running both pipelines
+       * produces double-extraction and silent breakage on `next/font`
+       * target.css files. We own the CSS pipeline here; user-side Rsbuild
+       * CSS config is intentionally ignored.
        *
-       * Next.js ships its own `CssExtractRspackPlugin` + layered rules
-       * (`css-loader` with `pure`, `next-flight-css-loader` for RSC,
-       * `next-font-loader` for `next/font`, plus postcss / lightningcss /
-       * sass chains). Running both pipelines produces double-extraction and
-       * silent breakage on `next/font` target.css files. We own the CSS
-       * pipeline here; user-side Rsbuild CSS config is intentionally ignored.
+       * No React Refresh strip needed — `storybook-builder-rsbuild` calls
+       * `createRsbuild({ plugins: [] })`, and `@rsbuild/plugin-react` (which
+       * would register `REACT_FAST_REFRESH`) isn't a dependency of any
+       * package in this repo. Next.js's `ReactRefreshRspackPlugin` (via
+       * `filterNextPlugins`) is the only refresh plugin in the chain.
        *
        * `CHAIN_ID` is supplied via the hook util — it's not exported from
        * `@rsbuild/core`'s public entry, so this is the only stable access.
@@ -465,49 +470,45 @@ export const rsbuildFinal: NonNullable<
       },
       rspack: (rspackConfig) => {
         rspackConfig.resolve ??= {}
+        rspackConfig.module ??= {}
+        rspackConfig.module.rules ??= []
+        rspackConfig.plugins ??= []
+        rspackConfig.ignoreWarnings ??= []
+
+        // --- Resolve ---
         rspackConfig.resolve.fallback = {
           ...rspackConfig.resolve.fallback,
           ...NODE_BUILTINS_FALLBACK,
         }
-
-        // Next.js compiled modules (path-to-regexp, etc.) use __dirname
-        // which gets mocked in browser builds — suppress the noisy warning.
-        rspackConfig.ignoreWarnings ??= []
-        rspackConfig.ignoreWarnings.push(/has been used, it will be mocked/)
-
         if (extraction.resolveLoader) {
           rspackConfig.resolveLoader = {
             ...rspackConfig.resolveLoader,
             ...extraction.resolveLoader,
           }
         }
+        // Next.js compiled modules (path-to-regexp, etc.) use __dirname
+        // which gets mocked in browser builds — suppress the noisy warning.
+        rspackConfig.ignoreWarnings.push(/has been used, it will be mocked/)
 
-        if (nextLoaderChain) {
-          const ok = replaceSwcRules(
-            rspackConfig.module?.rules ?? [],
-            nextLoaderChain,
+        // --- Rules ---
+        if (
+          nextLoaderChain &&
+          !replaceSwcRules(rspackConfig.module.rules, nextLoaderChain)
+        ) {
+          logger.warn(
+            'Could not find builtin:swc-loader rules to replace. ' +
+              'Next.js SWC integration may not work correctly.',
           )
-          if (!ok) {
-            logger.warn(
-              'Could not find builtin:swc-loader rules to replace. ' +
-                'Next.js SWC integration may not work correctly.',
-            )
-          }
         }
-
-        rspackConfig.module ??= {}
-        rspackConfig.module.rules ??= []
-
-        // Inject Next.js CSS rules wholesale. Unshift so Next.js's specific
-        // matchers (e.g., `require.resolve('next/font/google/target.css')`)
-        // are evaluated before any generic file rules that remain in the chain.
+        // Unshift so Next.js's specific matchers (e.g.,
+        // `require.resolve('next/font/google/target.css')`) are evaluated
+        // before any generic file rules that remain in the chain.
         if (nextCssRules.length > 0) {
           rspackConfig.module.rules.unshift(...nextCssRules)
         }
 
-        rspackConfig.plugins ??= []
+        // --- Plugins ---
         rspackConfig.plugins.push(new NoopTraceSpanPlugin(), ...nextPlugins)
-
         if (nextLoaderChain) {
           rspackConfig.plugins.push(
             new ReactRefreshInitPlugin(loaderPaths.refreshEntry),

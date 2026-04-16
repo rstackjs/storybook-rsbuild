@@ -79,7 +79,6 @@
     "@storybook/react": "^10.3.5",
     "next-rspack": "^16.2.3",
     "storybook-builder-rsbuild": "workspace:*",
-    "storybook-react-rsbuild": "workspace:*",
     "styled-jsx": "5.1.6"
   },
   "devDependencies": {
@@ -93,9 +92,6 @@
   },
   "dependenciesMeta": {
     "storybook-builder-rsbuild": {
-      "injected": true
-    },
-    "storybook-react-rsbuild": {
       "injected": true
     }
   },
