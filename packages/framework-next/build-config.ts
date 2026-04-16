@@ -5,7 +5,7 @@ const config: BuildEntries = {
   // build and must resolve `next` from the user's project, not ours.
   extraOutputs: {
     './next-image-mock': './loaders/next-image-mock.js',
-    './font-loader': './loaders/font-loader.cjs',
+    './next-font-url-rewrite': './loaders/next-font-url-rewrite.cjs',
     './react-refresh-entry': './loaders/react-refresh-entry.cjs',
     './swc-loader-shim': './loaders/swc-loader-shim.cjs',
   },

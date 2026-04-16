@@ -79,6 +79,12 @@ function loaderNameOf(use: any): string | null {
   return null
 }
 
+/** Normalize a rule's `use` field to an array (string, object, array, or absent). */
+function asUseArray(use: any): any[] {
+  if (!use) return []
+  return Array.isArray(use) ? use : [use]
+}
+
 /** Recursively walk rspack rules, invoking `fn` on each rule node. */
 function walkRules(rules: any[] | undefined, fn: (rule: any) => void): void {
   if (!rules) return
@@ -110,9 +116,8 @@ function buildNextLoaderChain(rawRules: any[], shimPath: string): any[] | null {
   // `builtin:react-refresh-loader` and `next-swc-loader`.
   let clientRule: any = null
   walkRules(rawRules, (rule) => {
-    if (clientRule || !rule.use) return
-    const uses = Array.isArray(rule.use) ? rule.use : [rule.use]
-    const names = uses.map(loaderNameOf)
+    if (clientRule) return
+    const names = asUseArray(rule.use).map(loaderNameOf)
     if (
       names.includes('builtin:react-refresh-loader') &&
       names.includes('next-swc-loader')
@@ -122,19 +127,15 @@ function buildNextLoaderChain(rawRules: any[], shimPath: string): any[] | null {
   })
   if (!clientRule) return null
 
-  const uses = Array.isArray(clientRule.use) ? clientRule.use : [clientRule.use]
-  const chain: any[] = []
-  for (const use of uses) {
+  return asUseArray(clientRule.use).flatMap((use) => {
     const name = loaderNameOf(use)
     if (name === 'next-swc-loader' || name?.endsWith('/next-swc-loader')) {
-      chain.push({ loader: shimPath, options: use.options || {} })
-    } else if (name?.includes('next-flight')) {
-      // Skip server component loaders — not needed in Storybook
-    } else {
-      chain.push(use)
+      return [{ loader: shimPath, options: use.options || {} }]
     }
-  }
-  return chain
+    // Skip server component loaders — not needed in Storybook
+    if (name?.includes('next-flight')) return []
+    return [use]
+  })
 }
 
 /**
@@ -145,17 +146,14 @@ function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
   let replaced = false
   walkRules(rules, (rule) => {
     if (!rule.use) return
-    const uses = Array.isArray(rule.use) ? rule.use : [rule.use]
-    let didSplice = false
-    for (let i = 0; i < uses.length; i++) {
-      if (loaderNameOf(uses[i]) === 'builtin:swc-loader') {
-        uses.splice(i, 1, ...nextChain)
-        i += nextChain.length - 1
-        didSplice = true
-      }
-    }
-    if (didSplice) {
-      rule.use = uses
+    let mutated = false
+    const next = asUseArray(rule.use).flatMap((use) => {
+      if (loaderNameOf(use) !== 'builtin:swc-loader') return [use]
+      mutated = true
+      return nextChain
+    })
+    if (mutated) {
+      rule.use = next
       replaced = true
     }
   })
@@ -241,44 +239,95 @@ class NoopTraceSpanPlugin {
 }
 
 // ---------------------------------------------------------------------------
-// Font-loader rule
+// CSS rule extraction
 // ---------------------------------------------------------------------------
 
 /**
- * Register our font-loader for `next/font` target.css files.
- *
- * SWC's fontLoaders transform rewrites `Inter({ subsets: ['latin'] })` into
- * `import inter from 'next/font/google/target.css?{...}'`. Our font-loader
- * processes these imports and outputs JS (`{ className, style, variable }`
- * plus `@font-face` injection). We use our own loader because Storybook has
- * no font optimization server — fonts are inlined as data URLs.
- *
- * Rsbuild's css-extract-rspack-plugin would also match `.css` files, so we
- * add an `exclude` to all existing CSS rules before inserting our own rule.
+ * Loader name fragments that mark a use entry as part of Next.js's CSS
+ * pipeline — Next.js-specific loaders, the Rspack extraction loader, and
+ * common CSS pre/post-processors.
  */
-function setupFontLoaderRule(rules: any[], loaderPath: string): void {
-  const fontPattern = /next[\\/]font[\\/](google|local)[\\/]target\.css/
+const CSS_LOADER_MARKERS = [
+  'css-loader',
+  'postcss-loader',
+  'lightningcss-loader',
+  'sass-loader',
+  'less-loader',
+  'resolve-url-loader',
+  'next-font-loader',
+  'next-flight-css-loader',
+  'next-style-loader',
+  'mini-css-extract',
+  'CssExtract',
+]
 
-  // Exclude font imports from existing CSS rules
+/** Matches any `test` regex used by CSS-related rules, including Next.js font target files. */
+const CSS_TEST_RE = /\.(css|s[ac]ss|less|styl)|target\.css/
+
+function isCssLoaderUse(use: any): boolean {
+  const name = loaderNameOf(use)
+  return !!name && CSS_LOADER_MARKERS.some((m) => name.includes(m))
+}
+
+function isNextFontLoader(use: any): boolean {
+  const name = loaderNameOf(use)
+  return name === 'next-font-loader' || !!name?.endsWith('/next-font-loader')
+}
+
+/**
+ * Identify whether a rule from Next.js's rawRules belongs to the CSS pipeline.
+ * Detection order:
+ * 1. Inline `loader` or any entry in `use` matches a CSS loader
+ * 2. Nested `oneOf` / `rules` contains a CSS sub-rule
+ * 3. `test` pattern matches CSS extensions — catches error-guard rules that
+ *    scope themselves to CSS files without declaring a loader
+ */
+function isCssRule(rule: any): boolean {
+  if (!rule || typeof rule !== 'object') return false
+
+  if (isCssLoaderUse(rule) || asUseArray(rule.use).some(isCssLoaderUse)) {
+    return true
+  }
+  if (rule.oneOf?.some(isCssRule)) return true
+  if (rule.rules?.some(isCssRule)) return true
+
+  if (rule.test) {
+    const patterns = Array.isArray(rule.test) ? rule.test : [rule.test]
+    const source = patterns
+      .map((t: any) => (t instanceof RegExp ? t.source : String(t)))
+      .join('|')
+    if (CSS_TEST_RE.test(source)) return true
+  }
+
+  return false
+}
+
+/**
+ * Extract Next.js CSS rules and splice a URL-rewrite loader in front of every
+ * `next-font-loader`.
+ *
+ * **Why the rewriter is needed:** `next-font-loader` emits CSS with
+ * `url(/_next/static/media/[hash])` (next-font-loader/index.js:78), but the
+ * matching `emitFile` call writes the binary at `static/media/[hash]` —
+ * without the `/_next/` prefix. Next.js bridges the gap via a dev-server alias
+ * (`/_next/*` → output root). Storybook has no such alias, so every font 404s
+ * unless we rewrite the prefix out. See `loaders/next-font-url-rewrite.cjs`
+ * for the loader itself (and the non-obvious `meta.ast` strip it performs).
+ *
+ * The rewriter is spliced *before* `next-font-loader` in the `use` chain so
+ * it runs *after* it — loaders execute right-to-left.
+ */
+function prepareNextCssRules(rawRules: any[], rewriterPath: string): any[] {
+  const rules = rawRules.filter(isCssRule)
   walkRules(rules, (rule) => {
-    if (!rule.test) return
-    const src =
-      rule.test instanceof RegExp ? rule.test.source : String(rule.test)
-    if (!src.includes('css')) return
-    if (Array.isArray(rule.exclude)) {
-      rule.exclude.push(fontPattern)
-    } else if (rule.exclude) {
-      rule.exclude = [rule.exclude, fontPattern]
-    } else {
-      rule.exclude = fontPattern
-    }
+    if (!rule.use) return
+    const uses = asUseArray(rule.use)
+    const fontIdx = uses.findIndex(isNextFontLoader)
+    if (fontIdx < 0) return
+    uses.splice(fontIdx, 0, { loader: rewriterPath })
+    rule.use = uses
   })
-
-  rules.unshift({
-    test: fontPattern,
-    type: 'javascript/auto',
-    loader: loaderPath,
-  })
+  return rules
 }
 
 // ---------------------------------------------------------------------------
@@ -357,11 +406,11 @@ export const rsbuildFinal: NonNullable<
     swcShim: fileURLToPath(
       import.meta.resolve('storybook-next-rsbuild/swc-loader-shim'),
     ),
-    fontLoader: fileURLToPath(
-      import.meta.resolve('storybook-next-rsbuild/font-loader'),
-    ),
     refreshEntry: fileURLToPath(
       import.meta.resolve('storybook-next-rsbuild/react-refresh-entry'),
+    ),
+    fontUrlRewrite: fileURLToPath(
+      import.meta.resolve('storybook-next-rsbuild/next-font-url-rewrite'),
     ),
   }
 
@@ -375,6 +424,16 @@ export const rsbuildFinal: NonNullable<
 
   const nextPlugins = filterNextPlugins(extraction.rawPlugins)
 
+  const nextCssRules = prepareNextCssRules(
+    extraction.rawRules,
+    loaderPaths.fontUrlRewrite,
+  )
+  if (nextCssRules.length > 0) {
+    logger.info(
+      `Using Next.js CSS pipeline (${nextCssRules.length} rules injected)`,
+    )
+  }
+
   return mergeRsbuildConfig(config, {
     source: {
       define: extraction.defines,
@@ -383,6 +442,27 @@ export const rsbuildFinal: NonNullable<
       alias: allAliases,
     },
     tools: {
+      /**
+       * Phase 1 — strip Rsbuild's CSS pipeline.
+       *
+       * Next.js ships its own `CssExtractRspackPlugin` + layered rules
+       * (`css-loader` with `pure`, `next-flight-css-loader` for RSC,
+       * `next-font-loader` for `next/font`, plus postcss / lightningcss /
+       * sass chains). Running both pipelines produces double-extraction and
+       * silent breakage on `next/font` target.css files. We own the CSS
+       * pipeline here; user-side Rsbuild CSS config is intentionally ignored.
+       *
+       * `CHAIN_ID` is supplied via the hook util — it's not exported from
+       * `@rsbuild/core`'s public entry, so this is the only stable access.
+       */
+      bundlerChain: (chain, { CHAIN_ID }) => {
+        if (chain.module.rules.has(CHAIN_ID.RULE.CSS)) {
+          chain.module.rules.delete(CHAIN_ID.RULE.CSS)
+        }
+        if (chain.plugins.has(CHAIN_ID.PLUGIN.MINI_CSS_EXTRACT)) {
+          chain.plugins.delete(CHAIN_ID.PLUGIN.MINI_CSS_EXTRACT)
+        }
+      },
       rspack: (rspackConfig) => {
         rspackConfig.resolve ??= {}
         rspackConfig.resolve.fallback = {
@@ -417,7 +497,13 @@ export const rsbuildFinal: NonNullable<
 
         rspackConfig.module ??= {}
         rspackConfig.module.rules ??= []
-        setupFontLoaderRule(rspackConfig.module.rules, loaderPaths.fontLoader)
+
+        // Inject Next.js CSS rules wholesale. Unshift so Next.js's specific
+        // matchers (e.g., `require.resolve('next/font/google/target.css')`)
+        // are evaluated before any generic file rules that remain in the chain.
+        if (nextCssRules.length > 0) {
+          rspackConfig.module.rules.unshift(...nextCssRules)
+        }
 
         rspackConfig.plugins ??= []
         rspackConfig.plugins.push(new NoopTraceSpanPlugin(), ...nextPlugins)
