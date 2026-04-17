@@ -20,3 +20,7 @@ hoistPattern:
   - '@babel/types'
   - '@babel/generator'
   - '@babel/traverse'
+  # next internally require('next-rspack/rspack-core') but doesn't declare
+  # next-rspack as a dependency — it's a phantom dependency that needs hoisting
+  # so next can resolve it from storybook-next-rsbuild's dep tree.
+  - 'next-rspack'
