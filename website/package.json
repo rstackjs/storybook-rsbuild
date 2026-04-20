@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@rstack-dev/doc-ui": "1.12.5",
-    "@shikijs/transformers": "^3.23.0",
+    "@shikijs/transformers": "^4.0.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
