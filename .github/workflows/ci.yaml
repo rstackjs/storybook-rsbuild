@@ -16,9 +16,6 @@ on:
 
 permissions:
   contents: read
-  # Required by `dorny/paths-filter` to call the PR files API.
-  # Declaring any permission implicitly sets unspecified scopes to `none`,
-  # so we must grant `pull-requests: read` explicitly.
   pull-requests: read
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
