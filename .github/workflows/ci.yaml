@@ -14,8 +14,44 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  # Negation pattern — any path not in the safelist defaults to heavy,
+  # so a newly added folder fails safe into running the full matrix.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      heavy: ${{ steps.filter.outputs.heavy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Compute path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            heavy:
+              - '**'
+              - '!**/*.md'
+              - '!LICENSE'
+              - '!CONTRIBUTING'
+              - '!website/**'
+              - '!.github/renovate.json5'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/DISCUSSION_TEMPLATE/**'
+              - '!.github/PULL_REQUEST_TEMPLATE.md'
+              - '!.github/CODEOWNERS'
+              - '!.vscode/**'
+              - '!.cursor/**'
+              - '!.claude/**'
+              - '!.gitignore'
+              - '!.editorconfig'
+
   lint-check:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +82,11 @@ jobs:
           pnpm check-dependency-version
   # ======== test ========
   test-build:
-    needs: lint-check
+    needs: [lint-check, changes]
+    # Non-PR events (push to main/v1, merge_group, workflow_dispatch)
+    # always run heavy as a post-merge safety net; PR events go through
+    # the `changes` path filter.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.heavy == 'true'
     strategy:
       matrix:
         node-version: [20.x, 22.x]
@@ -76,12 +116,6 @@ jobs:
       - name: Install Dependencies
         run: |
           pnpm install --frozen-lockfile
-
-      - name: Lint / Type Check / Check Dependency Version
-        run: |
-          pnpm lint
-          pnpm check
-          pnpm check-dependency-version
 
       - name: Prepare Playwright cache directory
         shell: bash
@@ -121,3 +155,22 @@ jobs:
       - name: E2E
         run: |
           pnpm e2e
+
+  # Aggregator status for branch protection.
+  # Always runs, passes iff every dependent job either succeeded or was
+  # legitimately skipped by the `changes` filter. Point branch protection
+  # at this job instead of individual matrix checks.
+  ci-passed:
+    needs: [changes, lint-check, test-build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert no failures
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          LINT: ${{ needs.lint-check.result }}
+          TEST: ${{ needs.test-build.result }}
+        run: |
+          [[ "$CHANGES" == "success" ]] || { echo "changes: $CHANGES"; exit 1; }
+          [[ "$LINT" == "success" ]] || { echo "lint-check: $LINT"; exit 1; }
+          [[ "$TEST" == "success" || "$TEST" == "skipped" ]] || { echo "test-build: $TEST"; exit 1; }
