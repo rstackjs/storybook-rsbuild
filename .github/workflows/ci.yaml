@@ -16,6 +16,40 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  # Decide whether the heavy `test-build` matrix should run.
+  # Skipped for changes confined to docs / editor / bot configs.
+  # Uses a negation pattern so any new path defaults to heavy (fail-safe).
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      heavy: ${{ steps.filter.outputs.heavy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Compute path filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            heavy:
+              - '**'
+              - '!**/*.md'
+              - '!LICENSE'
+              - '!CONTRIBUTING'
+              - '!website/**'
+              - '!.github/renovate.json5'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/DISCUSSION_TEMPLATE/**'
+              - '!.github/PULL_REQUEST_TEMPLATE.md'
+              - '!.github/CODEOWNERS'
+              - '!.vscode/**'
+              - '!.cursor/**'
+              - '!.claude/**'
+              - '!.gitignore'
+              - '!.editorconfig'
+              - '!bump.config.ts'
+
   lint-check:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +80,12 @@ jobs:
           pnpm check-dependency-version
   # ======== test ========
   test-build:
-    needs: lint-check
+    needs: [lint-check, changes]
+    if: >-
+      needs.changes.outputs.heavy == 'true' ||
+      github.event_name == 'merge_group' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
     strategy:
       matrix:
         node-version: [20.x, 22.x]
@@ -121,3 +160,23 @@ jobs:
       - name: E2E
         run: |
           pnpm e2e
+
+  # Aggregator status for branch protection.
+  # Always runs, passes iff every dependent job either succeeded or was
+  # legitimately skipped by the `changes` filter. Point branch protection
+  # at this job instead of individual matrix checks.
+  ci-passed:
+    needs: [lint-check, test-build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert no failures
+        run: |
+          if [[ "${{ needs.lint-check.result }}" != "success" ]]; then
+            echo "lint-check: ${{ needs.lint-check.result }}"
+            exit 1
+          fi
+          if [[ "${{ needs.test-build.result }}" != "success" && "${{ needs.test-build.result }}" != "skipped" ]]; then
+            echo "test-build: ${{ needs.test-build.result }}"
+            exit 1
+          fi
