@@ -82,13 +82,10 @@ jobs:
   # ======== test ========
   test-build:
     needs: [lint-check, changes]
-    # `push` is always heavy as a post-merge safety net — catches flaky
-    # transitive-dep resolution that the PR run may have hidden.
-    if: >-
-      needs.changes.outputs.heavy == 'true' ||
-      github.event_name == 'merge_group' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push'
+    # Non-PR events (push to main/v1, merge_group, workflow_dispatch)
+    # always run heavy as a post-merge safety net; PR events go through
+    # the `changes` path filter.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.heavy == 'true'
     strategy:
       matrix:
         node-version: [20.x, 22.x]
