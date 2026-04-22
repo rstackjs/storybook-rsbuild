@@ -169,10 +169,12 @@ async function doExtract(
 
   const { PHASE_DEVELOPMENT_SERVER, COMPILER_NAMES } = constantsMod
   const { Span } = traceMod
-  // ESM import of CJS module can create double-wrapped default
-  const loadConfig = configMod.default?.default || configMod.default
+  // ESM import of CJS module can create double-wrapped default; `as any`
+  // because TS types the single-unwrapped `.default` as the function directly
+  // (no further `.default`), but at runtime we defend against the wrapped form.
+  const loadConfig = (configMod as any).default?.default || configMod.default
   const getBaseWebpackConfig =
-    webpackConfigMod.default?.default || webpackConfigMod.default
+    (webpackConfigMod as any).default?.default || webpackConfigMod.default
   const { loadProjectInfo } = webpackConfigMod
 
   const nextConfig = await loadConfig(PHASE_DEVELOPMENT_SERVER, projectDir)

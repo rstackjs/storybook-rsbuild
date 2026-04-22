@@ -5,9 +5,7 @@ import type {
   Addon_DecoratorFunction,
   LoaderFunction,
 } from 'storybook/internal/types'
-// @ts-expect-error — package-name import required for ESM/CJS singleton behavior
 import { createNavigation } from 'storybook-next-rsbuild/navigation.mock'
-// @ts-expect-error — package-name import required for ESM/CJS singleton behavior
 import { createRouter } from 'storybook-next-rsbuild/router.mock'
 import { HeadManagerDecorator } from './head-manager/decorator'
 import { ImageDecorator } from './images/decorator'
