@@ -40,7 +40,7 @@ The `main` branch ships the Storybook v10 Rsbuild builder together with each fra
 Storybook Rsbuild allows you to use [Rsbuild](https://rsbuild.rs) as the build engine for Storybook, providing faster startup and build times.
 
 :::tip Using an AI coding agent?
-If you use [Claude Code](https://code.claude.com), [Codex](https://openai.com/index/codex/), [OpenCode](https://opencode.ai), or other AI coding agents, install our agent skills for guided setup and migration:
+If you use [Claude Code](https://code.claude.com), [Codex](https://openai.com/codex), [OpenCode](https://opencode.ai), or other AI coding agents, install our agent skills for guided setup and migration:
 
 <PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
 
@@ -63,7 +63,7 @@ npm create rsbuild@latest
 npx storybook@latest init
 ```
 
-Storybook will detect Rsbuild and automatically configure `storybook-builder-rsbuild` for you. It will also add example stories to your project. To understand the generated files, check the [Storybook Project Structure](https://storybook.js.org/docs/configure/sidebar-and-urls).
+Storybook will detect Rsbuild and automatically configure `storybook-builder-rsbuild` for you. It will also add example stories to your project. To understand the generated files, check the [Storybook Project Structure](https://storybook.js.org/docs/configure/user-interface/sidebar-and-urls).
 
 ### Existing Project
 
@@ -75,13 +75,13 @@ See the **[Frameworks](/guide/framework/react)** section for detailed migration 
 
 | Package                                                                                                                             | What it provides                                       |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/builder-rsbuild)                 | The Rsbuild-powered Storybook builder                  |
-| [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-react)                   | React framework integration configured for Rsbuild     |
-| [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-vue3)                     | Vue 3 framework integration configured for Rsbuild     |
-| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-html)                     | Vanilla JavaScript/TypeScript integration              |
-| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-web-components) | Lit and Web Components integration                     |
-| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/addon-rslib)                         | Addon that reuses Rslib configuration inside Storybook |
-| [storybook-addon-modernjs](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/addon-modernjs)                   | Addon that reuses Modern.js configuration inside Storybook |
+| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | The Rsbuild-powered Storybook builder                  |
+| [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-react)                   | React framework integration configured for Rsbuild     |
+| [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-vue3)                     | Vue 3 framework integration configured for Rsbuild     |
+| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | Vanilla JavaScript/TypeScript integration              |
+| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit and Web Components integration                     |
+| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | Addon that reuses Rslib configuration inside Storybook |
+| [storybook-addon-modernjs](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-modernjs)                   | Addon that reuses Modern.js configuration inside Storybook |
 
 ## Usage
 
