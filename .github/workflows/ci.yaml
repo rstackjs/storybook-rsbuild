@@ -16,6 +16,10 @@ on:
 
 permissions:
   contents: read
+  # Required by `dorny/paths-filter` to call the PR files API.
+  # Declaring any permission implicitly sets unspecified scopes to `none`,
+  # so we must grant `pull-requests: read` explicitly.
+  pull-requests: read
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -165,16 +169,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Assert no failures
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          LINT: ${{ needs.lint-check.result }}
+          TEST: ${{ needs.test-build.result }}
         run: |
-          if [[ "${{ needs.changes.result }}" != "success" ]]; then
-            echo "changes: ${{ needs.changes.result }}"
-            exit 1
-          fi
-          if [[ "${{ needs.lint-check.result }}" != "success" ]]; then
-            echo "lint-check: ${{ needs.lint-check.result }}"
-            exit 1
-          fi
-          if [[ "${{ needs.test-build.result }}" != "success" && "${{ needs.test-build.result }}" != "skipped" ]]; then
-            echo "test-build: ${{ needs.test-build.result }}"
-            exit 1
-          fi
+          [[ "$CHANGES" == "success" ]] || { echo "changes: $CHANGES"; exit 1; }
+          [[ "$LINT" == "success" ]] || { echo "lint-check: $LINT"; exit 1; }
+          [[ "$TEST" == "success" || "$TEST" == "skipped" ]] || { echo "test-build: $TEST"; exit 1; }
