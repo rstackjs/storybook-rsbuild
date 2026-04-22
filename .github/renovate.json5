@@ -25,18 +25,12 @@
 			"groupName": "storybook",
 			"groupSlug": "storybook",
 			"matchManagers": ["npm"],
-			"matchPackagePatterns": ["^storybook$", "^@storybook/"],
+			"matchPackageNames": ["storybook", "@storybook/**"],
 			"matchDepTypes": ["dependencies", "devDependencies"],
 			"rangeStrategy": "bump",
 			"separateMajorMinor": false,
 			"separateMinorPatch": false,
 			"separateMultipleMajor": false
-		},
-		{
-			"groupName": "rspack (stable and beta only)",
-			"groupSlug": "rspack-stable-beta",
-			"matchPackageNames": ["@rspack/core", "@rspack/cli"],
-			"allowedVersions": "/^\\d+\\.\\d+\\.\\d+(-beta.*)?$/"
 		},
 		{
 			"groupName": "rspress",
@@ -48,11 +42,19 @@
 			"groupName": "all non-major dependencies",
 			"groupSlug": "all-non-major",
 			"matchUpdateTypes": ["patch", "minor"],
-			"excludePackagePatterns": ["^storybook$", "^@storybook/"]
+			"matchPackageNames": ["**", "!storybook", "!@storybook/**"]
+		},
+		// Must be placed AFTER `all-non-major` so the groupName override wins.
+		// Ref: https://docs.renovatebot.com/configuration-options/#packagerules
+		{
+			"groupName": "rstack (rspack + rsbuild)",
+			"groupSlug": "rstack",
+			"matchPackageNames": ["@rspack/**", "@rsbuild/**"],
+			"allowedVersions": "/^\\d+\\.\\d+\\.\\d+(-(beta|rc)(\\.\\d+)?)?$/"
 		},
 		// manually update peer dependencies
 		{
-			"depTypeList": ["peerDependencies"],
+			"matchDepTypes": ["peerDependencies"],
 			"enabled": false
 		}
 	],
