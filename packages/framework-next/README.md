@@ -1,5 +1,10 @@
 # storybook-next-rsbuild
 
+> [!WARNING]
+> **Experimental.** This package bridges Storybook to Next.js's own build pipeline via `next-rspack`'s `getBaseWebpackConfig()`. Until it reaches a stable release, **any Next.js minor or patch upgrade may break compatibility** — including changes to internal `next/dist/*` paths, the `getBaseWebpackConfig` signature, or DOM anchors expected at runtime. Pin your `next` version if you need reproducibility, and expect to upgrade this package in lockstep with Next.js releases.
+>
+> `next-rspack` itself is an experimental integration on the Next.js side. See [AGENTS.md](./AGENTS.md) for the shim catalogue and "remove when" conditions for each workaround.
+
 Check out [rstackjs/storybook-rsbuild](https://github.com/rstackjs/storybook-rsbuild) for documentation.
 
 ## 🤖 Agent Skills

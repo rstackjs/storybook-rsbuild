@@ -74,6 +74,24 @@ const PREVIEW_KEYS = {
 }
 
 /**
+ * Dummy values fed to `getBaseWebpackConfig()` to satisfy its required params.
+ * Storybook never produces a real `.next/` build or serves draft-mode pages,
+ * so these code paths are dead in our case — the values are inert, not secrets.
+ * Keyed separately from version-dependent params (see `buildWebpackConfigParams`).
+ * See AGENTS.md § Shim Catalogue.
+ */
+const DUMMY_NEXT_ARGS = {
+  buildId: 'storybook-dev',
+  encryptionKey: 'storybook-encryption-key-1234567890ab',
+  rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
+  originalRewrites: undefined,
+  originalRedirects: undefined,
+  entrypoints: {
+    'main-app': { import: ['next/dist/client/next-dev.js'] },
+  },
+}
+
+/**
  * Build the `getBaseWebpackConfig` options for the detected Next.js version.
  * Signature drift: 15.x uses `edgePreviewProps`; 16.0+ renamed to
  * `previewProps` (now required).
@@ -166,23 +184,13 @@ async function doExtract(
 
   const dirs = pagesDirMod?.findPagesDir(projectDir)
 
-  // Preview-mode params are required by Next.js's API surface but unused in
-  // Storybook (we don't serve draft-mode pages). These dummy values satisfy
-  // the validation — they are not secrets.
   const params = buildWebpackConfigParams(nextVersion, {
-    buildId: 'storybook-dev',
-    encryptionKey: 'storybook-encryption-key-1234567890ab',
+    ...DUMMY_NEXT_ARGS,
     config: nextConfig,
     compilerType: COMPILER_NAMES.client,
     dev: true,
-    entrypoints: {
-      'main-app': { import: ['next/dist/client/next-dev.js'] },
-    },
     pagesDir: dirs?.pagesDir,
     appDir: dirs?.appDir,
-    rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
-    originalRewrites: undefined,
-    originalRedirects: undefined,
     runWebpackSpan: new Span({ name: 'storybook' }),
     jsConfig: projectInfo.jsConfig,
     jsConfigPath: projectInfo.jsConfigPath,

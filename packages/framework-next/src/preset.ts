@@ -290,6 +290,10 @@ const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
 class ReactRefreshInitPlugin {
   constructor(private entryPath: string) {}
   apply(compiler: any) {
+    // `name: undefined` is rspack/webpack's "global entry" semantic — attaches
+    // the bootstrap to every entry rather than a named one. Not a publicly
+    // documented contract; if rspack breaks this, pass an explicit name and
+    // add the entry to each Storybook chunk via compilation.addEntry.
     new compiler.webpack.EntryPlugin(compiler.context, this.entryPath, {
       name: undefined,
     }).apply(compiler)
@@ -364,9 +368,19 @@ export const rsbuildFinal: NonNullable<
           ...rspackConfig.resolve.fallback,
         }
         if (extraction.resolveLoader) {
+          // Field-level merge: scalars follow "Next.js wins" (last spread), but
+          // `modules` concatenate and `alias` unions so user-supplied loader
+          // search paths / aliases from `tools.rspack` aren't silently dropped.
+          const userRL = rspackConfig.resolveLoader ?? {}
+          const nextRL = extraction.resolveLoader
           rspackConfig.resolveLoader = {
-            ...rspackConfig.resolveLoader,
-            ...extraction.resolveLoader,
+            ...userRL,
+            ...nextRL,
+            modules: [...(nextRL.modules ?? []), ...(userRL.modules ?? [])],
+            alias: {
+              ...(userRL.alias ?? {}),
+              ...(nextRL.alias ?? {}),
+            },
           }
         }
         // Next.js compiled modules use __dirname, mocked in browser builds.
