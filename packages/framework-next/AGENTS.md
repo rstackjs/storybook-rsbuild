@@ -153,7 +153,7 @@ Syncing a change: run the grep, diff against upstream, apply the meaningful chan
 ## Known Operational Quirks
 
 - **Injected dep sync**: `storybook-builder-rsbuild` is consumed via `dependenciesMeta.injected: true` because this package pins `@rsbuild/core@1.x` while siblings use `2.x`. After rebuilding the builder, you **must** run `pnpm install` at the repo root to re-sync the injected artifact; `pnpm build` alone won't propagate.
-- **`next-rspack` phantom dep**: Next.js internally `require('next-rspack/rspack-core')` without declaring it. The monorepo's `pnpm-workspace.yaml` adds `next-rspack` to `hoistPattern` so the resolver finds it.
+- **`next-rspack` peer dep**: Next.js internally `require('next-rspack/rspack-core')` without declaring it, so consumers must install `next-rspack` beside `next` (declared here as a peer dependency). The monorepo's `pnpm-workspace.yaml` still hoists `next-rspack` so workspace sandboxes resolve it from the root install layout.
 
 ## References
 

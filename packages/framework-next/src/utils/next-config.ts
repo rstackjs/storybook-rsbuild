@@ -131,8 +131,8 @@ const EMPTY_EXTRACTION: NextRspackExtraction = {
  * defines, resolveLoader, raw rules, and raw plugins. On failure, logs the
  * error and returns an empty extraction so Storybook can still boot.
  *
- * `next-rspack` must be hoisted (via `hoistPattern`) so that `next`'s internal
- * `require('next-rspack/rspack-core')` can resolve it.
+ * `next-rspack` must be installed in the consuming project so that `next`'s
+ * internal `require('next-rspack/rspack-core')` can resolve it.
  */
 export async function extractNextRspackConfig(
   dir?: string,
@@ -144,14 +144,26 @@ export async function extractNextRspackConfig(
     return await doExtract(projectDir, nextVersion)
   } catch (err) {
     const versionLabel = nextVersion ? nextVersion.join('.') : 'unknown'
+    const installHint = isMissingNextRspackError(err)
+      ? ' Install next-rspack in your Next.js project and keep it aligned with your next version.'
+      : ''
     logger.error(
       `Failed to bridge Next.js config (next@${versionLabel}). ` +
         'Storybook will boot with React support only — ' +
         'Next.js features (CSS, fonts, images, navigation mocks) will not work. ' +
-        `Error: ${err instanceof Error ? err.message : String(err)}`,
+        `Error: ${err instanceof Error ? err.message : String(err)}.` +
+        installHint,
     )
     return EMPTY_EXTRACTION
   }
+}
+
+function isMissingNextRspackError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return (
+    err.message.includes('next-rspack/rspack-core') ||
+    err.message.includes('@rspack/core is not available')
+  )
 }
 
 async function doExtract(

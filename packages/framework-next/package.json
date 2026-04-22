@@ -81,7 +81,6 @@
   "dependencies": {
     "@rsbuild/core": "^1.6.14",
     "@storybook/react": "^10.3.5",
-    "next-rspack": "^16.2.3",
     "storybook-builder-rsbuild": "workspace:*",
     "styled-jsx": "5.1.6"
   },
@@ -89,6 +88,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "next": "^16.2.3",
+    "next-rspack": "^16.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "storybook": "10.3.5",
@@ -101,6 +101,7 @@
   },
   "peerDependencies": {
     "next": "^15.3.0 || ^16.0.0",
+    "next-rspack": "^15.3.0 || ^16.0.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
     "storybook": "^10.1.0"
