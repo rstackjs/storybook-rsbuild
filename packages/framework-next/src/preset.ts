@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import { logger } from 'storybook/internal/node-logger'
@@ -146,8 +146,17 @@ export const rsbuildFinal: NonNullable<
   const { nextConfigPath } =
     await options.presets.apply<FrameworkOptions>('frameworkOptions')
 
+  // Resolve `nextConfigPath` against `configDir` when relative — users commonly
+  // write `../next.config.ts` in `.storybook/main.ts`, expecting it relative to
+  // the Storybook config dir, not cwd.
+  const resolvedNextConfigPath = nextConfigPath
+    ? isAbsolute(nextConfigPath)
+      ? nextConfigPath
+      : resolvePath(options.configDir ?? process.cwd(), nextConfigPath)
+    : undefined
+
   const extraction = await extractNextRspackConfig(
-    nextConfigPath ? dirname(nextConfigPath) : undefined,
+    resolvedNextConfigPath ? dirname(resolvedNextConfigPath) : undefined,
   )
 
   const allAliases: Record<string, string | string[] | false> = {
@@ -181,12 +190,16 @@ export const rsbuildFinal: NonNullable<
     },
     tools: {
       /**
-       * Strip Rsbuild's CSS pipeline — Next.js ships its own `CssExtractRspackPlugin`
-       * plus layered CSS rules; running both produces double-extraction and
-       * breaks `next/font` target.css. `CHAIN_ID` isn't exported from
-       * `@rsbuild/core`'s public entry, so this hook is the only stable access.
+       * Strip Rsbuild's CSS pipeline only when we have Next.js's CSS rules to
+       * replace it — otherwise (e.g. when bridge extraction fails and falls
+       * back to `EMPTY_EXTRACTION`) we'd leave Storybook with no CSS handling
+       * at all, breaking even plain `.css` imports. Running both is not an
+       * option: it double-extracts and breaks `next/font` target.css.
+       * `CHAIN_ID` isn't exported from `@rsbuild/core`'s public entry, so this
+       * hook is the only stable access.
        */
       bundlerChain: (chain, { CHAIN_ID }) => {
+        if (nextCssRules.length === 0) return
         if (chain.module.rules.has(CHAIN_ID.RULE.CSS)) {
           chain.module.rules.delete(CHAIN_ID.RULE.CSS)
         }
