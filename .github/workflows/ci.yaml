@@ -16,9 +16,8 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # Decide whether the heavy `test-build` matrix should run.
-  # Skipped for changes confined to docs / editor / bot configs.
-  # Uses a negation pattern so any new path defaults to heavy (fail-safe).
+  # Negation pattern — any path not in the safelist defaults to heavy,
+  # so a newly added folder fails safe into running the full matrix.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -48,7 +47,6 @@ jobs:
               - '!.claude/**'
               - '!.gitignore'
               - '!.editorconfig'
-              - '!bump.config.ts'
 
   lint-check:
     runs-on: ubuntu-latest
@@ -81,6 +79,8 @@ jobs:
   # ======== test ========
   test-build:
     needs: [lint-check, changes]
+    # `push` is always heavy as a post-merge safety net — catches flaky
+    # transitive-dep resolution that the PR run may have hidden.
     if: >-
       needs.changes.outputs.heavy == 'true' ||
       github.event_name == 'merge_group' ||
@@ -115,12 +115,6 @@ jobs:
       - name: Install Dependencies
         run: |
           pnpm install --frozen-lockfile
-
-      - name: Lint / Type Check / Check Dependency Version
-        run: |
-          pnpm lint
-          pnpm check
-          pnpm check-dependency-version
 
       - name: Prepare Playwright cache directory
         shell: bash
@@ -166,12 +160,16 @@ jobs:
   # legitimately skipped by the `changes` filter. Point branch protection
   # at this job instead of individual matrix checks.
   ci-passed:
-    needs: [lint-check, test-build]
+    needs: [changes, lint-check, test-build]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Assert no failures
         run: |
+          if [[ "${{ needs.changes.result }}" != "success" ]]; then
+            echo "changes: ${{ needs.changes.result }}"
+            exit 1
+          fi
           if [[ "${{ needs.lint-check.result }}" != "success" ]]; then
             echo "lint-check: ${{ needs.lint-check.result }}"
             exit 1
