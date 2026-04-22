@@ -3,7 +3,11 @@ import * as actual from 'next/dist/client/components/navigation.js'
 import { NextjsRouterMocksNotAvailable } from 'storybook/internal/preview-errors'
 import type { Mock } from 'storybook/test'
 import { fn } from 'storybook/test'
-import { getRedirectError, RedirectStatusCode } from '../../next-internals'
+import {
+  getRedirectError,
+  RedirectStatusCode,
+  type RedirectType,
+} from '../../next-internals'
 
 let navigationAPI: {
   push: Mock
@@ -54,19 +58,13 @@ export * from 'next/dist/client/components/navigation.js'
 
 // mock utilities/overrides
 export const redirect = fn(
-  (
-    url: string,
-    type: actual.RedirectType = actual.RedirectType.push,
-  ): never => {
+  (url: string, type: RedirectType = 'push'): never => {
     throw getRedirectError(url, type, RedirectStatusCode.SeeOther)
   },
 ).mockName('next/navigation::redirect')
 
 export const permanentRedirect = fn(
-  (
-    url: string,
-    type: actual.RedirectType = actual.RedirectType.push,
-  ): never => {
+  (url: string, type: RedirectType = 'push'): never => {
     throw getRedirectError(url, type, RedirectStatusCode.PermanentRedirect)
   },
 ).mockName('next/navigation::permanentRedirect')
