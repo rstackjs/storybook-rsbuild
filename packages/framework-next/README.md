@@ -7,6 +7,16 @@
 
 Check out [rstackjs/storybook-rsbuild](https://github.com/rstackjs/storybook-rsbuild) for documentation.
 
+## Installation
+
+Install `next-rspack` alongside `storybook-next-rsbuild` in the consuming Next.js project:
+
+```bash
+pnpm add -D storybook-next-rsbuild next-rspack
+```
+
+`next-rspack` must be resolvable from Next.js itself because Next internally calls `require('next-rspack/rspack-core')` while generating the bridged Rspack config. Keep the `next-rspack` version aligned with your `next` version.
+
 ## 🤖 Agent Skills
 
 Using an AI coding agent? Install the agent skills for guided setup: `npx skills add rstackjs/agent-skills --skill storybook-rsbuild`

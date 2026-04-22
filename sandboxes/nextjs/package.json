@@ -20,6 +20,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "next-rspack": "^16.2.3",
     "storybook": "10.3.5",
     "storybook-next-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
