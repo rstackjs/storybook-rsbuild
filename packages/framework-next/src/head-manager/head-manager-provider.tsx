@@ -1,5 +1,5 @@
 // Port: @storybook/nextjs-vite/src/head-manager/head-manager-provider.tsx
-import type { PropsWithChildren } from 'react'
+import type { JSX, PropsWithChildren } from 'react'
 import React, { useMemo } from 'react'
 import { HeadManagerContext, initHeadManager } from '../next-internals'
 
@@ -15,7 +15,7 @@ type HeadManagerValue = {
 
 const HeadManagerProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const headManager: HeadManagerValue = useMemo(() => {
-    const hm = initHeadManager()
+    const hm: HeadManagerValue = initHeadManager()
     hm.getIsSsr = () => false
     return hm
   }, [])

@@ -1,6 +1,5 @@
 // Port: @storybook/nextjs-vite/src/export-mocks/headers/cookies.ts
 import { fn } from 'storybook/test'
-// @ts-expect-error — package-name import required for ESM/CJS singleton behavior
 import { headers } from 'storybook-next-rsbuild/headers.mock'
 import { RequestCookies } from '../../next-internals'
 

@@ -12,10 +12,10 @@
 export { isNextRouterError } from 'next/dist/client/components/is-next-router-error.js'
 export { getRedirectError } from 'next/dist/client/components/redirect.js'
 export { RedirectBoundary } from 'next/dist/client/components/redirect-boundary.js'
+export type { RedirectType } from 'next/dist/client/components/redirect-error.js'
 export { RedirectStatusCode } from 'next/dist/client/components/redirect-status-code.js'
 export { default as initHeadManager } from 'next/dist/client/head-manager.js'
 export { RequestCookies } from 'next/dist/compiled/@edge-runtime/cookies/index.js'
-export type { FlightRouterState } from 'next/dist/server/app-render/types'
 export { draftMode } from 'next/dist/server/request/draft-mode.js'
 export { HeadersAdapter } from 'next/dist/server/web/spec-extension/adapters/headers.js'
 export {
@@ -23,6 +23,7 @@ export {
   GlobalLayoutRouterContext,
   LayoutRouterContext,
 } from 'next/dist/shared/lib/app-router-context.shared-runtime.js'
+export type { FlightRouterState } from 'next/dist/shared/lib/app-router-types.js'
 export { HeadManagerContext } from 'next/dist/shared/lib/head-manager-context.shared-runtime.js'
 export {
   PathnameContext,

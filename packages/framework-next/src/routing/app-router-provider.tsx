@@ -1,6 +1,5 @@
 // Port: @storybook/nextjs-vite/src/routing/app-router-provider.tsx
 import React, { useMemo } from 'react'
-// @ts-expect-error — package-name import required for ESM/CJS singleton behavior
 import { getRouter } from 'storybook-next-rsbuild/navigation.mock'
 import {
   AppRouterContext,
@@ -121,7 +120,6 @@ export const AppRouterProvider: React.FC<
         <SearchParamsContext.Provider value={searchParams}>
           <GlobalLayoutRouterContext.Provider
             value={{
-              // @ts-expect-error (Only available in Next.js >= v15.1.1)
               changeByServerResponse() {},
               buildId: 'storybook',
               tree,
@@ -139,9 +137,7 @@ export const AppRouterProvider: React.FC<
                 value={{
                   childNodes: new Map(),
                   tree,
-                  // @ts-expect-error Only available in Next.js >= v15.1.1
                   parentTree: tree,
-                  // @ts-expect-error Only available in Next.js >= v15.1.1
                   parentCacheNode: cacheNode,
                   url: pathname,
                   loading: null,
