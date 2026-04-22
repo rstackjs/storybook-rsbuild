@@ -1,6 +1,6 @@
 {
   "name": "storybook-next-rsbuild",
-  "version": "0.0.0",
+  "version": "3.3.3",
   "description": "Storybook for Next.js and Rsbuild: Develop Next.js components in isolation with Hot Reloading.",
   "keywords": [
     "storybook",
