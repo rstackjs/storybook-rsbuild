@@ -176,6 +176,31 @@ function isErrorLoaderUse(use: any): boolean {
   return typeof name === 'string' && name.includes('error-loader')
 }
 
+const BARREL_TEST_RE = /__barrel_optimize__/
+const BARREL_NARROWED_TEST = /__barrel_optimize__/
+
+function flattenTestParts(test: any): any[] {
+  if (!test) return []
+  if (Array.isArray(test)) return test
+  if (typeof test === 'object' && Array.isArray(test.or)) return test.or
+  return [test]
+}
+
+/**
+ * `next/dist/build/swc/options` rewrites `import { x } from '@scope/pkg'` into
+ * `import { x } from '__barrel_optimize__?names=x!=!@scope/pkg'` when
+ * `optimizePackageImports` is enabled (default for many libs in Next 15+).
+ * The synthetic specifier needs Next.js's own JS rule chain to resolve — without
+ * it, rspack reports "no loader for this file type" on every MUI/lodash import.
+ */
+function isBarrelOptimizeRule(rule: any): boolean {
+  return flattenTestParts(rule?.test).some((t) => {
+    if (typeof t === 'string') return t.includes('__barrel_optimize__')
+    if (t instanceof RegExp) return BARREL_TEST_RE.test(t.source)
+    return false
+  })
+}
+
 /**
  * Strip Next.js's `_app.js`-only Pages-Router CSS guards.
  *
@@ -193,10 +218,23 @@ function isErrorLoaderUse(use: any): boolean {
 function stripNextCssRestrictions(rule: any): any {
   if (!rule || typeof rule !== 'object') return rule
   if (Array.isArray(rule.oneOf)) {
+    // Next.js's client rule mixes CSS branches with JS branches (`next-swc-loader`,
+    // `next-flight-loader`) under one `oneOf`. Pulling the whole rule into Storybook
+    // makes the JS branches re-run our SWC chain on TSX files, producing duplicate
+    // `$RefreshSig$` declarations. Keep only branches that are themselves CSS or
+    // exclusively handle `__barrel_optimize__` virtual specifiers (see
+    // `isBarrelOptimizeRule`).
     rule.oneOf = rule.oneOf
       .filter((r: any) => !asUseArray(r?.use).some(isErrorLoaderUse))
+      .filter((r: any) => isCssRule(r) || isBarrelOptimizeRule(r))
       .map((r: any) => {
-        if (isCssRule(r)) delete r.issuer
+        // Barrel branches' `test` typically `or`s the file-extension regex with
+        // the barrel marker (e.g. `{ or: [/\.tsx?$/, '__barrel_optimize__'] }`).
+        // Narrow to barrel only so this branch does not also catch regular TSX.
+        if (!isCssRule(r) && isBarrelOptimizeRule(r)) {
+          r.test = BARREL_NARROWED_TEST
+        }
+        delete r.issuer
         return stripNextCssRestrictions(r)
       })
   }
