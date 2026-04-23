@@ -224,9 +224,28 @@ async function doExtract(
   }
 
   const alias = rspackConfig.resolve?.alias || {}
-  const fallback = rspackConfig.resolve?.fallback || {}
   const rawRules = rspackConfig.module?.rules || []
   const rawPlugins = rspackConfig.plugins || []
+
+  // Next.js's browser polyfills (`querystring-es3`, `buffer`, `path-browserify`,
+  // ...) aren't on `resolve.fallback` — they're tucked inside a top-level rule
+  // whose only field is `resolve.fallback`. Harvest those and merge them up so
+  // Storybook's global resolver can satisfy `import { parse } from 'querystring'`
+  // from user code too. Last-write-wins, matching webpack's rule ordering.
+  const fallback: Record<string, string | string[] | false> = {
+    ...(rspackConfig.resolve?.fallback || {}),
+  }
+  const harvestFallback = (rules: any[]) => {
+    for (const r of rules) {
+      if (!r || typeof r !== 'object') continue
+      if (r.resolve?.fallback) {
+        Object.assign(fallback, r.resolve.fallback)
+      }
+      if (Array.isArray(r.oneOf)) harvestFallback(r.oneOf)
+      if (Array.isArray(r.rules)) harvestFallback(r.rules)
+    }
+  }
+  harvestFallback(rawRules)
 
   verifyRspackVersionAlignment()
 
