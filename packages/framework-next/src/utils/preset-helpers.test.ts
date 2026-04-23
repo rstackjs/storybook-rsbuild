@@ -64,6 +64,13 @@ describe('filterNextPlugins', () => {
     const plugins = [new BuildManifestPlugin(), new NextExternalsPlugin()]
     expect(filterNextPlugins(plugins as any[])).toEqual([])
   })
+
+  it('drops dev-only plugins (ReactRefreshRspackPlugin) in production', () => {
+    const css = new CssExtractRspackPlugin()
+    const refresh = new ReactRefreshRspackPlugin()
+    const plugins = [css, refresh]
+    expect(filterNextPlugins(plugins as any[], { isDev: false })).toEqual([css])
+  })
 })
 
 describe('buildNextLoaderChain', () => {
@@ -127,6 +134,21 @@ describe('buildNextLoaderChain', () => {
     expect(chain).toEqual([
       'builtin:react-refresh-loader',
       { loader: SHIM, options: {} },
+    ])
+  })
+
+  it('drops react-refresh-loader and forces dev:false in production', () => {
+    const swcOpts = { isServer: false, dev: true }
+    const refresh = { loader: 'builtin:react-refresh-loader' }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [refresh, { loader: 'next-swc-loader', options: swcOpts }],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM, { isDev: false })
+    expect(chain).toEqual([
+      { loader: SHIM, options: { isServer: false, dev: false } },
     ])
   })
 })
@@ -266,5 +288,54 @@ describe('prepareNextCssRules', () => {
       'css-loader',
       'postcss-loader',
     ])
+  })
+
+  it('drops oneOf branches that contain Next.js error-loader', () => {
+    const rule = {
+      test: /\.css$/,
+      oneOf: [
+        {
+          use: [
+            {
+              loader: '/abs/next/dist/build/webpack/loaders/error-loader',
+              options: { reason: 'Global CSS cannot be imported...' },
+            },
+          ],
+        },
+        {
+          test: /\.css$/,
+          issuer: /pages\/_app\.js$/,
+          use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
+        },
+      ],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    expect(result.oneOf).toHaveLength(1)
+    expect(result.oneOf[0].use[0].loader).toBe('css-loader')
+  })
+
+  it('strips issuer constraints from CSS rules so Storybook imports match', () => {
+    const rule = {
+      test: /\.css$/,
+      issuer: /pages\/_app\.js$/,
+      use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    expect(result.issuer).toBeUndefined()
+  })
+
+  it('strips issuer from CSS branches inside oneOf', () => {
+    const rule = {
+      test: /\.css$/,
+      oneOf: [
+        {
+          test: /\.css$/,
+          issuer: { not: /node_modules/ },
+          use: [{ loader: 'css-loader' }],
+        },
+      ],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    expect(result.oneOf[0].issuer).toBeUndefined()
   })
 })
