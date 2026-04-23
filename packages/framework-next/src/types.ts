@@ -49,9 +49,7 @@ export type StorybookConfig = Omit<
 
 export interface NextJsParameters {
   nextjs?: {
-    /** Enable App Directory features. Required when importing components using next/navigation. */
-    appDirectory?: boolean
-    /** Next.js navigation configuration for next/navigation (app directory only). */
+    /** Next.js navigation configuration for next/navigation (app directory). */
     navigation?: Partial<NextRouter>
     /** Next.js router configuration for next/router (pages directory). */
     router?: Partial<NextRouter>

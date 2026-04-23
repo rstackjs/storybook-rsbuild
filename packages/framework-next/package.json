@@ -62,6 +62,10 @@
       "types": "./dist/export-mocks/router/index.d.ts",
       "default": "./dist/export-mocks/router/index.js"
     },
+    "./rspack-helpers": {
+      "types": "./dist/rspack-helpers.d.ts",
+      "default": "./dist/rspack-helpers.js"
+    },
     "./swc-loader-shim": "./loaders/swc-loader-shim.cjs"
   },
   "files": [
@@ -127,7 +131,8 @@
       "./src/export-mocks/navigation/index.ts",
       "./src/export-mocks/router/index.ts",
       "./src/export-mocks/cache/index.ts",
-      "./src/export-mocks/headers/index.ts"
+      "./src/export-mocks/headers/index.ts",
+      "./src/rspack-helpers.ts"
     ],
     "platform": "node"
   }
