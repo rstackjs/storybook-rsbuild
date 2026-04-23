@@ -13,10 +13,12 @@ import {
   normalizeStories,
   stringifyProcessEnvs,
 } from 'storybook/internal/common'
+import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import type { Options } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import type { BuilderOptions, TypescriptOptions } from '../types'
+import { isMswActive } from './detect-msw'
 import { getVirtualModules } from './virtual-module-mapping'
 
 const require = createRequire(import.meta.url)
@@ -159,13 +161,21 @@ export default async (
   if (!isProd) {
     if (shouldDisableDevFeatures) {
       lazyCompilationConfig = false
+    } else if (builderOptions.lazyCompilation !== undefined) {
+      lazyCompilationConfig = builderOptions.lazyCompilation
+    } else if (await isMswActive(options)) {
+      // https://storybook.rsbuild.rs/guide/troubleshooting#msw-integration-and-lazy-compilation
+      lazyCompilationConfig = false
+      logger.warn(dedent`
+        Detected mockServiceWorker.js in staticDirs. Lazy compilation has been disabled
+        automatically to avoid a Service Worker race that can leave the preview iframe
+        blank on cold story loads. Set \`lazyCompilation\` explicitly in your builder
+        options to override.
+      `)
     } else {
-      lazyCompilationConfig =
-        builderOptions.lazyCompilation === undefined
-          ? {
-              entries: false,
-            }
-          : builderOptions.lazyCompilation
+      lazyCompilationConfig = {
+        entries: false,
+      }
     }
   }
 
