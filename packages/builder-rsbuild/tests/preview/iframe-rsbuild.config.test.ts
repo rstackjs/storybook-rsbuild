@@ -22,7 +22,6 @@ type LazyCompilationOption = Rspack.Configuration['lazyCompilation']
 const createOptions = (
   lazyCompilation: LazyCompilationOption | 'unset' = false,
   configType: 'DEVELOPMENT' | 'PRODUCTION' = 'DEVELOPMENT',
-  addons: unknown[] = [],
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
@@ -57,7 +56,6 @@ const createOptions = (
     ['tags', {}],
     ['build', { test: {} }],
     ['previewAnnotations', []],
-    ['addons', addons],
   ])
 
   const apply = rs.fn(
@@ -141,9 +139,8 @@ describe('iframe-rsbuild.config', () => {
 
   const runRspackTool = async (
     lazyCompilation: LazyCompilationOption | 'unset',
-    addons: unknown[] = [],
   ) => {
-    const { options } = createOptions(lazyCompilation, 'DEVELOPMENT', addons)
+    const { options } = createOptions(lazyCompilation)
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
     )
@@ -188,31 +185,6 @@ describe('iframe-rsbuild.config', () => {
   it('passes through lazyCompilation options object', async () => {
     const { rspackConfig } = await runRspackTool({ entries: true })
     expect(rspackConfig.lazyCompilation).toEqual({ entries: true })
-  })
-
-  // MSW's Service Worker races with the dev-server lazy-compilation RPC and
-  // leaves the preview iframe blank on cold story loads. Default-off when the
-  // addon is present; respect an explicit user override.
-  it('disables lazyCompilation when msw-storybook-addon is present and option is unset', async () => {
-    const { rspackConfig } = await runRspackTool('unset', [
-      'msw-storybook-addon',
-    ])
-    expect(rspackConfig.lazyCompilation).toBe(false)
-  })
-
-  it('respects explicit lazyCompilation even when msw-storybook-addon is present', async () => {
-    const { rspackConfig } = await runRspackTool({ entries: true }, [
-      'msw-storybook-addon',
-    ])
-    expect(rspackConfig.lazyCompilation).toEqual({ entries: true })
-  })
-
-  it('detects msw-storybook-addon when referenced via absolute path or object form', async () => {
-    const { rspackConfig } = await runRspackTool('unset', [
-      '/abs/path/to/node_modules/msw-storybook-addon',
-      { name: 'some-other-addon', options: {} },
-    ])
-    expect(rspackConfig.lazyCompilation).toBe(false)
   })
 
   it('appends raw query fallback rule for asset/source imports', async () => {

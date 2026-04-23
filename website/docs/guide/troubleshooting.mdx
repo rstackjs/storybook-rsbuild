@@ -109,7 +109,7 @@ export default {
 
 ## MSW integration and lazy compilation
 
-When [`msw-storybook-addon`](https://github.com/mswjs/msw-storybook-addon) is installed, the builder automatically disables lazy compilation and logs a warning at startup.
+When `mockServiceWorker.js` is found in one of the `staticDirs` entries — the convention used by [`msw-storybook-addon`](https://github.com/mswjs/msw-storybook-addon) and any hand-rolled MSW setup — the builder automatically disables lazy compilation and logs a warning at startup.
 
 This is necessary because MSW's Service Worker intercepts every `fetch` from the preview iframe, including the dev-server's lazy-compilation RPC (`POST /lazy-compilation-using-`). The SW's passthrough re-issues a fresh `fetch(clonedRequest)` that the dev-server aborts, which can leave stories stuck on a blank iframe during cold loads. The issue is rooted in how the lazy-compilation runtime talks to the dev-server via a stateful RPC channel — not a defect of the builder itself — and also affects the official `@storybook/builder-webpack5` when lazy compilation is manually enabled. A related failure mode is discussed upstream in [mswjs/msw#834](https://github.com/mswjs/msw/issues/834) (SW intercepting dev-server HMR SSE).
 
