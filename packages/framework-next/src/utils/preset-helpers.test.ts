@@ -338,4 +338,77 @@ describe('prepareNextCssRules', () => {
     const [result] = prepareNextCssRules([rule], REWRITER)
     expect(result.oneOf[0].issuer).toBeUndefined()
   })
+
+  it('drops non-CSS branches from a mixed oneOf so JS loaders do not run twice', () => {
+    // Next.js's client rule wraps both JS branches (next-swc-loader,
+    // next-flight-loader) and CSS branches under one oneOf. If we let the JS
+    // branches through, TSX files get hit by next-swc-loader once via this
+    // pulled-in rule and again via Storybook's swc rule, producing duplicate
+    // `$RefreshSig$` declarations.
+    const rule = {
+      oneOf: [
+        { test: /\.tsx?$/, use: [{ loader: 'next-swc-loader' }] },
+        {
+          test: /\.tsx?$/,
+          use: [
+            { loader: 'next-flight-loader' },
+            { loader: 'next-swc-loader' },
+          ],
+        },
+        {
+          test: /\.tsx?$/,
+          use: [
+            { loader: 'builtin:react-refresh-loader' },
+            { loader: 'next-swc-loader' },
+          ],
+        },
+        {
+          test: /\.module\.css$/,
+          use: [
+            { loader: 'next-style-loader' },
+            { loader: 'css-loader' },
+            { loader: 'postcss-loader' },
+          ],
+        },
+        {
+          test: /\.css$/,
+          use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
+        },
+        // empty/unknown branch — neither CSS nor harmful, should still drop
+        { test: /\.unknown$/ },
+      ],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    expect(result.oneOf).toHaveLength(2)
+    expect(result.oneOf[0].use[0].loader).toBe('next-style-loader')
+    expect(result.oneOf[1].use[0].loader).toBe('css-loader')
+  })
+
+  it('keeps __barrel_optimize__ branches but narrows their test off the file-extension OR', () => {
+    // Next.js emits a JS branch whose test is `{ or: [/\.tsx?$/, '__barrel_optimize__'] }`
+    // — the barrel arm is needed (Next rewrites MUI/lodash imports through
+    // `__barrel_optimize__?names=…`), but the file-extension arm makes the branch
+    // also catch regular TSX, which is what the duplicate `$RefreshSig$` came from.
+    // Keep the branch, drop the extension arm.
+    const rule = {
+      oneOf: [
+        {
+          test: { or: [/\.(tsx|ts|js|cjs|mjs|jsx)$/, '__barrel_optimize__'] },
+          use: [{ loader: 'next-swc-loader' }],
+        },
+        { test: /\.tsx?$/, use: [{ loader: 'next-swc-loader' }] },
+        {
+          test: /\.css$/,
+          use: [{ loader: 'css-loader' }],
+        },
+      ],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    // pure-JS branch dropped, barrel + CSS kept
+    expect(result.oneOf).toHaveLength(2)
+    expect(result.oneOf[0].use[0].loader).toBe('next-swc-loader')
+    expect(result.oneOf[0].test).toBeInstanceOf(RegExp)
+    expect((result.oneOf[0].test as RegExp).source).toBe('__barrel_optimize__')
+    expect(result.oneOf[1].use[0].loader).toBe('css-loader')
+  })
 })
