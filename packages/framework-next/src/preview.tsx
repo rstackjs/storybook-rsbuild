@@ -71,19 +71,20 @@ export const decorators: Addon_DecoratorFunction<ReactRenderer>[] = [
   asDecorator(HeadManagerDecorator),
 ]
 
+// Diverged from upstream: always seed both router mocks. The decorator mounts
+// both AppRouterProvider and PageRouterProvider (see routing/decorator.tsx),
+// so a story may consume `next/navigation` and `next/router` independently of
+// any `parameters.nextjs.appDirectory` flag.
 export const loaders: LoaderFunction<ReactRenderer> = async ({
   globals,
   parameters,
 }) => {
-  const { router, appDirectory } = parameters.nextjs ?? {}
-  if (appDirectory) {
-    createNavigation(router)
-  } else {
-    createRouter({
-      locale: globals.locale,
-      ...(router as Record<string, unknown>),
-    })
-  }
+  const { router } = parameters.nextjs ?? {}
+  createNavigation(router)
+  createRouter({
+    locale: globals.locale,
+    ...(router as Record<string, unknown>),
+  })
 }
 
 export const parameters = {

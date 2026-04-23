@@ -49,6 +49,10 @@ const config: BuildEntries = {
         exportEntries: ['./node'],
         entryPoint: './src/node/index.ts',
       },
+      {
+        exportEntries: ['./rspack-helpers'],
+        entryPoint: './src/rspack-helpers.ts',
+      },
     ],
   },
 }
