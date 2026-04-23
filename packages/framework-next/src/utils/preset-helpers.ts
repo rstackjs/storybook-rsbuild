@@ -41,10 +41,15 @@ export function filterNextAliases(
  * Build a Storybook loader chain from Next.js's client JS rule:
  * keep `builtin:react-refresh-loader`, swap `next-swc-loader` for our shim
  * (strips `pitch` that breaks virtual modules), drop server-only `next-flight-*`.
+ *
+ * In production (`isDev: false`), drop `builtin:react-refresh-loader` and force
+ * `next-swc-loader.options.dev = false`. Next.js's extraction always runs in
+ * dev mode, so without this its dev-only injections leak into prod bundles.
  */
 export function buildNextLoaderChain(
   rawRules: any[],
   shimPath: string,
+  { isDev }: { isDev: boolean } = { isDev: true },
 ): any[] | null {
   let clientRule: any = null
   walkRules(rawRules, (rule) => {
@@ -61,8 +66,13 @@ export function buildNextLoaderChain(
 
   return asUseArray(clientRule.use).flatMap((use) => {
     const name = loaderNameOf(use)
+    if (name === 'builtin:react-refresh-loader') {
+      return isDev ? [use] : []
+    }
     if (name === 'next-swc-loader' || name?.endsWith('/next-swc-loader')) {
-      return [{ loader: shimPath, options: use.options || {} }]
+      const options = use.options || {}
+      const adjusted = isDev ? options : { ...options, dev: false }
+      return [{ loader: shimPath, options: adjusted }]
     }
     if (name?.includes('next-flight')) return []
     return [use]
@@ -100,10 +110,18 @@ export const KEEP_PLUGIN_NAMES = new Set([
   'ReactRefreshRspackPlugin',
 ])
 
-export function filterNextPlugins(rawPlugins: any[]): any[] {
+/** Plugins from {@link KEEP_PLUGIN_NAMES} that must NOT leak into prod builds. */
+const DEV_ONLY_PLUGIN_NAMES = new Set(['ReactRefreshRspackPlugin'])
+
+export function filterNextPlugins(
+  rawPlugins: any[],
+  { isDev }: { isDev: boolean } = { isDev: true },
+): any[] {
   return rawPlugins.filter((plugin) => {
     const name = plugin?.constructor?.name
-    return !!name && KEEP_PLUGIN_NAMES.has(name)
+    if (!name || !KEEP_PLUGIN_NAMES.has(name)) return false
+    if (!isDev && DEV_ONLY_PLUGIN_NAMES.has(name)) return false
+    return true
   })
 }
 
@@ -153,6 +171,42 @@ function isCssRule(rule: any): boolean {
   return false
 }
 
+function isErrorLoaderUse(use: any): boolean {
+  const name = loaderNameOf(use)
+  return typeof name === 'string' && name.includes('error-loader')
+}
+
+/**
+ * Strip Next.js's `_app.js`-only Pages-Router CSS guards.
+ *
+ * Next.js's CSS rule chain has two restrictions that don't apply to Storybook:
+ *
+ * 1. An `error-loader` branch that throws "Global CSS cannot be imported from
+ *    files other than your Custom <App>". Storybook has no `_app.js`, so any
+ *    `import './globals.css'` from `preview.tsx` would hit it.
+ * 2. The remaining `oneOf` branches restrict by `issuer` (pages/_app.js or
+ *    node_modules). Storybook imports match neither, so without stripping
+ *    `issuer` rspack falls back to JS-parsing the .css file.
+ *
+ * Applied recursively before `prepareNextCssRules` consumes the chain.
+ */
+function stripNextCssRestrictions(rule: any): any {
+  if (!rule || typeof rule !== 'object') return rule
+  if (Array.isArray(rule.oneOf)) {
+    rule.oneOf = rule.oneOf
+      .filter((r: any) => !asUseArray(r?.use).some(isErrorLoaderUse))
+      .map((r: any) => {
+        if (isCssRule(r)) delete r.issuer
+        return stripNextCssRestrictions(r)
+      })
+  }
+  if (Array.isArray(rule.rules)) {
+    rule.rules = rule.rules.map(stripNextCssRestrictions)
+  }
+  if (isCssRule(rule)) delete rule.issuer
+  return rule
+}
+
 /**
  * Extract Next.js CSS rules and splice our URL-rewrite loader before every
  * `next-font-loader`. Why the rewriter: `next-font-loader` emits CSS with
@@ -160,12 +214,16 @@ function isCssRule(rule: any): boolean {
  * relying on a Next.js dev-server alias we don't have. See
  * `loaders/next-font-url-rewrite.cjs`. Spliced *before* next-font-loader so
  * it runs *after* it (loaders apply right-to-left).
+ *
+ * Also strips the Pages-Router `_app.js`-only guards (see
+ * `stripNextCssRestrictions`) so Storybook imports work without users having
+ * to patch `tools.rspack` from `main.ts`.
  */
 export function prepareNextCssRules(
   rawRules: any[],
   rewriterPath: string,
 ): any[] {
-  const rules = rawRules.filter(isCssRule)
+  const rules = rawRules.filter(isCssRule).map(stripNextCssRestrictions)
   walkRules(rules, (rule) => {
     if (!rule.use) return
     const uses = asUseArray(rule.use)

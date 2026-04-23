@@ -1,3 +1,4 @@
+import { builtinModules } from 'node:module'
 import { dirname, isAbsolute, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
@@ -97,27 +98,17 @@ class NoopTraceSpanPlugin {
 /**
  * Node.js builtins floor — merged *under* Next.js's `resolve.fallback`, so
  * Next.js-supplied polyfills (e.g. `process`) still win.
+ *
+ * Sourced from `node:module`'s `builtinModules` so every builtin is covered
+ * (`querystring`, `punycode`, `url`, `events`, ...). A hand-written allowlist
+ * inevitably drifts behind Node releases and creates "module not found" errors
+ * for transitive deps that import obscure builtins.
  */
 const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
-  [
-    'fs',
-    'zlib',
-    'stream',
-    'path',
-    'crypto',
-    'os',
-    'http',
-    'https',
-    'net',
-    'tls',
-    'child_process',
-    'dns',
-    'tty',
-    'module',
-    'async_hooks',
-    'perf_hooks',
-    'worker_threads',
-  ].map((m) => [m, false as const]),
+  builtinModules.flatMap((m) => [
+    [m, false as const],
+    [`node:${m}`, false as const],
+  ]),
 )
 
 /**
@@ -159,17 +150,29 @@ export const rsbuildFinal: NonNullable<
     resolvedNextConfigPath ? dirname(resolvedNextConfigPath) : undefined,
   )
 
+  // Storybook builds in two modes: dev server (`storybook dev`) and static
+  // build (`build-storybook`). Next.js's `getBaseWebpackConfig()` is always
+  // invoked in dev mode by `extractNextRspackConfig` (see utils/next-config.ts),
+  // so its output carries dev-only artefacts (React Refresh plugin/loader,
+  // `process.env.NODE_ENV: "development"` define, `next-swc-loader.dev=true`).
+  // We strip those when Storybook is building for production, otherwise the
+  // resulting bundle is broken (`$RefreshSig$` ReferenceError) and ships React's
+  // dev path.
+  const isDev = options.configType !== 'PRODUCTION'
+
   const allAliases: Record<string, string | string[] | false> = {
     ...filterNextAliases(extraction.alias),
     ...getStorybookOverrideAliases(),
   }
 
-  const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM)
+  const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM, {
+    isDev,
+  })
   if (nextLoaderChain) {
     logger.info('Using Next.js SWC loader for JS/TS compilation')
   }
 
-  const nextPlugins = filterNextPlugins(extraction.rawPlugins)
+  const nextPlugins = filterNextPlugins(extraction.rawPlugins, { isDev })
 
   const nextCssRules = prepareNextCssRules(
     extraction.rawRules,
@@ -181,9 +184,15 @@ export const rsbuildFinal: NonNullable<
     )
   }
 
+  // `process.env.NODE_ENV` is extracted from Next.js's dev DefinePlugin and
+  // would override Rsbuild's correct prod value. Drop it in prod and let
+  // Rsbuild's own define provide the canonical value.
+  const nextDefines: Record<string, string> = { ...extraction.defines }
+  if (!isDev) delete nextDefines['process.env.NODE_ENV']
+
   return mergeRsbuildConfig(config, {
     source: {
-      define: extraction.defines,
+      define: nextDefines,
     },
     resolve: {
       alias: allAliases,
@@ -237,7 +246,10 @@ export const rsbuildFinal: NonNullable<
           }
         }
         // Next.js compiled modules use __dirname, mocked in browser builds.
-        rspackConfig.ignoreWarnings.push(/has been used, it will be mocked/)
+        // Wording differs across rspack versions — match both.
+        rspackConfig.ignoreWarnings.push(
+          /(has been used, it will be mocked|is used and has been mocked)/,
+        )
 
         if (
           nextLoaderChain &&
@@ -255,7 +267,7 @@ export const rsbuildFinal: NonNullable<
         }
 
         rspackConfig.plugins.push(new NoopTraceSpanPlugin(), ...nextPlugins)
-        if (nextLoaderChain) {
+        if (nextLoaderChain && isDev) {
           rspackConfig.plugins.push(new ReactRefreshInitPlugin(REFRESH_ENTRY))
         }
       },
