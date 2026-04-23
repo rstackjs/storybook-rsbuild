@@ -5,6 +5,7 @@ import { mergeRsbuildConfig } from '@rsbuild/core'
 import { logger } from 'storybook/internal/node-logger'
 import type { PresetProperty } from 'storybook/internal/types'
 import type { FrameworkOptions, StorybookConfig } from './types'
+import { checkRspackInvariant } from './utils/check-rspack-invariant'
 import { extractNextRspackConfig, getNextVersion } from './utils/next-config'
 import {
   buildNextLoaderChain,
@@ -134,6 +135,8 @@ class ReactRefreshInitPlugin {
 export const rsbuildFinal: NonNullable<
   StorybookConfig['rsbuildFinal']
 > = async (config, options) => {
+  checkRspackInvariant(options.configDir ?? process.cwd())
+
   const { nextConfigPath } =
     await options.presets.apply<FrameworkOptions>('frameworkOptions')
 
