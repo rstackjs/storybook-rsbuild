@@ -253,15 +253,12 @@ importers:
 
   packages/framework-next:
     dependencies:
-      '@rsbuild/core':
-        specifier: ^1.6.14
-        version: 1.7.2
       '@storybook/react':
         specifier: ^10.3.5
         version: 10.3.5(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@5.9.3)
       storybook-builder-rsbuild:
         specifier: workspace:*
-        version: file:packages/builder-rsbuild(@rsbuild/core@1.7.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@5.9.3)(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: file:packages/builder-rsbuild(@rsbuild/core@1.6.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@5.9.3)(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))
       styled-jsx:
         specifier: 5.1.6
         version: 5.1.6(react@19.2.5)
@@ -269,6 +266,9 @@ importers:
       storybook-builder-rsbuild:
         injected: true
     devDependencies:
+      '@rsbuild/core':
+        specifier: 1.6.14
+        version: 1.6.14
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -681,6 +681,9 @@ importers:
         specifier: ^19.0.0
         version: 19.2.5(react@19.2.5)
     devDependencies:
+      '@rsbuild/core':
+        specifier: 1.6.14
+        version: 1.6.14
       '@storybook/addon-docs':
         specifier: 10.3.5
         version: 10.3.5(@types/react@19.2.14)(esbuild@0.27.0)(rollup@4.60.1)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(vite@8.0.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@22.19.1)(esbuild@0.27.0)(jiti@2.6.1)(less@4.6.4)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))(webpack@5.104.1(esbuild@0.27.0))
@@ -4503,6 +4506,11 @@ packages:
     resolution: {integrity: sha512-lWMnixq/QzxyhTV6NjQJ4SFo1J6PvOX8vUx5Wb4bBPsEb+8xZ89Bz6kOXpfXj9ak9AHTQVQzlgzBEc1SyM27xQ==}
     cpu: [x64]
     os: [win32]
+
+  '@rsbuild/core@1.6.14':
+    resolution: {integrity: sha512-qgzOA8O/HI+NaGDPoIzYL0tK01krJW+8tbCteUVfbLJhKPL7YQZ44WnYNkvqyz3Kw6zklQsY6j9xcdtpVAf3uQ==}
+    engines: {node: '>=18.12.0'}
+    hasBin: true
 
   '@rsbuild/core@1.7.2':
     resolution: {integrity: sha512-VAFO6cM+cyg2ntxNW6g3tB2Jc5J5mpLjLluvm7VtW2uceNzyUlVv41o66Yp1t1ikxd3ljtqegViXem62JqzveA==}
@@ -18302,6 +18310,14 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.60.1':
     optional: true
 
+  '@rsbuild/core@1.6.14':
+    dependencies:
+      '@rspack/core': 1.6.7(@swc/helpers@0.5.21)
+      '@rspack/lite-tapable': 1.1.0
+      '@swc/helpers': 0.5.21
+      core-js: 3.47.0
+      jiti: 2.6.1
+
   '@rsbuild/core@1.7.2':
     dependencies:
       '@rspack/core': 1.7.6(@swc/helpers@0.5.21)
@@ -18644,14 +18660,14 @@ snapshots:
       - tslib
       - typescript
 
-  '@rsbuild/plugin-type-check@1.3.4(@rsbuild/core@1.7.2)(typescript@5.9.3)':
+  '@rsbuild/plugin-type-check@1.3.4(@rsbuild/core@1.6.14)(typescript@5.9.3)':
     dependencies:
       deepmerge: 4.3.1
       json5: 2.2.3
       reduce-configs: 1.1.1
       ts-checker-rspack-plugin: 1.3.0(@rspack/core@2.0.0(@module-federation/runtime-tools@2.3.3)(@swc/helpers@0.5.21))(typescript@5.9.3)
     optionalDependencies:
-      '@rsbuild/core': 1.7.2
+      '@rsbuild/core': 1.6.14
     transitivePeerDependencies:
       - '@rspack/core'
       - tslib
@@ -27164,12 +27180,12 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  rsbuild-plugin-html-minifier-terser@1.1.3(@rsbuild/core@1.7.2):
+  rsbuild-plugin-html-minifier-terser@1.1.3(@rsbuild/core@1.6.14):
     dependencies:
       '@types/html-minifier-terser': 7.0.2
       html-minifier-terser: 7.2.0
     optionalDependencies:
-      '@rsbuild/core': 1.7.2
+      '@rsbuild/core': 1.6.14
 
   rsbuild-plugin-html-minifier-terser@1.1.3(@rsbuild/core@2.0.0(@module-federation/runtime-tools@2.3.3)(core-js@3.48.0)):
     dependencies:
@@ -27665,10 +27681,10 @@ snapshots:
 
   std-env@3.10.0: {}
 
-  storybook-builder-rsbuild@file:packages/builder-rsbuild(@rsbuild/core@1.7.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@5.9.3)(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2)):
+  storybook-builder-rsbuild@file:packages/builder-rsbuild(@rsbuild/core@1.6.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(storybook@10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@5.9.3)(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
-      '@rsbuild/core': 1.7.2
-      '@rsbuild/plugin-type-check': 1.3.4(@rsbuild/core@1.7.2)(typescript@5.9.3)
+      '@rsbuild/core': 1.6.14
+      '@rsbuild/plugin-type-check': 1.3.4(@rsbuild/core@1.6.14)(typescript@5.9.3)
       '@vitest/mocker': 3.2.4(vite@6.3.5(@types/node@22.19.1)(jiti@2.6.1)(less@4.6.4)(lightningcss@1.32.0)(sass-embedded@1.97.3)(sass@1.97.3)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2))
       browser-assert: 1.2.1
       case-sensitive-paths-webpack-plugin: 2.4.0
@@ -27680,7 +27696,7 @@ snapshots:
       path-browserify: 1.0.1
       picocolors: 1.1.1
       process: 0.11.10
-      rsbuild-plugin-html-minifier-terser: 1.1.3(@rsbuild/core@1.7.2)
+      rsbuild-plugin-html-minifier-terser: 1.1.3(@rsbuild/core@1.6.14)
       sirv: 2.0.4
       storybook: 10.3.5(@testing-library/dom@10.4.0)(prettier@3.8.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       ts-dedent: 2.2.0
