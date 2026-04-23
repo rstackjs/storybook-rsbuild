@@ -17,10 +17,36 @@ Storybook for Next.js & Rsbuild bridges Storybook's preview runtime to Next.js's
 | `next` | ≥ 15.3 |
 | `next-rspack` | matches `next` |
 | `react` / `react-dom` | ≥ 18 |
-| `@rsbuild/core` | ≥ 1.6 |
+| `@rsbuild/core` | see [version matrix](#version-matrix) |
 | `storybook` | ≥ 10.1 |
 
 </div>
+
+## Version matrix
+
+`@rsbuild/core` is a peer dependency: you install the version whose transitive `@rspack/core` matches the one `next-rspack` pulls in. If the two sides ship different `@rspack/core` copies, Next.js's extracted plugins bind to a different `NormalModule` class than the one Storybook's compilation actually uses — the framework throws at startup when it detects this.
+
+Pick the row that matches your `next` version and install the listed `@rsbuild/core`:
+
+<div style={{ width: '100%', maxWidth: '700px' }}>
+
+| `next` | `next-rspack` | `@rspack/core` (transitive) | `@rsbuild/core` |
+| :--- | :--- | :--- | :--- |
+| `15.3.x` | same as `next` | `1.3.4` | `1.3.6` |
+| `15.4.x` | same as `next` | `1.4.5` | `1.4.5` |
+| `15.5.x` | same as `next` | `1.4.5` | `1.4.5` |
+| `16.0.x` | same as `next` | `1.5.0` | `1.5.0` or `1.5.1` |
+| `16.1.x` | same as `next` | `1.6.7` | `1.6.14` |
+| `16.2.x` | same as `next` | `1.6.7` | `1.6.14` |
+
+</div>
+
+Notes:
+
+- `next-rspack` must be installed at the exact same version as `next` (single release train, no cross-version compatibility).
+- `@rsbuild/core` pins `@rspack/core` to an exact version (not a range), so only the specific `@rsbuild/core` versions listed above resolve to the target `@rspack/core`. Installing a newer `@rsbuild/core` within the same minor generally shifts the `@rspack/core` pin and breaks the invariant.
+- From Next 16 onwards, the chain is `next-rspack → @next/rspack-core → @rspack/core`. For Next 15, `next-rspack` depends on `@rspack/core` directly.
+- If the framework aborts with an `@rspack/core` mismatch error, compare the two paths it prints: they should be the same file. Realigning via this table (or via pnpm `overrides` / yarn `resolutions` forcing `@rspack/core` to the target version) is the supported fix.
 
 ## Getting started
 
