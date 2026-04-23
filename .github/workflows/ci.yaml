@@ -34,6 +34,9 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          # `every` so negation patterns actually exclude; default `some` OR's
+          # all patterns, which makes `**` swallow every file.
+          predicate-quantifier: 'every'
           filters: |
             heavy:
               - '**'

@@ -22,16 +22,6 @@
 			"separateMinorPatch": false
 		},
 		{
-			"groupName": "storybook",
-			"groupSlug": "storybook",
-			"matchManagers": ["npm"],
-			"matchPackageNames": ["storybook", "@storybook/**"],
-			"matchDepTypes": ["dependencies", "devDependencies"],
-			"separateMajorMinor": false,
-			"separateMinorPatch": false,
-			"separateMultipleMajor": false
-		},
-		{
 			"groupName": "rspress",
 			"matchPackageNames": ["@rspress/**"],
 			"groupSlug": "rspress",
@@ -55,6 +45,22 @@
 		{
 			"matchDepTypes": ["peerDependencies"],
 			"enabled": false
+		},
+		// Storybook group — placed AFTER the global `peerDependencies: enabled: false`
+		// rule so `enabled: true` here overrides it. Bumps dependencies, devDependencies
+		// AND peerDependencies together in a single PR, keeping the `storybook` peer range
+		// aligned with the bundled `@storybook/<renderer>`'s own peer range. Misalignment
+		// causes a pnpm doppelganger (two copies of `storybook` in the virtual store).
+		{
+			"groupName": "storybook",
+			"groupSlug": "storybook",
+			"matchManagers": ["npm"],
+			"matchPackageNames": ["storybook", "@storybook/**"],
+			"matchDepTypes": ["dependencies", "devDependencies", "peerDependencies"],
+			"separateMajorMinor": false,
+			"separateMinorPatch": false,
+			"separateMultipleMajor": false,
+			"enabled": true
 		}
 	],
 	"ignoreDeps": [
