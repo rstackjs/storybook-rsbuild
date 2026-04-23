@@ -1,4 +1,4 @@
-# FAQ
+# Troubleshooting
 
 ## Deploy Storybook to a subdirectory or subpath
 
@@ -106,6 +106,50 @@ export default {
   },
 }
 ```
+
+## MSW integration and lazy compilation
+
+When [`msw-storybook-addon`](https://github.com/mswjs/msw-storybook-addon) is installed, the builder automatically disables lazy compilation and logs a warning at startup.
+
+This is necessary because MSW's Service Worker intercepts every `fetch` from the preview iframe, including the dev-server's lazy-compilation RPC (`POST /lazy-compilation-using-`). The SW's passthrough re-issues a fresh `fetch(clonedRequest)` that the dev-server aborts, which can leave stories stuck on a blank iframe during cold loads. The issue is rooted in how the lazy-compilation runtime talks to the dev-server via a stateful RPC channel — not a defect of the builder itself — and also affects the official `@storybook/builder-webpack5` when lazy compilation is manually enabled. A related failure mode is discussed upstream in [mswjs/msw#834](https://github.com/mswjs/msw/issues/834) (SW intercepting dev-server HMR SSE).
+
+Leaving the auto-disable in place is the safest choice. If you never explicitly set `lazyCompilation`, no action is required on your side.
+
+If your project needs lazy compilation alongside MSW, set `lazyCompilation` explicitly in your builder options — an explicit value always takes priority over the MSW auto-disable:
+
+```ts
+// .storybook/main.ts
+export default {
+  framework: {
+    options: {
+      builder: {
+        // Opt back in — expect occasional blank iframes on cold loads.
+        lazyCompilation: { entries: false },
+      },
+    },
+  },
+}
+```
+
+When you opt back in, patch `public/mockServiceWorker.js` to let lazy-compilation RPC bypass MSW. Add this guard at the top of the `fetch` event listener, before MSW's own logic runs:
+
+```js
+// public/mockServiceWorker.js
+self.addEventListener('fetch', function (event) {
+  // Let Rspack / webpack's lazy-compilation RPC bypass MSW so the
+  // dev-server sees the original client request, not a re-issued clone.
+  if (event.request.url.includes('/lazy-compilation-using-')) {
+    return
+  }
+  // ...existing MSW handler logic
+})
+```
+
+Caveats:
+
+- `msw init` regenerates `mockServiceWorker.js` and will overwrite the patch. Re-apply it after upgrading MSW, or automate via a postinstall script that appends the guard if it is missing.
+- The bypass is scoped strictly to the lazy-compilation path; normal story requests still go through MSW and your handlers behave as before.
+- The substring match covers both the Rspack implementation (same-origin `POST /lazy-compilation-using-`) and webpack5's (dedicated random-port `GET /lazy-compilation-using-<module-path>`), so the same guard also works if you ever move to the official webpack5 builder with lazy compilation enabled.
 
 ## Why do sandboxes use `getAbsolutePath` to resolve the framework?
 

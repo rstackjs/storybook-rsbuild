@@ -13,10 +13,12 @@ import {
   normalizeStories,
   stringifyProcessEnvs,
 } from 'storybook/internal/common'
+import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import type { Options } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import type { BuilderOptions, TypescriptOptions } from '../types'
+import { isMswAddonEnabled } from './detect-msw'
 import { getVirtualModules } from './virtual-module-mapping'
 
 const require = createRequire(import.meta.url)
@@ -159,13 +161,25 @@ export default async (
   if (!isProd) {
     if (shouldDisableDevFeatures) {
       lazyCompilationConfig = false
+    } else if (builderOptions.lazyCompilation !== undefined) {
+      lazyCompilationConfig = builderOptions.lazyCompilation
+    } else if (await isMswAddonEnabled(options)) {
+      // MSW's Service Worker intercepts the dev-server lazy-compilation RPC
+      // (`/lazy-compilation-using-*`) and aborts its cloned fetch, which can
+      // leave the preview iframe blank on cold story loads. Disable lazy
+      // compilation by default when MSW is integrated; users can opt back in
+      // by setting `lazyCompilation` explicitly.
+      // https://storybook.rsbuild.rs/guide/troubleshooting#msw-integration-and-lazy-compilation
+      lazyCompilationConfig = false
+      logger.warn(dedent`
+        Detected msw-storybook-addon. Lazy compilation has been disabled automatically to
+        avoid a Service Worker race that can leave the preview iframe blank on cold story
+        loads. Set \`lazyCompilation\` explicitly in your builder options to override.
+      `)
     } else {
-      lazyCompilationConfig =
-        builderOptions.lazyCompilation === undefined
-          ? {
-              entries: false,
-            }
-          : builderOptions.lazyCompilation
+      lazyCompilationConfig = {
+        entries: false,
+      }
     }
   }
 
