@@ -7,6 +7,8 @@ import builderConfig from '../../packages/builder-rsbuild/build-config'
 // @ts-expect-error
 import htmlFrameworkConfig from '../../packages/framework-html/build-config'
 // @ts-expect-error
+import nextFrameworkConfig from '../../packages/framework-next/build-config'
+// @ts-expect-error
 import reactFrameworkConfig from '../../packages/framework-react/build-config'
 // @ts-expect-error
 import reactNativeWebFrameworkConfig from '../../packages/framework-react-native-web/build-config'
@@ -24,6 +26,7 @@ export const buildEntries = {
 
   // frameworks
   'storybook-html-rsbuild': htmlFrameworkConfig,
+  'storybook-next-rsbuild': nextFrameworkConfig,
   'storybook-react-rsbuild': reactFrameworkConfig,
   'storybook-react-native-web-rsbuild': reactNativeWebFrameworkConfig,
   'storybook-vue3-rsbuild': vue3FrameworkConfig,
