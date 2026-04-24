@@ -220,7 +220,7 @@ This precision is critical for follow-up syncs — `END_SHA` becomes the exact s
 After writing the report, ask the user if they want to publish it as a GitHub issue in this repository. If yes, create the issue using `gh`:
 
 ```bash
-gh issue create --title "<TITLE>" --body-file "$REPORT_NAME"
+gh issue create --title "<TITLE>" --body-file "$REPORT_NAME" --label "storybook sync report"
 ```
 
 **Title format**: `Storybook Sync: <range>` — where `<range>` matches the range used in the report. Examples:
