@@ -8,6 +8,6 @@
   },
   "main": "./src/index.tsx",
   "peerDependencies": {
-    "react": ">=18"
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   }
 }
