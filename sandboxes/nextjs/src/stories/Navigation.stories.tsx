@@ -107,3 +107,18 @@ export const WithSegmentDefined: Story = {
     },
   },
 }
+
+export const WithRouteParams: Story = {
+  parameters: {
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/safes/[address]',
+        // Tuple form: app-router-provider reads `[name, value]` pairs and
+        // surfaces them via `useParams()`. Object form crashes the tree
+        // builder because it spreads `segments` as an iterable.
+        segments: [['address', '0xdeadbeef']],
+      },
+    },
+  },
+}

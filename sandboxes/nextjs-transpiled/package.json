@@ -1,0 +1,13 @@
+{
+  "name": "@sandboxes/nextjs-transpiled",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "main": "./src/index.tsx",
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}
