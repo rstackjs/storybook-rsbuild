@@ -1,0 +1,267 @@
+import { PackageManagerTabs } from '@theme'
+
+# Next.js
+
+Storybook for Next.js & Rsbuild bridges Storybook's preview runtime to Next.js's own build pipeline via `next-rspack`, letting you develop Next.js components in isolation while reusing the same loaders, SWC options, and `next.config.ts` settings as your application.
+
+:::warning Experimental
+`storybook-next-rsbuild` relies on Next.js internals and moves with the Next.js release cadence. Any `next` minor or patch upgrade may break compatibility — pin `next` for reproducibility and upgrade `storybook-next-rsbuild` together with `next`.
+:::
+
+## Requirements
+
+<div style={{ width: '100%', maxWidth: '400px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `next` | ≥ 15.3 |
+| `next-rspack` | matches `next` |
+| `react` / `react-dom` | ≥ 18 |
+| `@rsbuild/core` | see [version matrix](#version-matrix) |
+| `storybook` | ≥ 10.1 |
+
+</div>
+
+## Version matrix
+
+`@rsbuild/core` is a peer dependency: you install the version whose transitive `@rspack/core` matches the one `next-rspack` pulls in. If the two sides ship different `@rspack/core` copies, Next.js's extracted plugins bind to a different `NormalModule` class than the one Storybook's compilation actually uses — the framework throws at startup when it detects this.
+
+Pick the row that matches your `next` version and install the listed `@rsbuild/core`:
+
+<div style={{ width: '100%', maxWidth: '700px' }}>
+
+| `next` | `next-rspack` | `@rspack/core` (transitive) | `@rsbuild/core` |
+| :--- | :--- | :--- | :--- |
+| `15.3.x` | same as `next` | `1.3.4` | `1.3.6` |
+| `15.4.x` | same as `next` | `1.4.5` | `1.4.5` |
+| `15.5.x` | same as `next` | `1.4.5` | `1.4.5` |
+| `16.0.x` | same as `next` | `1.5.0` | `1.5.0` or `1.5.1` |
+| `16.1.x` | same as `next` | `1.6.7` | `1.6.14` |
+| `16.2.x` | same as `next` | `1.6.7` | `1.6.14` |
+
+</div>
+
+Notes:
+
+- `next-rspack` must be installed at the exact same version as `next` (single release train, no cross-version compatibility).
+- `@rsbuild/core` pins `@rspack/core` to an exact version (not a range), so only the specific `@rsbuild/core` versions listed above resolve to the target `@rspack/core`. Installing a newer `@rsbuild/core` within the same minor generally shifts the `@rspack/core` pin and breaks the invariant.
+- From Next 16 onwards, the chain is `next-rspack → @next/rspack-core → @rspack/core`. For Next 15, `next-rspack` depends on `@rspack/core` directly.
+- If the framework aborts with an `@rspack/core` mismatch error, compare the two paths it prints: they should be the same file. Realigning via this table (or via pnpm `overrides` / yarn `resolutions` forcing `@rspack/core` to the target version) is the supported fix.
+
+## Getting started
+
+### Installation
+
+Install `storybook-next-rsbuild` and `next-rspack` together. Next.js internally calls `require('next-rspack/rspack-core')` while building, so `next-rspack` must be resolvable from your project — a missing peer will surface as an opaque module-not-found error at Storybook start.
+
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack -D" />
+
+Keep `next-rspack` on the same version as `next`.
+
+### Configure `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-next-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: ['@storybook/addon-docs'],
+}
+
+export default config
+```
+
+That's it — the framework will auto-detect `next.config.{js,ts,mjs}` at the project root. If your config lives elsewhere, set `nextConfigPath`:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-next-rsbuild',
+    options: {
+      nextConfigPath: '../next.config.ts',
+    },
+  },
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+Relative paths resolve against the Storybook config directory (`.storybook`).
+
+## How it works
+
+`storybook-next-rsbuild` loads your `next.config.{js,ts}` with Next.js's own config loader and asks `next-rspack` to emit the full build configuration. The framework then merges the resulting aliases, loaders, plugins, and defines into Rsbuild. In short: CSS, SWC, `next/font`, `transpilePackages`, and other build-level behaviors are produced by Next.js itself rather than reimplemented — so what works in `next dev` generally works in Storybook without extra wiring.
+
+## Framework options
+
+<div style={{ width: '100%', maxWidth: '600px' }}>
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `nextConfigPath` | `string` | auto-detected | Absolute or relative path to a `next.config.{js,ts,mjs}` file. |
+| `builder` | `BuilderOptions` | `{}` | Options forwarded to `storybook-builder-rsbuild`. See the [Configuration](/guide/configuration#builder-options) guide. |
+
+</div>
+
+## Supported Next.js features
+
+### `next/image`
+
+`next/image` renders inside stories. The framework swaps Next.js's default image loader for a client-side mock, so stories don't depend on a `/_next/image` optimization endpoint — both local and remote `src` values render directly.
+
+```tsx twoslash title="Image.stories.tsx"
+// @noErrors
+import Image from 'next/image'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+const meta = {
+  component: Image,
+  args: { src: '/vercel.svg', alt: 'Vercel', width: 200, height: 48 },
+} satisfies Meta<typeof Image>
+
+export default meta
+
+export const Default: StoryObj<typeof meta> = {}
+```
+
+### `next/font`
+
+Both `next/font/google` and `next/font/local` work out of the box — fonts are processed by Next.js's font loader and served through Storybook's dev server. CSS variables via the `variable` option also work.
+
+```tsx twoslash title="Font.stories.tsx"
+// @noErrors
+import { Inter } from 'next/font/google'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+const inter = Inter({ subsets: ['latin'] })
+
+function FontDemo({ className }: { className: string }) {
+  return <p className={className}>The quick brown fox jumps over the lazy dog.</p>
+}
+
+const meta = { component: FontDemo } satisfies Meta<typeof FontDemo>
+export default meta
+
+export const Default: StoryObj<typeof meta> = {
+  args: { className: inter.className },
+}
+```
+
+### `next/link`, `next/head`, `next/dynamic`
+
+Ship unchanged. `next/head` updates `document.head` through a built-in decorator. `next/link` falls back to client-side navigation through the mocked router (see below).
+
+### App Router and Pages Router
+
+Use `parameters.nextjs` to choose between the two routers and pre-seed their state:
+
+```tsx twoslash title="Navigation.stories.tsx"
+// @noErrors
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+function Component() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  return (
+    <button type="button" onClick={() => router.push('/next')}>
+      Navigate from {pathname}?{searchParams.toString()}
+    </button>
+  )
+}
+
+export default {
+  component: Component,
+  parameters: {
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/hello',
+        query: { foo: 'bar' },
+      },
+    },
+  },
+} satisfies Meta<typeof Component>
+
+export const Default: StoryObj<typeof Component> = {}
+```
+
+- `appDirectory: true` selects the App Router (`next/navigation` hooks).
+- `appDirectory: false` (default) selects the Pages Router (`next/router` hooks).
+- `navigation` applies to the App Router; `router` applies to the Pages Router. Both accept a partial `NextRouter` shape.
+
+### CSS, CSS Modules, Sass, `styled-jsx`
+
+All CSS handling is delegated to Next.js's pipeline: CSS Modules, global CSS imports, PostCSS, Sass, and `styled-jsx` behave as they do in a real Next.js build. The framework disables Rsbuild's built-in CSS rules to avoid double processing.
+
+### SWC transforms and `transpilePackages`
+
+Stories are compiled with Next.js's own `next-swc-loader`, which means:
+
+- `'use client'` directives behave like they do in Next.js.
+- `server-only` modules resolve as in a real build.
+- `transpilePackages` entries in your `next.config.ts` apply to stories automatically.
+- JSX runtime selection follows your `next.config.ts`.
+
+## Mocking Next.js APIs in stories
+
+For interaction testing and manual overrides, the framework ships subpath exports that mirror `@storybook/nextjs-vite`. Each entry re-exports the real Next.js module and wraps select APIs with spy-able [`fn()`](https://storybook.js.org/docs/writing-tests/interaction-testing) mocks from `storybook/test`.
+
+<div style={{ width: '100%', maxWidth: '800px' }}>
+
+| Import | Use for |
+| :--- | :--- |
+| `storybook-next-rsbuild/navigation.mock` | App Router — `useRouter`, `usePathname`, `useSearchParams`, `redirect`, `notFound`, `useParams`, … |
+| `storybook-next-rsbuild/router.mock` | Pages Router — `useRouter`, `withRouter`, and the singleton router |
+| `storybook-next-rsbuild/cache.mock` | `revalidatePath`, `revalidateTag`, `unstable_cache`, `unstable_noStore` |
+| `storybook-next-rsbuild/headers.mock` | `headers`, `cookies`, `draftMode` |
+
+</div>
+
+Call `getRouter()` from inside a `play` function to assert router interactions:
+
+```tsx twoslash title="Navigation.stories.tsx"
+// @noErrors
+import { expect, userEvent, within } from 'storybook/test'
+import { getRouter } from 'storybook-next-rsbuild/navigation.mock'
+import type { StoryObj } from 'storybook-next-rsbuild'
+
+export const Default: StoryObj = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const router = getRouter()
+
+    await userEvent.click(canvas.getByRole('button'))
+    await expect(router.push).toHaveBeenCalledWith('/next')
+  },
+}
+```
+
+:::warning Caveats
+- **Singleton state.** `getRouter()` returns the instance seeded by the most recent story render. Don't hold on to the reference across stories — read it fresh inside each `play`.
+- **Client-side only.** Storybook does not run a Next.js server, so `cache.mock` and `headers.mock` are the only way server-only APIs resolve when imported from client components in stories.
+- **Coupled to Next.js internals.** These subpaths re-export through `next/dist/*` paths. A future `next` release may rename them, which typically requires a `storybook-next-rsbuild` upgrade.
+:::
+
+## Known limitations
+
+- **No Server Components runtime.** Components marked `'use client'` render; pure Server Components are not executed. This matches `@storybook/nextjs-vite`.
+- **No API routes, middleware, or server actions.** Storybook doesn't run a Next.js server — `route.ts`, `middleware.ts`, and `'use server'` entry points don't execute.
+- **No `/_next/image` optimization.** `next/image` uses a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
+- **Version coupling.** The bridge depends on Next.js internal modules. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
+
+## Next steps
+
+- **[Writing Stories](https://storybook.js.org/docs/writing-stories)** — the basics of Component Story Format (CSF).
+- **[Interaction Testing](https://storybook.js.org/docs/writing-tests/interaction-testing)** — asserting against the router mocks above.
+- **[Configuration](/guide/configuration)** — `rsbuildFinal`, builder options, and TypeScript settings.
+
+A complete reference is available in the repository at [`sandboxes/nextjs`](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/nextjs), covering App Router, Pages Router, `next/font`, `next/image`, `styled-jsx`, and `next/head` stories.
