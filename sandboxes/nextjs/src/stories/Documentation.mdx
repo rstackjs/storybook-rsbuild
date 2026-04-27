@@ -1,0 +1,12 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Stories/Documentation" />
+
+# MDX docs probe
+
+Regression target: the `.mdx` story path goes through Storybook's docs
+addon, which itself depends on rspack accepting the MDX loader chain. If
+the loader resolution breaks, `pnpm --filter @sandboxes/nextjs build:storybook`
+errors before this page renders.
+
+<div data-testid="mdx-probe">MDX rendered successfully</div>
