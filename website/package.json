@@ -8,15 +8,15 @@
     "preview": "rspress preview"
   },
   "dependencies": {
-    "@rspress/core": "2.0.9",
-    "@rspress/plugin-algolia": "2.0.9",
+    "@rspress/core": "2.0.10",
+    "@rspress/plugin-algolia": "2.0.10",
 
-    "@rspress/plugin-sitemap": "2.0.9",
-    "@rspress/plugin-twoslash": "2.0.9",
+    "@rspress/plugin-sitemap": "2.0.10",
+    "@rspress/plugin-twoslash": "2.0.10",
     "rspress-plugin-font-open-sans": "1.0.3"
   },
   "devDependencies": {
-    "@rstack-dev/doc-ui": "1.13.2",
+    "@rstack-dev/doc-ui": "1.13.3",
     "@shikijs/transformers": "^4.0.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",

@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@rsbuild/core": "^2.0.0",
-    "@rslib/core": "^0.21.2",
+    "@rslib/core": "^0.21.3",
     "@types/node": "^22.0.0",
     "storybook": "10.3.5",
     "storybook-builder-rsbuild": "workspace:*",
