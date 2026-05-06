@@ -13,7 +13,7 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
-    "vue": "^3.5.33"
+    "vue": "^3.5.34"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.1.2",

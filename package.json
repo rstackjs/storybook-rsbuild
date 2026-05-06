@@ -28,15 +28,15 @@
     ]
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.13",
+    "@biomejs/biome": "^2.4.14",
     "@playwright/test": "^1.59.1",
-    "@rstest/core": "^0.9.9",
+    "@rstest/core": "^0.9.10",
     "@testing-library/jest-dom": "^6.9.1",
     "bumpp": "^10.4.1",
     "check-dependency-version-consistency": "^5.0.1",
     "cross-env": "^10.1.0",
     "get-port": "^7.2.0",
-    "jiti": "^2.6.1",
+    "jiti": "^2.7.0",
     "nano-staged": "^0.9.0",
     "path-serializer": "^0.6.0",
     "simple-git-hooks": "^2.13.1",
