@@ -77,10 +77,15 @@ test.describe(`${sandbox.name} build output isolation`, () => {
     // modern.config.ts that injects assetPrefix and filename overrides. If
     // the addon stops stripping these, they'll leak through mergeRsbuildConfig
     // and show up in the built iframe.html.
+    //
+    // `shell: process.platform === 'win32'` mirrors the Windows-shim handling
+    // in e2e/utils/sandboxProcess.ts — Node's execFile cannot launch the
+    // `pnpm.cmd` shim directly on Windows without going through a shell.
     await execFileAsync('pnpm', ['exec', 'storybook', 'build'], {
       cwd: sandboxDir,
       env: { ...process.env, CI: 'true', SB_RSBUILD_TEST_LEAK_PROBE: '1' },
       maxBuffer: 50 * 1024 * 1024,
+      shell: process.platform === 'win32',
     })
 
     // distPath isolation
