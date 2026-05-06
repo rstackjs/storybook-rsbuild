@@ -58,7 +58,7 @@ test.describe(`${sandbox.name} build output isolation`, () => {
   // Storybook build is heavier than the dev probe; bump the per-test timeout.
   test.setTimeout(300_000)
 
-  test('storybook build does not touch the Modern.js host dist/', async () => {
+  test('storybook build isolates output from Modern.js host config', async () => {
     const sandboxDir = path.resolve(sandbox.relativeDir)
     const hostDist = path.join(sandboxDir, 'dist')
     const storybookStatic = path.join(sandboxDir, 'storybook-static')
@@ -73,14 +73,29 @@ test.describe(`${sandbox.name} build output isolation`, () => {
     await mkdir(hostDist, { recursive: true })
     await writeFile(sentinelPath, sentinelMarker)
 
+    // SB_RSBUILD_TEST_LEAK_PROBE activates a guarded plugin in the sandbox's
+    // modern.config.ts that injects assetPrefix and filename overrides. If
+    // the addon stops stripping these, they'll leak through mergeRsbuildConfig
+    // and show up in the built iframe.html.
     await execFileAsync('pnpm', ['exec', 'storybook', 'build'], {
       cwd: sandboxDir,
-      env: { ...process.env, CI: 'true' },
+      env: { ...process.env, CI: 'true', SB_RSBUILD_TEST_LEAK_PROBE: '1' },
       maxBuffer: 50 * 1024 * 1024,
     })
 
+    // distPath isolation
     expect(existsSync(path.join(storybookStatic, 'iframe.html'))).toBe(true)
     expect(existsSync(sentinelPath)).toBe(true)
     expect(readFileSync(sentinelPath, 'utf8')).toBe(sentinelMarker)
+
+    // assetPrefix / filename isolation
+    const iframeHtml = readFileSync(
+      path.join(storybookStatic, 'iframe.html'),
+      'utf8',
+    )
+    expect(iframeHtml).not.toContain('leak-probe-prefix')
+    expect(iframeHtml).not.toContain('leak-probe-')
+    // Storybook's hardcoded chunk naming pattern survives.
+    expect(iframeHtml).toMatch(/iframe\.bundle\.js/)
   })
 })
