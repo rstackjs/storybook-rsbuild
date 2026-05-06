@@ -35,9 +35,9 @@ const config: StorybookConfig = {
       });
     }
 
-    // Example: add source alias
+    // Example: add resolve alias
     return mergeRsbuildConfig(config, {
-      source: {
+      resolve: {
         alias: {
           '@components': './src/components',
         },

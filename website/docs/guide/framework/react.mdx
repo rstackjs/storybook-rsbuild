@@ -22,9 +22,9 @@ Follow these steps inside an existing Rsbuild-powered React project.
 
 ### Installation
 
-Install the framework package to enable React support.
+Install the framework package and `@rsbuild/core`. Even though `storybook-react-rsbuild` declares `@rsbuild/core` as a peer, list it as a direct dev dependency so version pins and lockfile audits remain unambiguous.
 
-<PackageManagerTabs command="install storybook-react-rsbuild -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild -D" />
 
 ### Configure `.storybook/main.ts`
 
@@ -34,6 +34,7 @@ import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
     return mergeRsbuildConfig(config, {

@@ -12,7 +12,9 @@ See the [React component library example](https://github.com/rstackjs/storybook-
 
 ### Installation
 
-<PackageManagerTabs command="install storybook-addon-rslib -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-addon-rslib -D" />
+
+Install `@rsbuild/core` directly so the version that the addon and your framework package use is pinned in your own lockfile. Use this alongside the framework package from your project's [framework guide](/guide/framework) (e.g. `storybook-react-rsbuild`).
 
 ### Setup `.storybook/main.ts`
 

@@ -51,22 +51,32 @@ const config: StorybookConfig = {
 export default config
 ```
 
-At this point `npx storybook dev` should launch using the default `@rsbuild/core` and `@rsbuild/plugin-react` configuration. If your stories require additional Rspack features, continue with the next step.
+At this point `npx storybook dev` should launch using the default `@rsbuild/core` and `@rsbuild/plugin-react` configuration. If your project already has its own `rspack.config`, continue with step 4 — story bundles only see what's defined in `rsbuild.config.ts`, so any custom rules, plugins, or aliases that are not mirrored here will silently be missing from your stories.
 
-### 4. Reuse custom Rspack options (optional)
+### 4. Mirror an existing `rspack.config`
 
-Projects often maintain both `rspack.config.ts` (for the application build) and `rsbuild.config.ts` (for Storybook). Import the former into the latter and merge any rules or plugins through `tools.rspack`. Refer to [tools.rspack](https://rsbuild.rs/config/tools/rspack) for every customization hook.
+If your project maintains a custom `rspack.config.ts` / `rspack.config.cjs` for the application build, mirror its essential pieces in `rsbuild.config.ts`. Storybook does not read `rspack.config` — it reads `rsbuild.config.ts`, so parity has to be explicit.
 
-The example below reuses a `less-loader` rule defined in `rspack.config.cjs`:
+When porting an existing Rspack project, walk through your `rspack.config` and mirror each of the following if it has been customized:
 
-```ts title="rsbuild.config.ts" {3,7-13}
+- **`resolve.alias`** — set on `rsbuild.config.ts` directly under [`resolve.alias`](https://rsbuild.rs/config/resolve/alias), or merge via `tools.rspack` if you prefer to keep a single source of truth.
+- **Custom `module.rules` (loaders)** — merge via [`tools.rspack`](https://rsbuild.rs/config/tools/rspack). Note that Rsbuild's built-in plugins (`pluginReact`, `pluginSass`, etc.) already register the most common loaders; only project-specific rules (e.g. `@svgr/webpack`, `less-loader` with custom options, internal codegen loaders) need to be ported.
+- **Custom `plugins`** — merge via `tools.rspack`.
+- **Custom `externals`, `output.publicPath`, `experiments`, etc.** — merge via `tools.rspack`.
+
+The example below imports an existing Rspack config and mirrors its `resolve.alias` plus a custom `less-loader` rule:
+
+```ts title="rsbuild.config.ts" {3,8-10,12-15}
 import { defineConfig } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
 // import rspackConfig from './rspack.config.cjs'
-const rspackConfig = { module: { rules: [{}, {}, { loader: 'less-loader' }] } } as any
+const rspackConfig = { resolve: { alias: { '@app': './src' } }, module: { rules: [{}, {}, { loader: 'less-loader' }] } } as any
 
 export default defineConfig({
   plugins: [pluginReact()],
+  resolve: {
+    alias: rspackConfig.resolve?.alias,
+  },
   tools: {
     rspack: (config) => {
       const lessLoader = rspackConfig.module.rules[2]
@@ -76,3 +86,5 @@ export default defineConfig({
   },
 })
 ```
+
+Refer to [`tools.rspack`](https://rsbuild.rs/config/tools/rspack) for every customization hook.
