@@ -22,9 +22,9 @@ Use the steps below in an existing Rsbuild-based Vue project.
 
 ### Installation
 
-Install the Vue framework package to enable Storybook support.
+Install the Vue framework package and `@rsbuild/core`. Even though `storybook-vue3-rsbuild` declares `@rsbuild/core` as a peer, list it as a direct dev dependency so version pins and lockfile audits remain unambiguous.
 
-<PackageManagerTabs command="install storybook-vue3-rsbuild -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-vue3-rsbuild -D" />
 
 ### Configure `.storybook/main.ts`
 
@@ -34,6 +34,7 @@ import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-vue3-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
     return mergeRsbuildConfig(config, {

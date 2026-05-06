@@ -21,9 +21,9 @@ These steps assume you already have an Rsbuild project without a specific framew
 
 ### Installation
 
-Install the HTML framework package to enable vanilla stories.
+Install the HTML framework package and `@rsbuild/core`. Even though `storybook-html-rsbuild` declares `@rsbuild/core` as a peer, list it as a direct dev dependency so version pins and lockfile audits remain unambiguous.
 
-<PackageManagerTabs command="install storybook-html-rsbuild -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-html-rsbuild -D" />
 
 ### Configure `.storybook/main.ts`
 
@@ -33,6 +33,7 @@ import { mergeRsbuildConfig } from '@rsbuild/core'
 
 const config: StorybookConfig = {
   framework: 'storybook-html-rsbuild',
+  stories: ['../src/**/*.stories.@(js|mjs|ts)'],
   rsbuildFinal: (config) => {
     // Customize the final Rsbuild config here
     return mergeRsbuildConfig(config, {

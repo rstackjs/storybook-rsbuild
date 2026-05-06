@@ -92,7 +92,7 @@ const config: StorybookConfig = {
   // After:
   rsbuildFinal: async (config) => {
     return mergeRsbuildConfig(config, {
-      source: {
+      resolve: {
         alias: {
           '@components': './src/components',
         },
@@ -104,6 +104,10 @@ const config: StorybookConfig = {
 
 export default config
 ```
+
+:::tip Use relative paths in `resolve.alias`
+Rsbuild resolves alias values relative to the project root. Use `'./src/components'`, not `path.resolve(__dirname, '../src/components')`. The relative form is shorter and avoids `__dirname` issues in ESM configs.
+:::
 
 ### 4. Handle webpack-dependent addons
 
@@ -132,12 +136,22 @@ export default config
 
 The `webpackAddons` field runs each addon's `webpackFinal` hook and translates the resulting webpack config into Rspack config automatically.
 
+:::tip Common addons that need `webpackAddons`
+A few addons hook `webpackFinal` internally and must move to `webpackAddons` (or be replaced with the Rsbuild-native equivalent):
+
+- `@storybook/addon-styling-webpack` — global CSS / PostCSS / Sass / Less. Either route via `webpackAddons` or replace with [`@rsbuild/plugin-postcss`](https://rsbuild.rs/plugins/list/plugin-postcss), [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass), or [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less).
+- `@storybook/addon-coverage` — collects test coverage; route via `webpackAddons`.
+- `@storybook/preset-create-react-app` — CRA compatibility; route via `webpackAddons`.
+
+If an addon's name ends in `-webpack` or its docs mention `webpackFinal`, assume it needs this treatment. Silently dropping a webpack-only addon is a regression even if `storybook build` still passes.
+:::
+
 ### 5. Convert common webpack patterns
 
 | webpack pattern                       | Rsbuild equivalent                                      |
 | ------------------------------------- | ------------------------------------------------------- |
-| `config.resolve.alias`                | `source.alias` in `rsbuildFinal`                        |
-| `config.resolve.extensions`           | `source.extensions` (Rsbuild has sensible defaults)     |
+| `config.resolve.alias`                | `resolve.alias` in `rsbuildFinal`                       |
+| `config.resolve.extensions`           | `resolve.extensions` (Rsbuild has sensible defaults)    |
 | `config.module.rules` (loaders)       | `tools.rspack` or Rsbuild plugins                       |
 | `config.plugins` (webpack plugins)    | `tools.rspack` for Rspack plugins                       |
 | `DefinePlugin`                        | `source.define`                                         |
@@ -215,7 +229,7 @@ const config: StorybookConfig = {
   // After:
   rsbuildFinal: async (config) => {
     return mergeRsbuildConfig(config, {
-      source: {
+      resolve: {
         alias: {
           '@': './src',
         },
@@ -227,11 +241,15 @@ const config: StorybookConfig = {
 export default config
 ```
 
+:::tip Use relative paths in `resolve.alias`
+Rsbuild resolves alias values relative to the project root. Use `'./src'`, not `path.resolve(__dirname, '../src')`. The relative form is shorter and avoids `__dirname` issues in ESM configs.
+:::
+
 ### 4. Convert common Vite patterns
 
 | Vite pattern                  | Rsbuild equivalent                                      |
 | ----------------------------- | ------------------------------------------------------- |
-| `resolve.alias`               | `source.alias` in `rsbuildFinal`                        |
+| `resolve.alias`               | `resolve.alias` in `rsbuildFinal`                       |
 | `plugins: [react()]`         | Auto-configured by framework package                    |
 | `css.preprocessorOptions`    | `@rsbuild/plugin-sass` or `@rsbuild/plugin-less`       |
 | `define`                      | `source.define`                                         |
