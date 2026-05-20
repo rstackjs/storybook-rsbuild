@@ -1,6 +1,6 @@
 {
   "name": "storybook-addon-modernjs",
-  "version": "3.3.3",
+  "version": "3.3.4",
   "description": "Storybook addon for loading configuration of Modern.js",
   "keywords": [
     "storybook",
