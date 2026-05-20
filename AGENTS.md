@@ -101,6 +101,12 @@ pnpm build:sandboxes
   - `pnpm e2e` passes.
   - Snapshots updated only for intentional changes.
 
+### Release Workflow
+
+- Run `pnpm bump` from `main` to bump versions. Behavior (commit message format, files to update, tag/push opt-out) is pinned in `bump.config.ts` — do not override these via CLI flags.
+- Push the resulting version commit to `origin/main` directly.
+- Do **not** create or push tags locally. The `Release` GitHub Actions workflow (`workflow_dispatch`) reads the version from `packages/builder-rsbuild/package.json`, creates the tag, publishes to npm, and generates the GitHub release.
+
 ### When Stuck
 
 - Ask a clarifying question.
