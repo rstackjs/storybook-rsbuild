@@ -54,7 +54,7 @@
   "devDependencies": {
     "@rsbuild/core": "^2.0.5",
     "@types/node": "^22.0.0",
-    "lit": "^3.3.2",
+    "lit": "^3.3.3",
     "storybook": "10.3.5",
     "typescript": "^5.9.3"
   },
