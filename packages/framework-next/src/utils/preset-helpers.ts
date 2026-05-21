@@ -15,7 +15,10 @@ function asUseArray(use: any): any[] {
   return Array.isArray(use) ? use : [use]
 }
 
-function walkRules(rules: any[] | undefined, fn: (rule: any) => void): void {
+export function walkRules(
+  rules: any[] | undefined,
+  fn: (rule: any) => void,
+): void {
   if (!rules) return
   for (const rule of rules) {
     if (!rule || typeof rule !== 'object') continue
@@ -45,23 +48,32 @@ export function filterNextAliases(
  * In production (`isDev: false`), drop `builtin:react-refresh-loader` and force
  * `next-swc-loader.options.dev = false`. Next.js's extraction always runs in
  * dev mode, so without this its dev-only injections leak into prod bundles.
+ *
+ * Picking the "client" rule: Pages Router puts the loader chain at the top
+ * level alongside `builtin:react-refresh-loader`. App Router emits multiple
+ * nested rules under `oneOf` branches — some pair `next-swc-loader` with
+ * `next-flight-loader` (RSC), others ship the plain client transform. We
+ * prefer the plainest rule (just `next-swc-loader`, no flight pairings) since
+ * Storybook stories run as client components.
  */
 export function buildNextLoaderChain(
   rawRules: any[],
   shimPath: string,
   { isDev }: { isDev: boolean } = { isDev: true },
 ): any[] | null {
-  let clientRule: any = null
+  let plainSwcRule: any = null
+  let anySwcRule: any = null
   walkRules(rawRules, (rule) => {
-    if (clientRule) return
     const names = asUseArray(rule.use).map(loaderNameOf)
-    if (
-      names.includes('builtin:react-refresh-loader') &&
-      names.includes('next-swc-loader')
-    ) {
-      clientRule = rule
-    }
+    const hasSwc = names.some(
+      (n) => n === 'next-swc-loader' || n?.endsWith('/next-swc-loader'),
+    )
+    if (!hasSwc) return
+    anySwcRule ??= rule
+    const hasFlight = names.some((n) => n?.includes('next-flight'))
+    if (!hasFlight && !plainSwcRule) plainSwcRule = rule
   })
+  const clientRule = plainSwcRule ?? anySwcRule
   if (!clientRule) return null
 
   return asUseArray(clientRule.use).flatMap((use) => {
@@ -71,7 +83,17 @@ export function buildNextLoaderChain(
     }
     if (name === 'next-swc-loader' || name?.endsWith('/next-swc-loader')) {
       const options = use.options || {}
-      const adjusted = isDev ? options : { ...options, dev: false }
+      // In prod, `next-swc-loader` must not emit React Refresh runtime calls:
+      // - `dev: false` turns off dev-time hot-reload transforms
+      // - `hasReactRefresh: false` prevents the loader from injecting
+      //   `$ReactRefreshRuntime$` references that resolve to nothing once we
+      //   drop `ReactRefreshRspackPlugin` (DEV_ONLY) from the prod plugin set
+      // Without the second flag, prod bundles fail at runtime with
+      // `$ReactRefreshRuntime$ is not defined` — the symptom only surfaces in
+      // the browser, not in `storybook build`, so it's easy to miss in CI.
+      const adjusted = isDev
+        ? options
+        : { ...options, dev: false, hasReactRefresh: false }
       return [{ loader: shimPath, options: adjusted }]
     }
     if (name?.includes('next-flight')) return []
@@ -98,20 +120,143 @@ export function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
 }
 
 /**
+ * Prod-only sanitization: Next.js's `getBaseWebpackConfig()` is called in dev
+ * mode (see `utils/next-config.ts`), so every `oneOf` branch under the client
+ * rule — including barrel-optimize and other secondary chains — bakes in
+ * `builtin:react-refresh-loader` + `hasReactRefresh: true`. `buildNextLoaderChain`
+ * + `replaceSwcRules` already neutralize the primary client chain; this pass
+ * catches the remaining co-extracted branches that survive into `rspackConfig`.
+ *
+ * Without this, prod bundles still emit `$ReactRefreshRuntime$.refresh(...)`
+ * calls (via barrel-optimize compilations of `@mui/*`/`lodash`/...), but the
+ * `ReactRefreshRspackPlugin` we relied on to provide `$ReactRefreshRuntime$`
+ * is gated `DEV_ONLY` — symptom is a silent build followed by every story
+ * throwing `$ReactRefreshRuntime$ is not defined` at iframe load.
+ *
+ * Convergent: one walk, one rule, "in prod nobody emits HMR runtime calls."
+ */
+export function sanitizeReactRefreshForProd(rules: any[]): void {
+  let removed = 0
+  let patched = 0
+  walkRules(rules, (rule) => {
+    if (!rule.use) return
+    rule.use = asUseArray(rule.use)
+      .filter((use) => {
+        const drop = loaderNameOf(use) === 'builtin:react-refresh-loader'
+        if (drop) removed++
+        return !drop
+      })
+      .map((use) => {
+        const name = loaderNameOf(use)
+        if (
+          name?.endsWith('next-swc-loader') ||
+          name?.endsWith('swc-loader-shim.cjs')
+        ) {
+          patched++
+          const useObj =
+            typeof use === 'object' && use !== null ? use : { loader: name }
+          return {
+            ...useObj,
+            options: { ...(useObj.options || {}), hasReactRefresh: false },
+          }
+        }
+        return use
+      })
+  })
+  // eslint-disable-next-line no-console
+  console.error(
+    `[storybook-next-rsbuild] prod sanitize: -${removed} refresh-loader, ~${patched} swc-loader options patched`,
+  )
+}
+
+/**
  * Allowlist of Next.js plugins to inject into Storybook. Allowlist (not
  * denylist) because Next.js adds/renames plugins across versions and an
  * unknown new plugin may write to disk, throw, or pollute the bundle.
  * - `CssExtractRspackPlugin`: drives the CSS pipeline; required for `next/font` target.css
+ * - `ProvidePlugin` / `RspackProvidePlugin`: defines globals like `Buffer` /
+ *   `process` that browser-built Node libs (next-auth, openid-client, ...)
+ *   rely on. Rsbuild doesn't auto-provide these, so without keeping Next.js's
+ *   `ProvidePlugin` such libs throw `Buffer is not defined` at story render
+ *   time even though the build succeeds.
  * - `ReactRefreshRspackPlugin`: provides `$ReactRefreshRuntime$` via ProvidePlugin
  *   (complements our `ReactRefreshInitPlugin` which handles the `injectIntoGlobalHook` bootstrap)
  */
 export const KEEP_PLUGIN_NAMES = new Set([
   'CssExtractRspackPlugin',
+  'ProvidePlugin',
   'ReactRefreshRspackPlugin',
+  'RspackProvidePlugin',
 ])
 
 /** Plugins from {@link KEEP_PLUGIN_NAMES} that must NOT leak into prod builds. */
 const DEV_ONLY_PLUGIN_NAMES = new Set(['ReactRefreshRspackPlugin'])
+
+const PROVIDE_PLUGIN_NAMES = new Set(['ProvidePlugin', 'RspackProvidePlugin'])
+
+function isProvidePlugin(plugin: any): boolean {
+  return PROVIDE_PLUGIN_NAMES.has(plugin?.constructor?.name)
+}
+
+/**
+ * Read a webpack/rspack plugin's `{ key: spec }` definitions map. Works for
+ * ProvidePlugin and DefinePlugin alike: webpack stores definitions on a
+ * public `.definitions` property, rspack's JS wrapper stashes the
+ * constructor arg on `._args[0]`. Returns `null` when neither shape applies.
+ */
+export function readProvidedMap(plugin: any): Record<string, unknown> | null {
+  const definitions = plugin?.definitions
+  if (definitions && typeof definitions === 'object') return definitions
+  const arg = plugin?._args?.[0]
+  return arg && typeof arg === 'object' ? arg : null
+}
+
+/**
+ * Strip ProvidePlugin keys from Next.js's instance that Rsbuild already
+ * provides. Rspack warns on any duplicate ProvidePlugin key whose value
+ * differs from a previous registration, and Rsbuild ships `process` with a
+ * pre-resolved path while Next.js declares it with a bare `['process']`
+ * specifier — same key, different value. Dropping the overlap keeps
+ * Next.js's additive entries (notably `Buffer`, which `next-auth` /
+ * `openid-client` rely on at story render time).
+ */
+export function dedupProvidePluginKeys(
+  rsbuildPlugins: readonly any[] | undefined,
+  nextPlugins: readonly any[],
+): any[] {
+  const rsbuildKeys = new Set<string>()
+  for (const plugin of rsbuildPlugins ?? []) {
+    if (!isProvidePlugin(plugin)) continue
+    const provided = readProvidedMap(plugin)
+    if (provided) {
+      for (const k of Object.keys(provided)) rsbuildKeys.add(k)
+    }
+  }
+  const out: any[] = []
+  for (const plugin of nextPlugins) {
+    if (!isProvidePlugin(plugin)) {
+      out.push(plugin)
+      continue
+    }
+    const provided = readProvidedMap(plugin)
+    if (!provided) {
+      out.push(plugin)
+      continue
+    }
+    let dropped = 0
+    const filtered: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(provided)) {
+      if (rsbuildKeys.has(k)) dropped++
+      else filtered[k] = v
+    }
+    if (dropped === 0) {
+      out.push(plugin)
+    } else if (Object.keys(filtered).length > 0) {
+      out.push(new plugin.constructor(filtered))
+    }
+  }
+  return out
+}
 
 export function filterNextPlugins(
   rawPlugins: any[],
