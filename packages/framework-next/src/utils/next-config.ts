@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
 import { logger } from 'storybook/internal/node-logger'
+import { readProvidedMap, walkRules } from './preset-helpers'
 
 // Must be set before any Next.js internal imports so that
 // getBaseWebpackConfig() emits rspack-compatible config.
@@ -21,6 +22,39 @@ export interface NextRspackExtraction {
   rawRules: any[]
   /** Raw plugin instances from getBaseWebpackConfig (client, dev). */
   rawPlugins: any[]
+  /**
+   * Delta added by the user's `next.config.webpack(config, opts)` hook,
+   * captured by wrapping the hook before `getBaseWebpackConfig()` invokes it.
+   * Append-only for arrays; key-diff for objects. Empty when the user did not
+   * define a `webpack` hook. Forwarded into the rspack config in `preset.ts`
+   * (bypassing Next.js's plugin allowlist by design — user-authored plugins
+   * are user intent, not Next.js base output).
+   */
+  userDelta: UserWebpackDelta
+}
+
+export interface UserWebpackDelta {
+  /** Rules appended by the user's webpack() hook. */
+  rules: any[]
+  /** Plugin instances appended by the user's webpack() hook. */
+  plugins: any[]
+  /** Aliases added or overwritten by the user. */
+  alias: Record<string, string | string[] | false>
+  /** Fallback entries added or overwritten by the user. */
+  fallback: Record<string, string | string[] | false>
+  /** Experiment keys added or changed by the user. */
+  experiments: Record<string, any>
+  /** Externals appended by the user (array form only). */
+  externals: any[]
+}
+
+const EMPTY_USER_DELTA: UserWebpackDelta = {
+  rules: [],
+  plugins: [],
+  alias: {},
+  fallback: {},
+  experiments: {},
+  externals: [],
 }
 
 const req = createRequire(import.meta.url)
@@ -124,6 +158,223 @@ const EMPTY_EXTRACTION: NextRspackExtraction = {
   resolveLoader: {},
   rawRules: [],
   rawPlugins: [],
+  userDelta: EMPTY_USER_DELTA,
+}
+
+/**
+ * Wraps `nextConfig.webpack` so we observe the rspack config both before and
+ * after the user's hook runs, without invoking `getBaseWebpackConfig()` twice.
+ * Strategy:
+ *   1. Snapshot lengths/keys of the fields we care about *before* the hook.
+ *   2. Let the hook run with the real Next.js arguments (`opts.dev`,
+ *      `opts.isServer`, `opts.defaultLoaders`, ...).
+ *   3. Compute an append-only delta from the post-hook config.
+ *
+ * The captured delta is exposed via `getDelta()`, called after
+ * `getBaseWebpackConfig()` returns. If the user did not define a `webpack`
+ * hook, this is a no-op and `getDelta()` returns an empty delta.
+ *
+ * Field policy:
+ *   rules / plugins / externals : append-only (warn if mutated)
+ *   alias / fallback            : key-diff (added or value-changed keys)
+ *   experiments                 : shallow merge (added or value-changed keys)
+ *   optimization / cache / etc. : silent skip (Rsbuild/Storybook territory)
+ */
+export function instrumentUserWebpack(nextConfig: any): () => UserWebpackDelta {
+  const original = nextConfig?.webpack
+  if (typeof original !== 'function') {
+    return () => EMPTY_USER_DELTA
+  }
+
+  let captured: UserWebpackDelta = EMPTY_USER_DELTA
+
+  nextConfig.webpack = (webpackConfig: any, opts: any) => {
+    // Coerce `externals` to an array before the user hook runs.
+    // Next.js's NEXT_RSPACK=true client-dev base config may emit `externals`
+    // as a non-array shape (object/function/undefined), but most user
+    // `next.config.webpack()` hooks assume the webpack convention of
+    // `config.externals.push(...)`. Coercing here lets webpack-style hooks
+    // append cleanly without per-project workarounds. Pre-existing object
+    // entries are migrated as a single-element array so we don't lose them.
+    if (webpackConfig && !Array.isArray(webpackConfig.externals)) {
+      const existing = webpackConfig.externals
+      webpackConfig.externals =
+        existing == null ||
+        (typeof existing === 'object' && Object.keys(existing).length === 0)
+          ? []
+          : [existing]
+    }
+    const before = snapshotForDelta(webpackConfig)
+    const after = original(webpackConfig, opts) ?? webpackConfig
+    captured = computeDelta(before, after)
+    return after
+  }
+
+  return () => captured
+}
+
+interface DeltaSnapshot {
+  rulesLen: number
+  pluginsLen: number
+  externalsLen: number
+  externalsIsArray: boolean
+  aliasKeys: Set<string>
+  aliasValues: Map<string, unknown>
+  fallbackKeys: Set<string>
+  fallbackValues: Map<string, unknown>
+  experimentsKeys: Set<string>
+  experimentsValues: Map<string, unknown>
+}
+
+function snapshotForDelta(cfg: any): DeltaSnapshot {
+  const rules = cfg?.module?.rules
+  const plugins = cfg?.plugins
+  const externals = cfg?.externals
+  const alias = cfg?.resolve?.alias ?? {}
+  const fallback = cfg?.resolve?.fallback ?? {}
+  const experiments = cfg?.experiments ?? {}
+
+  return {
+    rulesLen: Array.isArray(rules) ? rules.length : 0,
+    pluginsLen: Array.isArray(plugins) ? plugins.length : 0,
+    externalsLen: Array.isArray(externals) ? externals.length : 0,
+    externalsIsArray: Array.isArray(externals),
+    aliasKeys: new Set(Object.keys(alias)),
+    aliasValues: new Map(Object.entries(alias)),
+    fallbackKeys: new Set(Object.keys(fallback)),
+    fallbackValues: new Map(Object.entries(fallback)),
+    experimentsKeys: new Set(Object.keys(experiments)),
+    experimentsValues: new Map(Object.entries(experiments)),
+  }
+}
+
+function computeDelta(before: DeltaSnapshot, after: any): UserWebpackDelta {
+  const rulesAfter = after?.module?.rules
+  const pluginsAfter = after?.plugins
+  const externalsAfter = after?.externals
+  const aliasAfter = after?.resolve?.alias ?? {}
+  const fallbackAfter = after?.resolve?.fallback ?? {}
+  const experimentsAfter = after?.experiments ?? {}
+
+  let rules: any[] = []
+  if (Array.isArray(rulesAfter)) {
+    if (rulesAfter.length < before.rulesLen) {
+      logger.warn(
+        `next.config.webpack() removed module rules (count ${before.rulesLen} → ${rulesAfter.length}); ` +
+          'Storybook only forwards appended rules.',
+      )
+    } else {
+      rules = rulesAfter
+        .slice(before.rulesLen)
+        .filter((rule) => !isStorybookClaimedRule(rule))
+    }
+  }
+
+  let plugins: any[] = []
+  if (Array.isArray(pluginsAfter)) {
+    if (pluginsAfter.length < before.pluginsLen) {
+      logger.warn(
+        `next.config.webpack() removed plugins (count ${before.pluginsLen} → ${pluginsAfter.length}); ` +
+          'Storybook only forwards appended plugins.',
+      )
+    } else {
+      plugins = pluginsAfter.slice(before.pluginsLen)
+    }
+  }
+
+  let externals: any[] = []
+  if (Array.isArray(externalsAfter) && before.externalsIsArray) {
+    externals = externalsAfter.slice(before.externalsLen)
+  }
+
+  return {
+    rules,
+    plugins,
+    alias: diffRecord(before.aliasKeys, before.aliasValues, aliasAfter),
+    fallback: diffRecord(
+      before.fallbackKeys,
+      before.fallbackValues,
+      fallbackAfter,
+    ),
+    experiments: diffRecord(
+      before.experimentsKeys,
+      before.experimentsValues,
+      experimentsAfter,
+    ),
+    externals,
+  }
+}
+
+function diffRecord<V>(
+  beforeKeys: Set<string>,
+  beforeValues: Map<string, unknown>,
+  after: Record<string, V>,
+): Record<string, V> {
+  const out: Record<string, V> = {}
+  for (const [k, v] of Object.entries(after)) {
+    if (!beforeKeys.has(k) || beforeValues.get(k) !== v) {
+      out[k] = v
+    }
+  }
+  return out
+}
+
+/**
+ * File extensions Storybook addons (currently `@storybook/addon-docs`) claim
+ * exclusively. User-added rules matching these extensions are dropped from the
+ * delta because rspack concatenates loader chains from all matching rules —
+ * letting a user-side `@next/mdx` rule co-exist with addon-docs's MDX loader
+ * silently fuses their two loader chains into one broken chain, producing the
+ * opaque `Module build failed: ×` error.
+ *
+ * Mental model for the user: in Storybook, `.mdx` is processed by
+ * `@storybook/addon-docs`. Your `next.config.webpack()`-added MDX loader
+ * (typically from `@next/mdx`) applies to Next.js page MDX, not Storybook
+ * stories — they share the extension but not the build context.
+ *
+ * Convergent in the spirit of the user's directive: a single, explicit
+ * exclusion list — not enumeration-by-symptom — anchored to "Storybook addon
+ * owns this extension." Extend only when a new conflict surfaces with the same
+ * shape.
+ */
+const STORYBOOK_CLAIMED_EXTENSIONS = ['.mdx']
+
+export function ruleTestMatchesAny(
+  test: unknown,
+  candidates: readonly string[],
+): boolean {
+  if (!test) return false
+  if (test instanceof RegExp) return candidates.some((p) => test.test(p))
+  if (Array.isArray(test)) {
+    return test.some((t) => ruleTestMatchesAny(t, candidates))
+  }
+  if (typeof test === 'object' && test !== null) {
+    const t = test as { and?: unknown[]; or?: unknown[] }
+    if (Array.isArray(t.or)) {
+      return t.or.some((sub) => ruleTestMatchesAny(sub, candidates))
+    }
+    if (Array.isArray(t.and)) {
+      // `{ and: [...] }` means ALL sub-tests must match; the rule applies to a
+      // file extension only if every clause matches a representative filename.
+      return candidates.some((p) =>
+        t.and!.every((sub) => ruleTestMatchesAny(sub, [p])),
+      )
+    }
+  }
+  return false
+}
+
+export function isStorybookClaimedRule(rule: any): boolean {
+  if (!rule || typeof rule !== 'object') return false
+  const sampleNames = STORYBOOK_CLAIMED_EXTENSIONS.map((ext) => `probe${ext}`)
+  if (ruleTestMatchesAny(rule.test, sampleNames)) {
+    logger.info(
+      `Dropping user next.config.webpack() rule for ${STORYBOOK_CLAIMED_EXTENSIONS.join('/')} ` +
+        '(claimed by @storybook/addon-docs in Storybook context).',
+    )
+    return true
+  }
+  return false
 }
 
 /**
@@ -190,6 +441,11 @@ async function doExtract(
   const { loadProjectInfo } = webpackConfigMod
 
   const nextConfig = await loadConfig(PHASE_DEVELOPMENT_SERVER, projectDir)
+  // Instrument the user's `webpack(config, opts)` hook (no-op if absent) so we
+  // can extract its delta in a single getBaseWebpackConfig() call. Must happen
+  // BEFORE loadProjectInfo / getBaseWebpackConfig so the wrapper is the
+  // reference Next.js invokes.
+  const getUserDelta = instrumentUserWebpack(nextConfig)
   const projectInfo = await loadProjectInfo({
     dir: projectDir,
     config: nextConfig,
@@ -214,12 +470,11 @@ async function doExtract(
 
   const rspackConfig = await getBaseWebpackConfig(projectDir, params)
 
-  // rspack uses `_args[0]`, webpack uses `definitions`
   const defines: Record<string, any> = {}
   for (const plugin of rspackConfig.plugins || []) {
     const name = plugin?.constructor?.name
     if (name === 'DefinePlugin' || name === 'RspackDefinePlugin') {
-      Object.assign(defines, plugin.definitions || plugin._args?.[0] || {})
+      Object.assign(defines, readProvidedMap(plugin) ?? {})
     }
   }
 
@@ -235,24 +490,29 @@ async function doExtract(
   const fallback: Record<string, string | string[] | false> = {
     ...(rspackConfig.resolve?.fallback || {}),
   }
-  const harvestFallback = (rules: any[]) => {
-    for (const r of rules) {
-      if (!r || typeof r !== 'object') continue
-      if (r.resolve?.fallback) {
-        Object.assign(fallback, r.resolve.fallback)
-      }
-      if (Array.isArray(r.oneOf)) harvestFallback(r.oneOf)
-      if (Array.isArray(r.rules)) harvestFallback(r.rules)
-    }
-  }
-  harvestFallback(rawRules)
+  walkRules(rawRules, (r) => {
+    if (r.resolve?.fallback) Object.assign(fallback, r.resolve.fallback)
+  })
 
   verifyRspackVersionAlignment()
+
+  const userDelta = getUserDelta()
+  const deltaSummary =
+    userDelta.rules.length +
+      userDelta.plugins.length +
+      Object.keys(userDelta.alias).length +
+      Object.keys(userDelta.fallback).length +
+      Object.keys(userDelta.experiments).length +
+      userDelta.externals.length >
+    0
+      ? ` (user next.config.webpack: +${userDelta.rules.length} rules, +${userDelta.plugins.length} plugins, +${Object.keys(userDelta.alias).length} aliases, +${Object.keys(userDelta.fallback).length} fallbacks, +${Object.keys(userDelta.experiments).length} experiments, +${userDelta.externals.length} externals)`
+      : ''
 
   logger.info(
     `Extracted Next.js rspack config: ${Object.keys(alias).length} aliases, ` +
       `${Object.keys(defines).length} defines, ` +
-      `${rawRules.length} rules, ${rawPlugins.length} plugins`,
+      `${rawRules.length} rules, ${rawPlugins.length} plugins` +
+      deltaSummary,
   )
 
   return {
@@ -262,5 +522,6 @@ async function doExtract(
     resolveLoader: rspackConfig.resolveLoader || {},
     rawRules,
     rawPlugins,
+    userDelta,
   }
 }

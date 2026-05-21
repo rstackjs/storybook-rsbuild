@@ -188,6 +188,8 @@ test.describe(sandbox.name, () => {
     expect(text).toContain('"a":"1"')
     expect(text).toContain('"b":"2"')
     expect(text).toContain('"encoded":"aGk="')
+    // Bare `Buffer` reference — exercises `ProvidePlugin` retention.
+    expect(text).toContain('"provided":"aGk="')
   })
 
   test('global CSS import applies styles to story content', async ({
@@ -305,5 +307,63 @@ test.describe(sandbox.name, () => {
   }) => {
     const frame = await openStory(page, 'stories-navigation--with-route-params')
     await expect(frame.getByText('address: 0xdeadbeef')).toBeVisible()
+  })
+
+  test('next.config.webpack() rule with bare @svgr/webpack loader resolves and runs', async ({
+    page,
+  }) => {
+    // Locks in three things at once: (1) `resolveLoader.modules` includes the
+    // consumer's `node_modules` so the bare `@svgr/webpack` specifier resolves;
+    // (2) the user-side rule from `next.config.webpack()` actually fires
+    // (delta-rules forwarding); (3) the safe-wallet pattern of mutating the
+    // image rule's `exclude` to /\.svg$/ in the same hook so SVGR — not the
+    // default asset-image loader — claims .svg files.
+    const frame = await openStory(page, 'stories-svgricon--default')
+    const icon = frame.getByTestId('svgr-icon')
+    // SVGR turns .svg files into React components — the element renders as an
+    // <svg>, NOT an <img>. (If the default image rule still owned .svg this
+    // would be `<img src="..." />` instead.)
+    await expect(icon).toBeVisible()
+    expect(await icon.evaluate((el) => el.tagName.toLowerCase())).toBe('svg')
+  })
+
+  test('user-defined resolve.alias in next.config.webpack() resolves through delta', async ({
+    page,
+  }) => {
+    // anticapture-style alias delta: the user's webpack() hook adds
+    // `'@user-alias/probe': '/path/to/target.ts'` and importing the alias
+    // from a story resolves via rspack's resolver.
+    const frame = await openStory(page, 'stories-useralias--default')
+    const probe = frame.getByTestId('user-alias-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveText('resolved via @user-alias/probe')
+  })
+
+  test('user DefinePlugin from next.config.webpack() reaches story runtime', async ({
+    page,
+  }) => {
+    // proposalsapp-style: user pushes `new webpack.DefinePlugin({...})`
+    // that injects `process.env.DATABASE_URL`, feature flags, etc. The
+    // define must survive `forwardNextConfigPlugins: true` forwarding AND
+    // `dedupProvidePluginKeys` (which targets ProvidePlugin only, not
+    // DefinePlugin — regression target if the dedup widens accidentally).
+    const frame = await openStory(page, 'stories-userdefine--default')
+    const probe = frame.getByTestId('user-define-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveText('user-define-value')
+  })
+
+  test('user resolve.fallback maps a non-builtin module to empty so it imports cleanly', async ({
+    page,
+  }) => {
+    // proposalsapp-style: 40+ node-only deps (pg, jsdom, ...) are stubbed via
+    // `config.resolve.fallback['pg'] = false`. We use a synthetic module name
+    // (`sandbox-fake-native`) to avoid pulling a real native dep into the
+    // sandbox install. If the fallback delta isn't forwarded, rspack errors
+    // at build time with "Can't resolve 'sandbox-fake-native'".
+    const frame = await openStory(page, 'stories-userfallback--default')
+    const probe = frame.getByTestId('user-fallback-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveText(/resolved to empty module/)
   })
 })

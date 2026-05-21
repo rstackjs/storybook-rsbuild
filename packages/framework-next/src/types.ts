@@ -30,6 +30,19 @@ export type FrameworkOptions = {
     /** Glob patterns of image files to exclude from static handling. */
     excludeFiles?: string[]
   }
+  /**
+   * Forward plugins added by `next.config.webpack()` into Storybook's bundler.
+   *
+   * Defaults to `false` because most plugins next.config users add target
+   * Next.js's production pipeline (build manifests, source-map uploaders,
+   * stats writers) and either do nothing in Storybook or crash the rspack
+   * IPC channel (e.g. `copy-webpack-plugin`'s `processAssets` hook). Rules,
+   * aliases, fallbacks, and externals from `next.config.webpack()` are
+   * always forwarded — only plugins are gated. Opt in if your project
+   * relies on a client-side plugin and you've verified it works with
+   * `@rspack/core`.
+   */
+  forwardNextConfigPlugins?: boolean
 }
 
 /**

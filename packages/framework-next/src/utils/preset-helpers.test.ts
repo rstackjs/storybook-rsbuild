@@ -1,9 +1,11 @@
 import { describe, expect, it } from '@rstest/core'
 import {
   buildNextLoaderChain,
+  dedupProvidePluginKeys,
   filterNextAliases,
   filterNextPlugins,
   prepareNextCssRules,
+  readProvidedMap,
   replaceSwcRules,
 } from './preset-helpers'
 
@@ -36,6 +38,84 @@ describe('filterNextAliases', () => {
       'next/link': ['/a', '/b'],
     }
     expect(filterNextAliases(input)).toEqual(input)
+  })
+})
+
+describe('readProvidedMap', () => {
+  it('reads `.definitions` when present (webpack-public path)', () => {
+    const plugin = { definitions: { Buffer: ['buffer', 'Buffer'] } }
+    expect(readProvidedMap(plugin)).toEqual({ Buffer: ['buffer', 'Buffer'] })
+  })
+
+  it('falls back to `_args[0]` when definitions is absent (rspack-internal path)', () => {
+    const plugin = { _args: [{ Buffer: ['buffer', 'Buffer'] }] }
+    expect(readProvidedMap(plugin)).toEqual({ Buffer: ['buffer', 'Buffer'] })
+  })
+
+  it('returns null for non-ProvidePlugin shapes', () => {
+    expect(readProvidedMap({})).toBeNull()
+    expect(readProvidedMap({ _args: ['not-an-object'] })).toBeNull()
+    expect(readProvidedMap(null)).toBeNull()
+  })
+})
+
+describe('dedupProvidePluginKeys (proposalsapp / safe-wallet pattern)', () => {
+  class RspackProvidePlugin {
+    public definitions: Record<string, unknown>
+    constructor(definitions: Record<string, unknown>) {
+      this.definitions = definitions
+    }
+  }
+  class OtherPlugin {}
+
+  it('drops keys from the Next plugin that Rsbuild already provides', () => {
+    const rsbuild = [new RspackProvidePlugin({ process: '/abs/process' })]
+    const next = [
+      new RspackProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+        process: ['process'],
+      }),
+    ]
+    const out = dedupProvidePluginKeys(rsbuild, next) as RspackProvidePlugin[]
+    expect(out).toHaveLength(1)
+    expect(out[0].definitions).toEqual({ Buffer: ['buffer', 'Buffer'] })
+  })
+
+  it('removes the Next plugin entirely when every key is covered', () => {
+    const rsbuild = [
+      new RspackProvidePlugin({ process: '/abs/process', Buffer: '/abs/buf' }),
+    ]
+    const next = [
+      new RspackProvidePlugin({
+        process: ['process'],
+        Buffer: ['buffer', 'Buffer'],
+      }),
+    ]
+    const out = dedupProvidePluginKeys(rsbuild, next)
+    expect(out).toEqual([])
+  })
+
+  it('keeps the original instance untouched when no keys overlap', () => {
+    const rsbuild = [new RspackProvidePlugin({ process: '/abs/process' })]
+    const nextPlugin = new RspackProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    })
+    const out = dedupProvidePluginKeys(rsbuild, [nextPlugin])
+    expect(out).toEqual([nextPlugin])
+    expect(out[0]).toBe(nextPlugin)
+  })
+
+  it('passes non-ProvidePlugin entries through unchanged', () => {
+    const rsbuild = [new RspackProvidePlugin({ process: '/abs/process' })]
+    const other = new OtherPlugin()
+    const out = dedupProvidePluginKeys(rsbuild, [other])
+    expect(out).toEqual([other])
+  })
+
+  it('handles undefined rsbuild plugins list', () => {
+    const next = [new RspackProvidePlugin({ Buffer: ['buffer', 'Buffer'] })]
+    const out = dedupProvidePluginKeys(undefined, next) as RspackProvidePlugin[]
+    expect(out[0].definitions).toEqual({ Buffer: ['buffer', 'Buffer'] })
   })
 })
 
@@ -76,14 +156,48 @@ describe('filterNextPlugins', () => {
 describe('buildNextLoaderChain', () => {
   const SHIM = '/shim/swc-loader-shim.cjs'
 
-  it('returns null when no rule carries both react-refresh and next-swc loaders', () => {
+  it('returns null when no rule carries next-swc-loader at all', () => {
     const rules = [
       {
         test: /\.tsx?$/,
-        use: [{ loader: 'next-swc-loader', options: { isServer: false } }],
+        use: [{ loader: 'css-loader' }],
       },
     ]
     expect(buildNextLoaderChain(rules, SHIM)).toBeNull()
+  })
+
+  it('matches App Router rules with next-swc-loader but no react-refresh-loader', () => {
+    // Next.js App Router output emits client rules without the
+    // `builtin:react-refresh-loader` paired in — it's injected by
+    // `ReactRefreshRspackPlugin` instead. Older matcher required both.
+    const swcOpts = { isServer: false }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [{ loader: 'next-swc-loader', options: swcOpts }],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([{ loader: SHIM, options: swcOpts }])
+  })
+
+  it('prefers the plain client rule over flight-paired variants', () => {
+    const swcOpts = { isServer: false }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'next-flight-loader' },
+          { loader: 'next-swc-loader', options: { isServer: true } },
+        ],
+      },
+      {
+        test: /\.tsx?$/,
+        use: [{ loader: 'next-swc-loader', options: swcOpts }],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([{ loader: SHIM, options: swcOpts }])
   })
 
   it('swaps next-swc-loader for the shim and drops next-flight-* loaders', () => {
@@ -148,7 +262,10 @@ describe('buildNextLoaderChain', () => {
     ]
     const chain = buildNextLoaderChain(rules, SHIM, { isDev: false })
     expect(chain).toEqual([
-      { loader: SHIM, options: { isServer: false, dev: false } },
+      {
+        loader: SHIM,
+        options: { isServer: false, dev: false, hasReactRefresh: false },
+      },
     ])
   })
 })
@@ -382,6 +499,31 @@ describe('prepareNextCssRules', () => {
     expect(result.oneOf).toHaveLength(2)
     expect(result.oneOf[0].use[0].loader).toBe('next-style-loader')
     expect(result.oneOf[1].use[0].loader).toBe('css-loader')
+  })
+
+  it('passes through an absolute-path string `test` unchanged (Next 15.x font rule shape)', () => {
+    // Regression for the removed string→regex normalization. Next.js 15.x emits
+    // some next/font branches with `test` as an absolute file path string
+    // (`/abs/path/to/next/font/google/target.css`). rspack's condition matcher
+    // tests against `resource` (query already stripped), so a string test still
+    // fires for query-bearing resources like `target.css?{params}` — no
+    // normalization needed. Keep the string form so we don't lose information
+    // about Next.js's original intent (downstream tooling may inspect `test`).
+    const absPath = '/abs/.next/cache/next-font-loader/target.css'
+    const rule = {
+      test: absPath,
+      use: [
+        { loader: 'css-loader' },
+        { loader: 'next-font-loader', options: {} },
+      ],
+    }
+    const [result] = prepareNextCssRules([rule], REWRITER)
+    expect(result.test).toBe(absPath)
+    expect(result.use.map((u: any) => u.loader)).toEqual([
+      'css-loader',
+      REWRITER,
+      'next-font-loader',
+    ])
   })
 
   it('keeps __barrel_optimize__ branches but narrows their test off the file-extension OR', () => {

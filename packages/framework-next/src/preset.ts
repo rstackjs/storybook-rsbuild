@@ -9,10 +9,12 @@ import { checkRspackInvariant } from './utils/check-rspack-invariant'
 import { extractNextRspackConfig, getNextVersion } from './utils/next-config'
 import {
   buildNextLoaderChain,
+  dedupProvidePluginKeys,
   filterNextAliases,
   filterNextPlugins,
   prepareNextCssRules,
   replaceSwcRules,
+  sanitizeReactRefreshForProd,
 } from './utils/preset-helpers'
 
 const resolve = (id: string) => fileURLToPath(import.meta.resolve(id))
@@ -113,6 +115,50 @@ const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
 )
 
 /**
+ * Aliases for `node:`-protocol builtins. Rsbuild ships a pre-resolve guard
+ * that errors on bare `node:*` requests *before* webpack's `resolve.fallback`
+ * fires, so `fallback` alone can't suppress the build error. Mapping each
+ * `node:foo` to `false` via `resolve.alias` short-circuits resolution at the
+ * point Rsbuild checks. The non-prefixed forms stay in `fallback` only —
+ * adding them to alias would also intercept legitimate `import { ... } from 'fs'`
+ * before webpack's fallback layer has a chance to provide a polyfill (e.g.
+ * Next.js's `buffer`, `process`, `stream-browserify`).
+ */
+const NODE_PROTOCOL_ALIAS: Record<string, false> = Object.fromEntries(
+  builtinModules.map((m) => [`node:${m}`, false as const]),
+)
+
+/**
+ * Suppresses all `node:`-prefixed imports in the browser bundle.
+ *
+ * Rspack hard-errors on bare `node:foo` with "need an additional plugin to
+ * handle 'node:' URIs". The check fires at module-build stage, *after* both
+ * `resolve.alias` and `resolve.fallback`, so neither layer alone suppresses
+ * it.
+ *
+ * Stripping the prefix (NormalModuleReplacementPlugin: `node:foo` → `foo`)
+ * works for builtins listed in `node:module.builtinModules`, but newer
+ * deps (e.g. undici importing `node:sqlite`, Node 22.5+ only) reach modules
+ * that *aren't* in builtinModules on older Node releases — the strip then
+ * surfaces a "Can't resolve 'sqlite'" error.
+ *
+ * The Storybook preview is a browser bundle, so any `node:*` import is dead
+ * code by definition. `IgnorePlugin` replaces them with empty modules,
+ * matching the webpack idiom for "blocked imports."
+ *
+ * `compiler.webpack.IgnorePlugin` is the version-stable way to reach the
+ * rspack class without importing `@rspack/core` directly (framework-next
+ * doesn't declare it as a dep).
+ */
+class IgnoreNodeProtocolPlugin {
+  apply(compiler: any) {
+    const IgnorePlugin = compiler.webpack?.IgnorePlugin
+    if (!IgnorePlugin) return
+    new IgnorePlugin({ resourceRegExp: /^node:/ }).apply(compiler)
+  }
+}
+
+/**
  * Injects `react-refresh/runtime.injectIntoGlobalHook()` as a global entry.
  * Next.js's simplified `ReactRefreshRspackPlugin` only provides
  * `$ReactRefreshRuntime$` via ProvidePlugin — without this entry,
@@ -137,7 +183,7 @@ export const rsbuildFinal: NonNullable<
 > = async (config, options) => {
   checkRspackInvariant(options.configDir ?? process.cwd())
 
-  const { nextConfigPath } =
+  const { nextConfigPath, forwardNextConfigPlugins = false } =
     await options.presets.apply<FrameworkOptions>('frameworkOptions')
 
   // Resolve `nextConfigPath` against `configDir` when relative — users commonly
@@ -163,9 +209,26 @@ export const rsbuildFinal: NonNullable<
   // dev path.
   const isDev = options.configType !== 'PRODUCTION'
 
+  // Layering: Next.js base aliases (filtered) → Storybook overrides
+  // (next/image, styled-jsx) → user delta. User aliases win over Next.js,
+  // but `filterNextAliases` runs on the BASE only, so the React/RSC singletons
+  // we strip there cannot be re-introduced via the user delta path either.
+  // If user delta carries `react`/`react-dom` we drop them with a warn so the
+  // React identity invariant (AGENTS.md) stays intact.
+  const userAliasDelta = filterNextAliases(extraction.userDelta.alias)
+  for (const k of Object.keys(extraction.userDelta.alias)) {
+    if (!(k in userAliasDelta)) {
+      logger.warn(
+        `next.config.webpack() set resolve.alias["${k}"]; ignoring to preserve ` +
+          'Storybook React singleton.',
+      )
+    }
+  }
   const allAliases: Record<string, string | string[] | false> = {
+    ...NODE_PROTOCOL_ALIAS,
     ...filterNextAliases(extraction.alias),
     ...getStorybookOverrideAliases(),
+    ...userAliasDelta,
   }
 
   const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM, {
@@ -219,29 +282,76 @@ export const rsbuildFinal: NonNullable<
           chain.plugins.delete(CHAIN_ID.PLUGIN.MINI_CSS_EXTRACT)
         }
       },
-      rspack: (rspackConfig) => {
+      rspack: async (rspackConfig) => {
         rspackConfig.resolve ??= {}
         rspackConfig.module ??= {}
         rspackConfig.module.rules ??= []
         rspackConfig.plugins ??= []
         rspackConfig.ignoreWarnings ??= []
 
-        // Fallback precedence: user > Next.js polyfills > our builtin floor.
-        rspackConfig.resolve.fallback = {
+        // Fallback precedence: user delta (from next.config.webpack) > rsbuild
+        // user (via tools.rspack) > Next.js polyfills > our builtin floor.
+        // The user delta wins over Rsbuild's own `tools.rspack` fallback only
+        // when the same key is set in both — that mirrors what would happen
+        // inside Next.js itself, since the user `webpack()` hook runs last.
+        // Fallback merge — order matters:
+        //   1. Our builtin floor (every Node builtin → false)
+        //   2. Rsbuild's defaults / user `tools.rspack` overrides
+        //   3. Next.js's polyfills (only for keys still at `false` or unset) —
+        //      Rsbuild defaults `fs`/`stream`/`assert`/... to `false` even on
+        //      the browser build, which would suppress Next.js's polyfills
+        //      (`stream-browserify`, `buffer`, `util`) and break libs like
+        //      Victory that import `readable-stream`. Letting Next.js win over
+        //      a `false` is restorative, not destructive: Rsbuild's `false`
+        //      means "no opinion" for builtins, while a user-supplied non-false
+        //      entry is real intent we must preserve.
+        //   4. User `next.config.webpack` delta has the final word.
+        // Rspack types `fallback` values as `string | string[] | false |
+        // (string | false)[]`; we narrow back to the webpack-classic shape
+        // because every entry we put in is either a literal `false` or a
+        // resolved string. The `(string | false)[]` variant only appears in
+        // user-supplied configs we don't construct.
+        const fallback: Record<
+          string,
+          string | string[] | false | (string | false)[]
+        > = {
           ...NODE_BUILTINS_FALLBACK,
-          ...extraction.fallback,
           ...rspackConfig.resolve.fallback,
         }
+        for (const [k, v] of Object.entries(extraction.fallback)) {
+          if (fallback[k] === false || fallback[k] === undefined) {
+            fallback[k] = v
+          }
+        }
+        Object.assign(fallback, extraction.userDelta.fallback)
+        rspackConfig.resolve.fallback = fallback
         if (extraction.resolveLoader) {
           // Field-level merge: scalars follow "Next.js wins" (last spread), but
           // `modules` concatenate and `alias` unions so user-supplied loader
           // search paths / aliases from `tools.rspack` aren't silently dropped.
+          // Always include the consumer project's `node_modules` so loaders
+          // declared via bare specifier in `next.config.webpack()` rules
+          // (e.g. `@svgr/webpack`) resolve from the user's install, not from
+          // Next.js's vendored loader path.
           const userRL = rspackConfig.resolveLoader ?? {}
           const nextRL = extraction.resolveLoader
+          const cwdNodeModules = resolvePath(
+            options.configDir ?? process.cwd(),
+            '../node_modules',
+          )
+          const fallbackModules = ['node_modules', cwdNodeModules]
           rspackConfig.resolveLoader = {
             ...userRL,
             ...nextRL,
-            modules: [...(nextRL.modules ?? []), ...(userRL.modules ?? [])],
+            modules: [
+              ...(nextRL.modules ?? []),
+              ...(userRL.modules ?? []),
+              ...fallbackModules.filter(
+                (m) =>
+                  !(nextRL.modules ?? []).includes(m) &&
+                  !(userRL.modules ?? []).includes(m),
+              ),
+            ],
             alias: {
               ...(userRL.alias ?? {}),
               ...(nextRL.alias ?? {}),
@@ -269,10 +379,170 @@ export const rsbuildFinal: NonNullable<
           rspackConfig.module.rules.unshift(...nextCssRules)
         }
 
-        rspackConfig.plugins.push(new NoopTraceSpanPlugin(), ...nextPlugins)
+        // See `dedupProvidePluginKeys` doc — Rsbuild's pre-registered
+        // ProvidePlugin already covers `process`; we strip overlapping keys
+        // from Next.js's instance so only the additive entries (notably
+        // `Buffer`, which `next-auth` / `openid-client` rely on) remain.
+        const dedupedNextPlugins = dedupProvidePluginKeys(
+          rspackConfig.plugins,
+          nextPlugins,
+        )
+        rspackConfig.plugins.push(
+          new NoopTraceSpanPlugin(),
+          ...dedupedNextPlugins,
+        )
         if (nextLoaderChain && isDev) {
           rspackConfig.plugins.push(new ReactRefreshInitPlugin(REFRESH_ENTRY))
         }
+
+        rspackConfig.plugins.push(new IgnoreNodeProtocolPlugin())
+
+        // User delta from `next.config.webpack(config, opts)` — appended last
+        // so it lands AFTER both Rsbuild's defaults and Next.js's base. Bypasses
+        // the KEEP_PLUGIN_NAMES allowlist by design: user-authored plugins
+        // (e.g. `SriManifestWebpackPlugin`) are user intent, not Next.js
+        // implementation detail. Plugins are pushed regardless of dev/prod —
+        // the user's hook receives Next.js's real `{ dev, isServer, ... }` opts
+        // and gates internally if needed.
+        const { userDelta } = extraction
+        // Identity-track next.config.webpack delta rules so the post-
+        // webpackFinal dedup below only touches them — Next.js/Rsbuild rules
+        // with overlapping `test` (notably CSS `oneOf` chains that share
+        // `/\.css$/`) MUST stay untouched.
+        const nextConfigDeltaRules = new Set<any>(userDelta.rules)
+        if (userDelta.rules.length > 0) {
+          rspackConfig.module.rules.push(...userDelta.rules)
+        }
+        if (userDelta.plugins.length > 0) {
+          if (forwardNextConfigPlugins) {
+            rspackConfig.plugins.push(...userDelta.plugins)
+          } else {
+            const names = userDelta.plugins
+              .map((p: any) => p?.constructor?.name || typeof p)
+              .join(', ')
+            logger.info(
+              `Dropping ${userDelta.plugins.length} next.config.webpack() plugin(s) ` +
+                `[${names}]. Most webpack-only plugins (CopyPlugin, source-map ` +
+                `uploaders, stats writers) crash rspack's IPC channel during ` +
+                `processAssets. Set framework option ` +
+                `\`forwardNextConfigPlugins: true\` to opt in.`,
+            )
+          }
+        }
+        if (Object.keys(userDelta.experiments).length > 0) {
+          rspackConfig.experiments = {
+            ...rspackConfig.experiments,
+            ...userDelta.experiments,
+          }
+        }
+        if (userDelta.externals.length > 0) {
+          if (!rspackConfig.externals) {
+            rspackConfig.externals = userDelta.externals
+          } else if (Array.isArray(rspackConfig.externals)) {
+            rspackConfig.externals.push(...userDelta.externals)
+          } else {
+            // Rsbuild may set externals as an object — coerce to mixed array
+            // so the user-added entries (typically functions or regex maps)
+            // land alongside without overriding the object form.
+            rspackConfig.externals = [
+              rspackConfig.externals,
+              ...userDelta.externals,
+            ]
+          }
+        }
+
+        // Invoke user `.storybook/main.*` `webpackFinal` against the assembled
+        // rspack config. `storybook-builder-rsbuild` only chains `webpackFinal`
+        // from presets registered under `webpackAddons`; top-level main-config
+        // hooks would otherwise silently disappear. We run it here, AFTER the
+        // Next.js delta has been applied, so user code that introspects/mutates
+        // existing rules (e.g. `imageRule.exclude = /\.svg$/` to take SVGs
+        // away from the asset-image loader before adding @svgr/webpack) sees
+        // the same rule set that will actually ship — empty-config probing
+        // would render those mutations no-ops.
+        const rulesSnapshotBeforeUserFinal = new Set(rspackConfig.module.rules)
+        const userWebpackResult: any = await options.presets.apply(
+          'webpackFinal',
+          rspackConfig,
+          options,
+        )
+        if (userWebpackResult && userWebpackResult !== rspackConfig) {
+          // User returned a fresh object. Field-merge instead of wholesale
+          // `Object.assign`: a blanket overwrite would replace
+          // `rspackConfig.module` and lose the Next.js CSS rules we unshifted
+          // above. Most main-config webpackFinal hooks mutate-and-return; the
+          // fresh-object path here protects the few that build a new config
+          // from scratch.
+          for (const key of Object.keys(userWebpackResult)) {
+            if (key === 'module') {
+              rspackConfig.module = {
+                ...rspackConfig.module,
+                ...userWebpackResult.module,
+                rules:
+                  userWebpackResult.module?.rules ?? rspackConfig.module.rules,
+              }
+            } else if (
+              key === 'plugins' &&
+              Array.isArray(userWebpackResult.plugins)
+            ) {
+              rspackConfig.plugins = userWebpackResult.plugins
+            } else {
+              ;(rspackConfig as any)[key] = userWebpackResult[key]
+            }
+          }
+        }
+
+        // Narrow dedup: when the user's `.storybook/main.* webpackFinal` adds
+        // a rule whose `test` matches one that came in via the
+        // `next.config.webpack` delta, drop the next.config one. Without
+        // this, two passes of @svgr against the same .svg produce a
+        // SvgoParserError. Dedup only spans (next.config delta) ↔ (storybook
+        // webpackFinal additions); Next.js/Rsbuild CSS rules that
+        // legitimately share `/\.css$/` (e.g. via `oneOf` branches) stay
+        // untouched.
+        //
+        // Signature is `RegExp.toString()` — only RegExp `test` values are
+        // dedup-comparable. `{ and: [...] }` / `{ or: [...] }` shapes
+        // collapse to `[object Object]` and would cross-match unrelated
+        // rules, so we skip them.
+        const ruleTestSignature = (r: any): string | null =>
+          r?.test instanceof RegExp ? r.test.toString() : null
+        const userFinalAddedTests = new Set<string>()
+        for (const r of rspackConfig.module.rules as any[]) {
+          if (rulesSnapshotBeforeUserFinal.has(r)) continue
+          const sig = ruleTestSignature(r)
+          if (sig) userFinalAddedTests.add(sig)
+        }
+        if (userFinalAddedTests.size > 0 && nextConfigDeltaRules.size > 0) {
+          rspackConfig.module.rules = (
+            rspackConfig.module.rules as any[]
+          ).filter((r: any) => {
+            if (!nextConfigDeltaRules.has(r)) return true
+            const sig = ruleTestSignature(r)
+            if (sig && userFinalAddedTests.has(sig)) {
+              logger.info(
+                `Dropping next.config.webpack rule for ${sig} — superseded by .storybook/main webpackFinal rule.`,
+              )
+              return false
+            }
+            return true
+          })
+        }
+
+        // Run prod sanitization LAST so it covers every rule introduced
+        // above — Rsbuild's, replaceSwcRules' shim chain, Next.js CSS rule's
+        // `oneOf` (which embeds `__barrel_optimize__` branches with raw
+        // `next-swc-loader`), Next.js plugins, AND any user-delta rules.
+        // Running this earlier misses the unshift'd CSS-block barrel rules
+        // and leaks `$ReactRefreshRuntime$.refresh(...)` into prod bundles.
+        if (!isDev) {
+          // `rspackConfig.module.rules` was defaulted to `[]` at the top of
+          // this `tools.rspack` handler; the union type still reports
+          // `RuleSetRules | undefined`.
+          sanitizeReactRefreshForProd(rspackConfig.module.rules as any[])
+        }
+
+        return rspackConfig
       },
     },
   })

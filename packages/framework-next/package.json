@@ -83,7 +83,9 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
+    "@rspack/plugin-react-refresh": "^1.0.0",
     "@storybook/react": "^10.3.5",
+    "react-refresh": ">=0.10.0 <1.0.0",
     "storybook-builder-rsbuild": "workspace:*",
     "styled-jsx": "5.1.6"
   },
