@@ -67,11 +67,27 @@ Generate the report filename (anchored to system clock):
 REPORT_NAME=$(bash <skill-dir>/scripts/fetch_upstream.sh --report-name)
 ```
 
-Determine the commit range from the user's request:
+Determine the commit range.
+
+**Default (no user-specified range)** — continue from the last sync report. The `storybook sync report` label is fixed and used for every report this skill publishes.
+
+1. Find the most recent sync report issue (any state — the newest one is the previous endpoint, regardless of whether it's been closed yet):
+   ```bash
+   LAST_BODY=$(gh issue list --repo rstackjs/storybook-rsbuild --state all \
+     --label "storybook sync report" --limit 1 --json body --jq '.[0].body')
+   ```
+2. Extract the previous END_SHA — it's the last `storybookjs/storybook/commit/<sha>` URL in the Range line:
+   ```bash
+   PREV_END_SHA=$(printf '%s' "$LAST_BODY" \
+     | grep -oE 'storybookjs/storybook/commit/[a-f0-9]+' | tail -1 | sed 's|.*/||')
+   ```
+3. Pass `--from "${PREV_END_SHA}^"` so the boundary is **closed** (inclusive of PREV_END_SHA). The script uses git's `A..B` syntax, which is exclusive of A; the trailing `^` (parent) makes the new range re-include PREV_END_SHA. Re-processing that one commit is intentional — prefer running it twice over leaving a gap if upstream history shifted or boundary semantics are unclear at execution time.
+4. If no prior report exists (empty `LAST_BODY` or no SHA parsed), fall back to `--days 30`.
+
+**User-specified range** — overrides the default:
 - **Relative days**: "past 20 days", "last 30 days" → use `--days N`
 - **Absolute date range**: "since 2025-12-01", "Dec 1 to Dec 20" → use `--since` / `--until`
 - **Version tags**: "between v8.4.0 and v8.5.0" → use `--from` / `--to`
-- If unspecified, default to `--days 30`.
 
 **Important**: For relative date ranges, always use `--days N`. The script reads the system clock to compute exact dates, avoiding date miscalculation.
 
