@@ -48,7 +48,7 @@
   "devDependencies": {
     "@modern-js/app-tools": "^3.2.1",
     "@modern-js/plugin": "^3.2.1",
-    "@rsbuild/core": "^2.0.6",
+    "@rsbuild/core": "^2.0.7",
     "@types/node": "^22.0.0",
     "storybook": "10.3.5",
     "storybook-builder-rsbuild": "workspace:*",
