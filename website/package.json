@@ -13,16 +13,16 @@
 
     "@rspress/plugin-sitemap": "2.0.13",
     "@rspress/plugin-twoslash": "2.0.13",
-    "rspress-plugin-font-open-sans": "1.0.3"
+    "rspress-plugin-font-open-sans": "1.0.4"
   },
   "devDependencies": {
-    "@rstack-dev/doc-ui": "1.14.2",
+    "@rstack-dev/doc-ui": "1.14.3",
     "@shikijs/transformers": "^4.1.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "rsbuild-plugin-open-graph": "^1.1.2"
+    "rsbuild-plugin-open-graph": "^1.1.3"
   }
 }
