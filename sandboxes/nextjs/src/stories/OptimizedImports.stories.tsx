@@ -1,13 +1,11 @@
+import { Badge } from '@sandboxes/nextjs-barrel'
 import { Heart, Star } from 'lucide-react'
 import type { Meta, StoryObj } from 'storybook-next-rsbuild'
 
 // Regression target: `optimizePackageImports` rewrites these named imports to
-// `__barrel_optimize__?names=Heart,Star!=!lucide-react` specifiers, which
-// flow through Next.js's barrel rule. Two failure modes guarded:
-//   - oneOf filter regresses to letting the JS branch through → dev mode
-//     crashes with duplicate `$RefreshSig$` declarations.
-//   - barrel test narrowed too aggressively → `__barrel_optimize__?…!=!…`
-//     has no handler, build errors with "Module parse failed".
+// `__barrel_optimize__?names=Heart,Star!=!lucide-react` specifiers. lucide-react
+// ships JS; the `TsBarrel` story below adds a TS re-export barrel whose
+// matchResource points at TS source (the case that broke safe-wallet's @mui).
 function OptimizedImportsProbe() {
   return (
     <div
@@ -27,3 +25,7 @@ const meta = {
 export default meta
 
 export const Default: StoryObj<typeof meta> = {}
+
+export const TsBarrel: StoryObj<typeof meta> = {
+  render: () => <Badge>ok</Badge>,
+}
