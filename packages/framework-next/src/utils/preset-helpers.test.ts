@@ -4,9 +4,16 @@ import {
   dedupProvidePluginKeys,
   filterNextAliases,
   filterNextPlugins,
-  prepareNextCssRules,
+  isRuntimeCssUrl,
+  makeBarrelRule,
+  makeFontRule,
+  mergeFallback,
+  NODE_BUILTINS_FALLBACK,
   readProvidedMap,
   replaceSwcRules,
+  ruleTestSignature,
+  TARGET_CSS_RE,
+  withRuntimeUrlFilter,
 } from './preset-helpers'
 
 describe('filterNextAliases', () => {
@@ -145,11 +152,13 @@ describe('filterNextPlugins', () => {
     expect(filterNextPlugins(plugins as any[])).toEqual([])
   })
 
-  it('drops dev-only plugins (ReactRefreshRspackPlugin) in production', () => {
+  it('keeps ReactRefreshRspackPlugin when present (dev rawPlugins)', () => {
+    // Mode is handled at extraction time: prod runs `getBaseWebpackConfig({
+    // dev:false })`, so this plugin is simply absent from prod rawPlugins —
+    // the allowlist no longer needs an explicit prod gate.
     const css = new CssExtractRspackPlugin()
     const refresh = new ReactRefreshRspackPlugin()
-    const plugins = [css, refresh]
-    expect(filterNextPlugins(plugins as any[], { isDev: false })).toEqual([css])
+    expect(filterNextPlugins([css, refresh] as any[])).toEqual([css, refresh])
   })
 })
 
@@ -251,22 +260,19 @@ describe('buildNextLoaderChain', () => {
     ])
   })
 
-  it('drops react-refresh-loader and forces dev:false in production', () => {
-    const swcOpts = { isServer: false, dev: true }
-    const refresh = { loader: 'builtin:react-refresh-loader' }
+  it('preserves Next.js swc options verbatim (mode set at extraction)', () => {
+    // In prod we extract with `dev:false`, so Next.js already emits
+    // `dev:false, hasReactRefresh:false` and omits the refresh loader. The
+    // chain builder passes those options straight through — no post-hoc edits.
+    const prodSwcOpts = { isServer: false, dev: false, hasReactRefresh: false }
     const rules = [
       {
         test: /\.tsx?$/,
-        use: [refresh, { loader: 'next-swc-loader', options: swcOpts }],
+        use: [{ loader: 'next-swc-loader', options: prodSwcOpts }],
       },
     ]
-    const chain = buildNextLoaderChain(rules, SHIM, { isDev: false })
-    expect(chain).toEqual([
-      {
-        loader: SHIM,
-        options: { isServer: false, dev: false, hasReactRefresh: false },
-      },
-    ])
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([{ loader: SHIM, options: prodSwcOpts }])
   })
 })
 
@@ -308,249 +314,159 @@ describe('replaceSwcRules', () => {
   })
 })
 
-describe('prepareNextCssRules', () => {
-  const REWRITER = '/loaders/next-font-url-rewrite.cjs'
+// Regression-target units distilled from the community gauntlet (see AGENTS.md
+// Shim Catalogue). These lock the CSS-URL passthrough that broke safe-wallet,
+// the fallback precedence that keeps Victory/stream libs working (console/oak),
+// the next/font + barrel rule shapes, and the svgr dedup signature.
 
-  it('extracts CSS rules identified by loader markers', () => {
-    const cssRule = {
-      test: /\.css$/,
-      use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
+describe('isRuntimeCssUrl (css-loader url/import passthrough)', () => {
+  it('flags root-absolute and scheme-absolute URLs as runtime (safe-wallet /images, /fonts)', () => {
+    for (const u of [
+      '/images/logo.svg',
+      '/fonts/fonts.css',
+      'https://cdn/x.css',
+      'data:image/svg+xml,%3Csvg%3E%3C/svg%3E',
+    ]) {
+      expect(isRuntimeCssUrl(u)).toBe(true)
     }
-    const jsRule = { test: /\.jsx?$/, use: [{ loader: 'next-swc-loader' }] }
-
-    const result = prepareNextCssRules([jsRule, cssRule], REWRITER)
-
-    expect(result).toHaveLength(1)
-    expect(result[0]).toBe(cssRule)
   })
 
-  it('extracts via rule.test (scss/less/styl) even without loader markers', () => {
-    const rules = [
-      { test: /\.scss$/, use: [] },
-      { test: /\.less$/, use: [] },
-      { test: /\.styl$/, use: [] },
-      { test: /\.ts$/, use: [] },
-    ]
-    const result = prepareNextCssRules(rules, REWRITER)
-    expect(result).toHaveLength(3)
+  it('covers protocol-relative and bare schemes (transit data:, proposalsapp @import)', () => {
+    expect(isRuntimeCssUrl('//cdn/x.css')).toBe(true) // leading-slash branch
+    expect(isRuntimeCssUrl('http://x/y.woff2')).toBe(true)
   })
 
-  it('matches next/font target.css virtual files via CSS_TEST_RE', () => {
-    const rule = { test: /target\.css$/, use: [] }
-    const result = prepareNextCssRules([rule], REWRITER)
-    expect(result).toContain(rule)
-  })
-
-  it('splices the font URL rewriter *before* next-font-loader so it runs after', () => {
-    const fontLoader = { loader: 'next-font-loader', options: {} }
-    const rule = {
-      test: /target\.css$/,
-      use: [{ loader: 'css-loader' }, fontLoader],
+  it('lets relative paths resolve as modules', () => {
+    for (const u of ['./a.png', '../b.svg', 'img.png', 'fonts/x.woff2']) {
+      expect(isRuntimeCssUrl(u)).toBe(false)
     }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    // Webpack loaders run right-to-left — splicing rewriter *before*
-    // next-font-loader in the array means it runs *after*.
-    expect(result.use.map((u: any) => u.loader)).toEqual([
-      'css-loader',
-      REWRITER,
-      'next-font-loader',
-    ])
+  })
+})
+
+describe('withRuntimeUrlFilter', () => {
+  it('merges a passthrough filter, preserving an existing object option', () => {
+    const out = withRuntimeUrlFilter({ keepImport: true }) as any
+    expect(out.keepImport).toBe(true)
+    expect(out.filter('/x.png')).toBe(false) // runtime URL → skipped
+    expect(out.filter('./x.png')).toBe(true) // relative → resolved
   })
 
-  it('splices the rewriter inside nested oneOf rules', () => {
-    const rule = {
-      test: /\.css$/,
-      oneOf: [
-        {
-          test: /target\.css$/,
-          use: [
-            { loader: 'css-loader' },
-            { loader: 'next-font-loader', options: {} },
-          ],
-        },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    const inner = result.oneOf[0]
-    expect(inner.use.map((u: any) => u.loader)).toEqual([
-      'css-loader',
-      REWRITER,
-      'next-font-loader',
-    ])
+  it('replaces a boolean/undefined option wholesale', () => {
+    expect(typeof withRuntimeUrlFilter(true).filter).toBe('function')
+    expect(typeof withRuntimeUrlFilter(undefined).filter).toBe('function')
   })
 
-  it('matches next-font-loader specified by absolute path', () => {
-    const rule = {
-      test: /\.css$/,
-      use: [
-        { loader: 'css-loader' },
-        { loader: '/abs/path/to/next-font-loader', options: {} },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.use.map((u: any) => u.loader)).toEqual([
-      'css-loader',
-      REWRITER,
-      '/abs/path/to/next-font-loader',
-    ])
+  it('rejects an external @import target (same filter feeds url and import)', () => {
+    expect(
+      withRuntimeUrlFilter(undefined).filter('https://cdn/styles.css'),
+    ).toBe(false)
+  })
+})
+
+describe('TARGET_CSS_RE (next/font synthetic module)', () => {
+  it('matches synthetic next/font target.css on both separators', () => {
+    expect(TARGET_CSS_RE.test('node_modules/next/font/google/target.css')).toBe(
+      true,
+    )
+    expect(
+      TARGET_CSS_RE.test('node_modules\\next\\font\\local\\target.css'),
+    ).toBe(true)
   })
 
-  it('is a no-op on CSS rules that do not use next-font-loader', () => {
-    const rule = {
-      test: /\.css$/,
-      use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.use.map((u: any) => u.loader)).toEqual([
-      'css-loader',
-      'postcss-loader',
-    ])
+  it('does not match ordinary css', () => {
+    expect(TARGET_CSS_RE.test('src/app/globals.css')).toBe(false)
+    expect(TARGET_CSS_RE.test('src/Other.module.css')).toBe(false)
+  })
+})
+
+describe('makeFontRule', () => {
+  it('routes target.css to the font loader as a JS module', () => {
+    expect(makeFontRule('/loaders/font.cjs')).toEqual({
+      test: TARGET_CSS_RE,
+      loader: '/loaders/font.cjs',
+      type: 'javascript/auto',
+    })
+  })
+})
+
+describe('makeBarrelRule (__barrel_optimize__ → SWC chain)', () => {
+  const chain = [{ loader: '/shim.cjs', options: { isServer: false } }]
+
+  it('routes the __barrel_optimize__ matchResource through the SWC chain (safe-wallet @mui)', () => {
+    const rule = makeBarrelRule(chain)!
+    expect(
+      rule.test.test('__barrel_optimize__?names=Button!=!@mui/material'),
+    ).toBe(true)
+    expect(rule.use).toBe(chain)
   })
 
-  it('drops oneOf branches that contain Next.js error-loader', () => {
-    const rule = {
-      test: /\.css$/,
-      oneOf: [
-        {
-          use: [
-            {
-              loader: '/abs/next/dist/build/webpack/loaders/error-loader',
-              options: { reason: 'Global CSS cannot be imported...' },
-            },
-          ],
-        },
-        {
-          test: /\.css$/,
-          issuer: /pages\/_app\.js$/,
-          use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
-        },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.oneOf).toHaveLength(1)
-    expect(result.oneOf[0].use[0].loader).toBe('css-loader')
+  it('does not match ordinary module paths', () => {
+    expect(makeBarrelRule(chain)!.test.test('src/App.tsx')).toBe(false)
   })
 
-  it('strips issuer constraints from CSS rules so Storybook imports match', () => {
-    const rule = {
-      test: /\.css$/,
-      issuer: /pages\/_app\.js$/,
-      use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.issuer).toBeUndefined()
+  it('is null when there is no Next.js loader chain', () => {
+    expect(makeBarrelRule(null)).toBeNull()
+  })
+})
+
+describe('mergeFallback (resolve.fallback precedence)', () => {
+  it('lets Next.js polyfills win over Rsbuild stream=false (console victory / oak stream-http)', () => {
+    const out = mergeFallback(
+      { stream: false, fs: false, assert: false },
+      { stream: false, fs: false },
+      { stream: '/poly/stream-browserify', util: '/poly/util' },
+      {},
+    )
+    expect(out.stream).toBe('/poly/stream-browserify')
+    expect(out.util).toBe('/poly/util')
+    expect(out.fs).toBe(false) // Next had no opinion → stays false
   })
 
-  it('strips issuer from CSS branches inside oneOf', () => {
-    const rule = {
-      test: /\.css$/,
-      oneOf: [
-        {
-          test: /\.css$/,
-          issuer: { not: /node_modules/ },
-          use: [{ loader: 'css-loader' }],
-        },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.oneOf[0].issuer).toBeUndefined()
+  it('preserves a non-false Rsbuild/user-tools entry over a Next polyfill', () => {
+    const out = mergeFallback(
+      { stream: false },
+      { stream: '/rsbuild/stream' }, // explicit intent, not "no opinion"
+      { stream: '/poly/stream-browserify' },
+      {},
+    )
+    expect(out.stream).toBe('/rsbuild/stream')
   })
 
-  it('drops non-CSS branches from a mixed oneOf so JS loaders do not run twice', () => {
-    // Next.js's client rule wraps both JS branches (next-swc-loader,
-    // next-flight-loader) and CSS branches under one oneOf. If we let the JS
-    // branches through, TSX files get hit by next-swc-loader once via this
-    // pulled-in rule and again via Storybook's swc rule, producing duplicate
-    // `$RefreshSig$` declarations.
-    const rule = {
-      oneOf: [
-        { test: /\.tsx?$/, use: [{ loader: 'next-swc-loader' }] },
-        {
-          test: /\.tsx?$/,
-          use: [
-            { loader: 'next-flight-loader' },
-            { loader: 'next-swc-loader' },
-          ],
-        },
-        {
-          test: /\.tsx?$/,
-          use: [
-            { loader: 'builtin:react-refresh-loader' },
-            { loader: 'next-swc-loader' },
-          ],
-        },
-        {
-          test: /\.module\.css$/,
-          use: [
-            { loader: 'next-style-loader' },
-            { loader: 'css-loader' },
-            { loader: 'postcss-loader' },
-          ],
-        },
-        {
-          test: /\.css$/,
-          use: [{ loader: 'css-loader' }, { loader: 'postcss-loader' }],
-        },
-        // empty/unknown branch — neither CSS nor harmful, should still drop
-        { test: /\.unknown$/ },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.oneOf).toHaveLength(2)
-    expect(result.oneOf[0].use[0].loader).toBe('next-style-loader')
-    expect(result.oneOf[1].use[0].loader).toBe('css-loader')
+  it('gives the next.config.webpack delta the final word', () => {
+    const out = mergeFallback(
+      { stream: false },
+      { stream: false },
+      { stream: '/poly/stream' },
+      { stream: false }, // user explicitly stubs it out
+    )
+    expect(out.stream).toBe(false)
   })
 
-  it('passes through an absolute-path string `test` unchanged (Next 15.x font rule shape)', () => {
-    // Regression for the removed string→regex normalization. Next.js 15.x emits
-    // some next/font branches with `test` as an absolute file path string
-    // (`/abs/path/to/next/font/google/target.css`). rspack's condition matcher
-    // tests against `resource` (query already stripped), so a string test still
-    // fires for query-bearing resources like `target.css?{params}` — no
-    // normalization needed. Keep the string form so we don't lose information
-    // about Next.js's original intent (downstream tooling may inspect `test`).
-    const absPath = '/abs/.next/cache/next-font-loader/target.css'
-    const rule = {
-      test: absPath,
-      use: [
-        { loader: 'css-loader' },
-        { loader: 'next-font-loader', options: {} },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    expect(result.test).toBe(absPath)
-    expect(result.use.map((u: any) => u.loader)).toEqual([
-      'css-loader',
-      REWRITER,
-      'next-font-loader',
-    ])
+  it('floor maps every Node builtin to false', () => {
+    expect(NODE_BUILTINS_FALLBACK.querystring).toBe(false)
+    expect(NODE_BUILTINS_FALLBACK.punycode).toBe(false)
+    expect(NODE_BUILTINS_FALLBACK.stream).toBe(false)
+  })
+})
+
+describe('ruleTestSignature (svgr dedup — safe-wallet / oak)', () => {
+  it('produces a stable signature for distinct RegExp instances with the same source', () => {
+    expect(ruleTestSignature({ test: /\.svg$/ })).toBe('/\\.svg$/')
+    expect(ruleTestSignature({ test: /\.svg$/ })).toBe(
+      ruleTestSignature({ test: /\.svg$/ }),
+    )
   })
 
-  it('keeps __barrel_optimize__ branches but narrows their test off the file-extension OR', () => {
-    // Next.js emits a JS branch whose test is `{ or: [/\.tsx?$/, '__barrel_optimize__'] }`
-    // — the barrel arm is needed (Next rewrites MUI/lodash imports through
-    // `__barrel_optimize__?names=…`), but the file-extension arm makes the branch
-    // also catch regular TSX, which is what the duplicate `$RefreshSig$` came from.
-    // Keep the branch, drop the extension arm.
-    const rule = {
-      oneOf: [
-        {
-          test: { or: [/\.(tsx|ts|js|cjs|mjs|jsx)$/, '__barrel_optimize__'] },
-          use: [{ loader: 'next-swc-loader' }],
-        },
-        { test: /\.tsx?$/, use: [{ loader: 'next-swc-loader' }] },
-        {
-          test: /\.css$/,
-          use: [{ loader: 'css-loader' }],
-        },
-      ],
-    }
-    const [result] = prepareNextCssRules([rule], REWRITER)
-    // pure-JS branch dropped, barrel + CSS kept
-    expect(result.oneOf).toHaveLength(2)
-    expect(result.oneOf[0].use[0].loader).toBe('next-swc-loader')
-    expect(result.oneOf[0].test).toBeInstanceOf(RegExp)
-    expect((result.oneOf[0].test as RegExp).source).toBe('__barrel_optimize__')
-    expect(result.oneOf[1].use[0].loader).toBe('css-loader')
+  it('returns null for non-RegExp tests so {and:}/{or:} shapes never cross-match', () => {
+    expect(ruleTestSignature({ test: { or: [/\.svg$/] } })).toBeNull()
+    expect(ruleTestSignature({ test: 'string' })).toBeNull()
+    expect(ruleTestSignature({ use: 'x' })).toBeNull()
+    expect(ruleTestSignature(null)).toBeNull()
+  })
+
+  it('distinguishes .svg from .css so shared-extension rules are not dropped', () => {
+    expect(ruleTestSignature({ test: /\.svg$/ })).not.toBe(
+      ruleTestSignature({ test: /\.css$/ }),
+    )
   })
 })

@@ -42,7 +42,6 @@
       "types": "./dist/export-mocks/navigation/index.d.ts",
       "default": "./dist/export-mocks/navigation/index.js"
     },
-    "./next-font-url-rewrite": "./loaders/next-font-url-rewrite.cjs",
     "./next-image-mock": "./loaders/next-image-mock.js",
     "./node": {
       "types": "./dist/node/index.d.ts",
@@ -62,10 +61,7 @@
       "types": "./dist/export-mocks/router/index.d.ts",
       "default": "./dist/export-mocks/router/index.js"
     },
-    "./rspack-helpers": {
-      "types": "./dist/rspack-helpers.d.ts",
-      "default": "./dist/rspack-helpers.js"
-    },
+    "./storybook-nextjs-font-loader": "./loaders/storybook-nextjs-font-loader.cjs",
     "./swc-loader-shim": "./loaders/swc-loader-shim.cjs"
   },
   "files": [
@@ -134,8 +130,7 @@
       "./src/export-mocks/navigation/index.ts",
       "./src/export-mocks/router/index.ts",
       "./src/export-mocks/cache/index.ts",
-      "./src/export-mocks/headers/index.ts",
-      "./src/rspack-helpers.ts"
+      "./src/export-mocks/headers/index.ts"
     ],
     "platform": "node"
   }

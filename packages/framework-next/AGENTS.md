@@ -33,7 +33,7 @@ flowchart TD
         FNA["filterNextAliases<br/>drop react/react-dom"]
         SOA["getStorybookOverrideAliases<br/>next/image, styled-jsx"]
         BLC["buildNextLoaderChain<br/>next-swc-loader → shim"]
-        PNC["prepareNextCssRules<br/>+ font URL rewrite"]
+        NFR["next/font target.css<br/>→ font loader rule"]
         FNP["filterNextPlugins<br/>allowlist"]
     end
 
@@ -41,7 +41,7 @@ flowchart TD
 
     subgraph P3["3 — Inject into Rsbuild (rsbuildFinal)"]
         direction LR
-        BC["tools.bundlerChain<br/>strip Rsbuild CSS / HMR"] --> RS["tools.rspack<br/>merge Next.js config"]
+        BC["tools.bundlerChain<br/>exclude target.css from CSS"] --> RS["tools.rspack<br/>merge Next.js config"]
     end
 ```
 
@@ -51,7 +51,7 @@ This package only exists to mediate between four codebases that each own part of
 
 | Party | Owns | Assumes |
 |---|---|---|
-| **Next.js** | config generation, SWC, CSS/font pipeline, runtime contexts | that it controls the entire build and the runtime `<head>` (via `_document.js`) and a dev server at `/_next/*` |
+| **Next.js** | config generation, SWC, `next/font` transform, runtime contexts | that it controls the entire build and the runtime `<head>` (via `_document.js`) and a dev server at `/_next/*` |
 | **Rspack** | low-level bundling, loader execution, `NormalModule` hooks | webpack-compatible config semantics |
 | **Rsbuild** | opinionated defaults (CSS pipeline, SWC, HMR), plugin orchestration via `CHAIN_ID` | that it's the sole config author; that user-side `rsbuild.config.ts` is load-bearing |
 | **Storybook** | story discovery, preview iframe, virtual entry modules, decorators, React runtime identity | that addons own their rules/plugins; that React is a singleton provided by `storybook/internal` |
@@ -59,7 +59,7 @@ This package only exists to mediate between four codebases that each own part of
 Conflicts and who wins:
 
 - **React identity**: Storybook wins. Next.js aliases `react`/`react-dom` to its own `next/dist/compiled/*` copies; we strip those (`filterNextAliases`) so Storybook's runtime React wins. Double-copy breaks hooks and context.
-- **CSS pipeline**: Next.js wins. Both Rsbuild and Next.js register CSS rules + extract plugins. We delete Rsbuild's and inject Next.js's — the only way `next/font` target.css works.
+- **CSS pipeline**: Rsbuild wins. Rsbuild's css-loader/postcss/CSS-modules/sass handling is kept as-is for all real `.css`/`.scss`. The only Next.js CSS concern we keep is `next/font`: `next-swc` rewrites `next/font/*` into a synthetic `target.css`, which we exclude from Rsbuild's CSS rule and route to a dedicated font loader (ported from `@storybook/nextjs`). This replaced an earlier design that deleted Rsbuild's whole CSS pipeline and spliced Next.js's CSS rule chain in — that required brittle `oneOf`/`issuer` surgery and a `/_next/static/media/` URL-rewrite shim, all now gone.
 - **JS compilation**: Next.js wins. Rsbuild's `builtin:swc-loader` gets rewritten to Next.js's loader chain so `'use client'`, `server-only`, JSX runtime, and `next/dynamic` behave natively.
 - **HMR**: split. Keep Next.js's `ReactRefreshRspackPlugin` (provides `$ReactRefreshRuntime$`) but add `ReactRefreshInitPlugin` for the `injectIntoGlobalHook()` bootstrap Next.js expects a separate entry to do.
 - **Runtime DOM**: Next.js assumes it; we shim it. Next.js's client code expects DOM elements that `_document.js` normally renders; we never render `_document.js`, so `preview.tsx` inserts them manually (see Shim Catalogue).
@@ -74,6 +74,12 @@ If you're adding a feature, the first question to answer is: which of the four p
 `getBaseWebpackConfig()` emits ~80 rules, 18 plugins, 30+ aliases, full `externals`/`optimization` blocks, and an entry/output configuration tuned for a real `.next/` build. Using it whole-cloth would break Storybook in a hundred small ways. So we take exactly six fields: `alias`, `fallback`, `defines`, `resolveLoader`, `rawRules`, `rawPlugins` — everything else (Storybook's entry, output, HMR transport, dev server) stays with Rsbuild/Storybook.
 
 The extraction is therefore intentionally *narrow*. Resist forwarding more fields "just in case" — each one adds a coupling point to `getBaseWebpackConfig`'s output shape, and that shape drifts across versions.
+
+### Extract in the matching mode, don't strip afterward
+
+`getBaseWebpackConfig({ dev })` is called with `dev: options.configType !== 'PRODUCTION'` — the *same* mode Storybook is building for. Next.js then emits a config that already matches the target: in prod it omits `builtin:react-refresh-loader`, sets `next-swc-loader.{dev:false, hasReactRefresh:false}`, defines `NODE_ENV: "production"`, and never constructs `ReactRefreshRspackPlugin`.
+
+An earlier design extracted *always in dev* and then surgically stripped the dev artefacts for prod (a recursive rule walk removing the refresh loader, a dev-only plugin denylist, a define deletion). That post-hoc sanitization was fragile: every new `oneOf` branch Next.js added (barrel-optimize chains, etc.) re-leaked `$ReactRefreshRuntime$` into prod bundles — a failure that only surfaced at story render, never at `storybook build`. Matching the mode at the source deletes the whole class of problem: there is nothing to strip because Next.js never emitted it. Rsbuild owns `mode`/minification/`NODE_ENV`, so the only standing requirement is that Rsbuild's build mode agrees with the `dev` we pass — which it does, both keying off the Storybook build phase.
 
 ### Allowlist, not denylist, for plugins
 
@@ -118,9 +124,12 @@ Every shim here exists because one of the four parties makes an assumption that 
 | `NoopTraceSpanPlugin` | `next-swc-loader` reads `this.currentTraceSpan`; `RspackProfilingPlugin` would set it but resolves `NormalModule` from Next.js's vendored rspack-core (distinct class from Rsbuild's rspack instance) | Next.js decouples tracing from `NormalModule` identity |
 | `ReactRefreshInitPlugin` | Next.js's `ReactRefreshRspackPlugin` only wires `$ReactRefreshRuntime$`; the `injectIntoGlobalHook()` bootstrap normally lives in a separate entry Next.js injects via its own orchestration. Also relies on rspack's `EntryPlugin({ name: undefined })` "global entry" semantic (attach to every entry), which isn't a publicly documented contract. | Next.js moves the bootstrap into the plugin or exposes a helper; *or* rspack drops the unnamed-entry semantic, in which case switch to an explicit entry name + `compilation.addEntry` per chunk |
 | `swc-loader-shim.cjs` (strips `pitch`) | `next-swc-loader.pitch` reads source from disk; Storybook's virtual entry modules only exist in memory via `VirtualModulesPlugin` | `next-swc-loader.pitch` gains a memory-source fallback |
-| `next-font-url-rewrite.cjs` | `next-font-loader` emits `url(/_next/static/media/…)` but `emitFile`s to `static/media/…`; real Next.js bridges via dev-server alias `/_next/* → output root` | Storybook dev server gains the same alias, or Next.js drops the `/_next/` prefix |
+| `storybook-nextjs-font-loader.cjs` | `next-swc` rewrites `next/font/*` into a synthetic `target.css` that needs handling; we replace it with a JS module that injects `@font-face`/class CSS into `document.head` at runtime (google = CDN, local = relative `url`). Ported from `@storybook/nextjs` so we follow one upstream-blessed `next/font` style instead of pulling Next.js's CSS chain | Next.js exposes a builder-agnostic `next/font` runtime, or Storybook's font handling is upstreamed into the builder |
+| `nextBarrelRule` (`__barrel_optimize__` → SWC shim chain) | `optimizePackageImports` (default-on in Next 15+) makes `next-swc` emit `__barrel_optimize__?names=…!=!<pkg>` requests; the `!=!` matchResource bypasses Rsbuild's `.tsx?` rule, so the real module (often TS source) would be parsed as raw JS and throw. We route the matchResource through the SWC shim chain. (We skip Next's `next-barrel-loader` tree-shaking; compiling the whole barrel is correct, just larger.) | Rsbuild matches rules on the real resource behind `!=!`, or Next.js stops emitting `__barrel_optimize__` |
+| `tools.cssLoader` url/import `filter` (`isRuntimeCssUrl`) | Rsbuild owns CSS now; its css-loader resolves root-absolute `url(/foo)` / `@import '/foo'` as modules and fails. Next.js's `cssFileResolve` leaves these (and `https:`/`data:`) untouched as runtime URLs; we mirror that | css-loader stops resolving root-absolute URLs, or Rsbuild adds a Next-style passthrough |
 | `next-image-mock.js` | `next/image` expects a `/_next/image` optimization endpoint | Storybook gains an image-optimization dev endpoint |
-| `NODE_BUILTINS_FALLBACK` | user/transitive code imports `fs`, `path`, etc. in browser builds; Next.js's own `resolve.fallback` covers some but not all | Next.js's browser-build fallback covers all Node builtins |
+| `NODE_BUILTINS_FALLBACK` (bare specifiers) | user/transitive code imports bare `fs`, `path`, etc. in browser builds; Next.js's own `resolve.fallback` covers some but not all | Next.js's browser-build fallback covers all Node builtins |
+| `IgnoreNodeProtocolPlugin` (`IgnorePlugin` `/^node:/`) | the single handler for `node:`-prefixed imports — drops them at `NormalModuleFactory.beforeResolve`, *before* any resolve guard fires. Replaced the old triple (`resolve.fallback` + `resolve.alias` + this plugin) once it was confirmed `IgnorePlugin` preempts both Rsbuild's pre-resolve `node:` guard and rspack's module-build `node:` error | rspack natively stubs `node:*` for web targets, or Storybook's browser build gains a `node:` externals preset |
 | `filterNextAliases` (drop react/react-dom) | Next.js aliases react to `next/dist/compiled/react`; Storybook needs the real react | Next.js and Storybook agree on a shared React resolution |
 | `filterNextPlugins` (allowlist) | `rawPlugins` contains build-time, runtime-harmful plugins | Next.js splits "build" vs "render-time" plugins in its output |
 | `styled-jsx` alias pointing at resolved dir | dual-package resolution + singletons across `styled-jsx` / `styled-jsx/style` | styled-jsx ships a modern `exports` map |
