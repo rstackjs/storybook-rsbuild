@@ -18,9 +18,9 @@ export interface NextRspackExtraction {
   defines: Record<string, any>
   /** resolveLoader configuration */
   resolveLoader: Record<string, any>
-  /** Raw module rules from getBaseWebpackConfig (client, dev). */
+  /** Raw module rules from getBaseWebpackConfig (client; mode matches build). */
   rawRules: any[]
-  /** Raw plugin instances from getBaseWebpackConfig (client, dev). */
+  /** Raw plugin instances from getBaseWebpackConfig (client; mode matches build). */
   rawPlugins: any[]
   /**
    * Delta added by the user's `next.config.webpack(config, opts)` hook,
@@ -165,17 +165,18 @@ const EMPTY_EXTRACTION: NextRspackExtraction = {
  * Wraps `nextConfig.webpack` so we observe the rspack config both before and
  * after the user's hook runs, without invoking `getBaseWebpackConfig()` twice.
  * Strategy:
- *   1. Snapshot lengths/keys of the fields we care about *before* the hook.
+ *   1. Snapshot identity sets / value maps of the fields we care about *before*
+ *      the hook (reference identity, not array length).
  *   2. Let the hook run with the real Next.js arguments (`opts.dev`,
  *      `opts.isServer`, `opts.defaultLoaders`, ...).
- *   3. Compute an append-only delta from the post-hook config.
+ *   3. Compute the delta as "entries present after but not before".
  *
  * The captured delta is exposed via `getDelta()`, called after
  * `getBaseWebpackConfig()` returns. If the user did not define a `webpack`
  * hook, this is a no-op and `getDelta()` returns an empty delta.
  *
  * Field policy:
- *   rules / plugins / externals : append-only (warn if mutated)
+ *   rules / plugins / externals : additions by reference identity
  *   alias / fallback            : key-diff (added or value-changed keys)
  *   experiments                 : shallow merge (added or value-changed keys)
  *   optimization / cache / etc. : silent skip (Rsbuild/Storybook territory)
@@ -214,107 +215,60 @@ export function instrumentUserWebpack(nextConfig: any): () => UserWebpackDelta {
 }
 
 interface DeltaSnapshot {
-  rulesLen: number
-  pluginsLen: number
-  externalsLen: number
+  /**
+   * Identity sets / value maps of what the config carried BEFORE the user hook
+   * ran. Anything present afterward but absent here is a user addition. Using
+   * reference identity (not array length) means an addition is captured no
+   * matter where in the array it lands, and a removal simply doesn't surface —
+   * the framework forwards additions only.
+   */
+  rules: Set<unknown>
+  plugins: Set<unknown>
+  externals: Set<unknown>
   externalsIsArray: boolean
-  aliasKeys: Set<string>
-  aliasValues: Map<string, unknown>
-  fallbackKeys: Set<string>
-  fallbackValues: Map<string, unknown>
-  experimentsKeys: Set<string>
-  experimentsValues: Map<string, unknown>
+  alias: Map<string, unknown>
+  fallback: Map<string, unknown>
+  experiments: Map<string, unknown>
 }
 
 function snapshotForDelta(cfg: any): DeltaSnapshot {
-  const rules = cfg?.module?.rules
-  const plugins = cfg?.plugins
-  const externals = cfg?.externals
-  const alias = cfg?.resolve?.alias ?? {}
-  const fallback = cfg?.resolve?.fallback ?? {}
-  const experiments = cfg?.experiments ?? {}
-
+  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
   return {
-    rulesLen: Array.isArray(rules) ? rules.length : 0,
-    pluginsLen: Array.isArray(plugins) ? plugins.length : 0,
-    externalsLen: Array.isArray(externals) ? externals.length : 0,
-    externalsIsArray: Array.isArray(externals),
-    aliasKeys: new Set(Object.keys(alias)),
-    aliasValues: new Map(Object.entries(alias)),
-    fallbackKeys: new Set(Object.keys(fallback)),
-    fallbackValues: new Map(Object.entries(fallback)),
-    experimentsKeys: new Set(Object.keys(experiments)),
-    experimentsValues: new Map(Object.entries(experiments)),
+    rules: new Set(arr(cfg?.module?.rules)),
+    plugins: new Set(arr(cfg?.plugins)),
+    externals: new Set(arr(cfg?.externals)),
+    externalsIsArray: Array.isArray(cfg?.externals),
+    alias: new Map(Object.entries(cfg?.resolve?.alias ?? {})),
+    fallback: new Map(Object.entries(cfg?.resolve?.fallback ?? {})),
+    experiments: new Map(Object.entries(cfg?.experiments ?? {})),
   }
 }
 
 function computeDelta(before: DeltaSnapshot, after: any): UserWebpackDelta {
-  const rulesAfter = after?.module?.rules
-  const pluginsAfter = after?.plugins
-  const externalsAfter = after?.externals
-  const aliasAfter = after?.resolve?.alias ?? {}
-  const fallbackAfter = after?.resolve?.fallback ?? {}
-  const experimentsAfter = after?.experiments ?? {}
-
-  let rules: any[] = []
-  if (Array.isArray(rulesAfter)) {
-    if (rulesAfter.length < before.rulesLen) {
-      logger.warn(
-        `next.config.webpack() removed module rules (count ${before.rulesLen} → ${rulesAfter.length}); ` +
-          'Storybook only forwards appended rules.',
-      )
-    } else {
-      rules = rulesAfter
-        .slice(before.rulesLen)
-        .filter((rule) => !isStorybookClaimedRule(rule))
-    }
-  }
-
-  let plugins: any[] = []
-  if (Array.isArray(pluginsAfter)) {
-    if (pluginsAfter.length < before.pluginsLen) {
-      logger.warn(
-        `next.config.webpack() removed plugins (count ${before.pluginsLen} → ${pluginsAfter.length}); ` +
-          'Storybook only forwards appended plugins.',
-      )
-    } else {
-      plugins = pluginsAfter.slice(before.pluginsLen)
-    }
-  }
-
-  let externals: any[] = []
-  if (Array.isArray(externalsAfter) && before.externalsIsArray) {
-    externals = externalsAfter.slice(before.externalsLen)
-  }
+  const added = (v: unknown, seen: Set<unknown>): any[] =>
+    Array.isArray(v) ? v.filter((x) => !seen.has(x)) : []
 
   return {
-    rules,
-    plugins,
-    alias: diffRecord(before.aliasKeys, before.aliasValues, aliasAfter),
-    fallback: diffRecord(
-      before.fallbackKeys,
-      before.fallbackValues,
-      fallbackAfter,
+    rules: added(after?.module?.rules, before.rules).filter(
+      (rule) => !isStorybookClaimedRule(rule),
     ),
-    experiments: diffRecord(
-      before.experimentsKeys,
-      before.experimentsValues,
-      experimentsAfter,
-    ),
-    externals,
+    plugins: added(after?.plugins, before.plugins),
+    externals: before.externalsIsArray
+      ? added(after?.externals, before.externals)
+      : [],
+    alias: diffRecord(before.alias, after?.resolve?.alias ?? {}),
+    fallback: diffRecord(before.fallback, after?.resolve?.fallback ?? {}),
+    experiments: diffRecord(before.experiments, after?.experiments ?? {}),
   }
 }
 
 function diffRecord<V>(
-  beforeKeys: Set<string>,
-  beforeValues: Map<string, unknown>,
+  before: Map<string, unknown>,
   after: Record<string, V>,
 ): Record<string, V> {
   const out: Record<string, V> = {}
   for (const [k, v] of Object.entries(after)) {
-    if (!beforeKeys.has(k) || beforeValues.get(k) !== v) {
-      out[k] = v
-    }
+    if (!before.has(k) || before.get(k) !== v) out[k] = v
   }
   return out
 }
@@ -387,12 +341,13 @@ export function isStorybookClaimedRule(rule: any): boolean {
  */
 export async function extractNextRspackConfig(
   dir?: string,
+  { dev = true }: { dev?: boolean } = {},
 ): Promise<NextRspackExtraction> {
   const projectDir = dir || process.cwd()
   const nextVersion = getNextVersion()
 
   try {
-    return await doExtract(projectDir, nextVersion)
+    return await doExtract(projectDir, nextVersion, dev)
   } catch (err) {
     const versionLabel = nextVersion ? nextVersion.join('.') : 'unknown'
     const installHint = isMissingNextRspackError(err)
@@ -420,6 +375,7 @@ function isMissingNextRspackError(err: unknown): boolean {
 async function doExtract(
   projectDir: string,
   nextVersion: [number, number] | null,
+  dev: boolean,
 ): Promise<NextRspackExtraction> {
   const [constantsMod, traceMod, configMod, webpackConfigMod, pagesDirMod] =
     await Promise.all([
@@ -449,7 +405,7 @@ async function doExtract(
   const projectInfo = await loadProjectInfo({
     dir: projectDir,
     config: nextConfig,
-    dev: true,
+    dev,
   })
 
   const dirs = pagesDirMod?.findPagesDir(projectDir)
@@ -458,7 +414,7 @@ async function doExtract(
     ...DUMMY_NEXT_ARGS,
     config: nextConfig,
     compilerType: COMPILER_NAMES.client,
-    dev: true,
+    dev,
     pagesDir: dirs?.pagesDir,
     appDir: dirs?.appDir,
     runWebpackSpan: new Span({ name: 'storybook' }),

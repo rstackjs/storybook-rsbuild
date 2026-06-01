@@ -4,6 +4,8 @@
  * no-op under some test runtimes and would break direct imports from tests.
  */
 
+import { builtinModules } from 'node:module'
+
 function loaderNameOf(use: any): string | null {
   if (typeof use === 'string') return use
   if (typeof use === 'object' && use !== null) return use.loader ?? null
@@ -42,12 +44,15 @@ export function filterNextAliases(
 
 /**
  * Build a Storybook loader chain from Next.js's client JS rule:
- * keep `builtin:react-refresh-loader`, swap `next-swc-loader` for our shim
- * (strips `pitch` that breaks virtual modules), drop server-only `next-flight-*`.
+ * swap `next-swc-loader` for our shim (strips `pitch` that breaks virtual
+ * modules), drop server-only `next-flight-*`, and pass everything else through
+ * unchanged — notably `builtin:react-refresh-loader`, which Next.js only emits
+ * into the dev `rawRules`.
  *
- * In production (`isDev: false`), drop `builtin:react-refresh-loader` and force
- * `next-swc-loader.options.dev = false`. Next.js's extraction always runs in
- * dev mode, so without this its dev-only injections leak into prod bundles.
+ * Mode-correctness is free because we extract in the matching mode: `preset.ts`
+ * calls `getBaseWebpackConfig({ dev: !isProduction })`, so the SWC options
+ * (`dev` / `hasReactRefresh`) and the presence of the refresh loader already
+ * reflect the build mode. No post-hoc prod stripping is needed.
  *
  * Picking the "client" rule: Pages Router puts the loader chain at the top
  * level alongside `builtin:react-refresh-loader`. App Router emits multiple
@@ -59,7 +64,6 @@ export function filterNextAliases(
 export function buildNextLoaderChain(
   rawRules: any[],
   shimPath: string,
-  { isDev }: { isDev: boolean } = { isDev: true },
 ): any[] | null {
   let plainSwcRule: any = null
   let anySwcRule: any = null
@@ -78,23 +82,10 @@ export function buildNextLoaderChain(
 
   return asUseArray(clientRule.use).flatMap((use) => {
     const name = loaderNameOf(use)
-    if (name === 'builtin:react-refresh-loader') {
-      return isDev ? [use] : []
-    }
     if (name === 'next-swc-loader' || name?.endsWith('/next-swc-loader')) {
-      const options = use.options || {}
-      // In prod, `next-swc-loader` must not emit React Refresh runtime calls:
-      // - `dev: false` turns off dev-time hot-reload transforms
-      // - `hasReactRefresh: false` prevents the loader from injecting
-      //   `$ReactRefreshRuntime$` references that resolve to nothing once we
-      //   drop `ReactRefreshRspackPlugin` (DEV_ONLY) from the prod plugin set
-      // Without the second flag, prod bundles fail at runtime with
-      // `$ReactRefreshRuntime$ is not defined` — the symptom only surfaces in
-      // the browser, not in `storybook build`, so it's easy to miss in CI.
-      const adjusted = isDev
-        ? options
-        : { ...options, dev: false, hasReactRefresh: false }
-      return [{ loader: shimPath, options: adjusted }]
+      // Preserve Next.js's computed options verbatim — they already match the
+      // build mode (dev extraction → refresh on; prod extraction → refresh off).
+      return [{ loader: shimPath, options: use.options || {} }]
     }
     if (name?.includes('next-flight')) return []
     return [use]
@@ -120,56 +111,6 @@ export function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
 }
 
 /**
- * Prod-only sanitization: Next.js's `getBaseWebpackConfig()` is called in dev
- * mode (see `utils/next-config.ts`), so every `oneOf` branch under the client
- * rule — including barrel-optimize and other secondary chains — bakes in
- * `builtin:react-refresh-loader` + `hasReactRefresh: true`. `buildNextLoaderChain`
- * + `replaceSwcRules` already neutralize the primary client chain; this pass
- * catches the remaining co-extracted branches that survive into `rspackConfig`.
- *
- * Without this, prod bundles still emit `$ReactRefreshRuntime$.refresh(...)`
- * calls (via barrel-optimize compilations of `@mui/*`/`lodash`/...), but the
- * `ReactRefreshRspackPlugin` we relied on to provide `$ReactRefreshRuntime$`
- * is gated `DEV_ONLY` — symptom is a silent build followed by every story
- * throwing `$ReactRefreshRuntime$ is not defined` at iframe load.
- *
- * Convergent: one walk, one rule, "in prod nobody emits HMR runtime calls."
- */
-export function sanitizeReactRefreshForProd(rules: any[]): void {
-  let removed = 0
-  let patched = 0
-  walkRules(rules, (rule) => {
-    if (!rule.use) return
-    rule.use = asUseArray(rule.use)
-      .filter((use) => {
-        const drop = loaderNameOf(use) === 'builtin:react-refresh-loader'
-        if (drop) removed++
-        return !drop
-      })
-      .map((use) => {
-        const name = loaderNameOf(use)
-        if (
-          name?.endsWith('next-swc-loader') ||
-          name?.endsWith('swc-loader-shim.cjs')
-        ) {
-          patched++
-          const useObj =
-            typeof use === 'object' && use !== null ? use : { loader: name }
-          return {
-            ...useObj,
-            options: { ...(useObj.options || {}), hasReactRefresh: false },
-          }
-        }
-        return use
-      })
-  })
-  // eslint-disable-next-line no-console
-  console.error(
-    `[storybook-next-rsbuild] prod sanitize: -${removed} refresh-loader, ~${patched} swc-loader options patched`,
-  )
-}
-
-/**
  * Allowlist of Next.js plugins to inject into Storybook. Allowlist (not
  * denylist) because Next.js adds/renames plugins across versions and an
  * unknown new plugin may write to disk, throw, or pollute the bundle.
@@ -180,7 +121,9 @@ export function sanitizeReactRefreshForProd(rules: any[]): void {
  *   `ProvidePlugin` such libs throw `Buffer is not defined` at story render
  *   time even though the build succeeds.
  * - `ReactRefreshRspackPlugin`: provides `$ReactRefreshRuntime$` via ProvidePlugin
- *   (complements our `ReactRefreshInitPlugin` which handles the `injectIntoGlobalHook` bootstrap)
+ *   (complements our `ReactRefreshInitPlugin` which handles the `injectIntoGlobalHook`
+ *   bootstrap). Naturally dev-only: we extract with `dev: !isProduction`, so
+ *   Next.js omits this plugin from the prod `rawPlugins` — no explicit gating needed.
  */
 export const KEEP_PLUGIN_NAMES = new Set([
   'CssExtractRspackPlugin',
@@ -188,9 +131,6 @@ export const KEEP_PLUGIN_NAMES = new Set([
   'ReactRefreshRspackPlugin',
   'RspackProvidePlugin',
 ])
-
-/** Plugins from {@link KEEP_PLUGIN_NAMES} that must NOT leak into prod builds. */
-const DEV_ONLY_PLUGIN_NAMES = new Set(['ReactRefreshRspackPlugin'])
 
 const PROVIDE_PLUGIN_NAMES = new Set(['ProvidePlugin', 'RspackProvidePlugin'])
 
@@ -258,162 +198,135 @@ export function dedupProvidePluginKeys(
   return out
 }
 
-export function filterNextPlugins(
-  rawPlugins: any[],
-  { isDev }: { isDev: boolean } = { isDev: true },
-): any[] {
+export function filterNextPlugins(rawPlugins: any[]): any[] {
   return rawPlugins.filter((plugin) => {
     const name = plugin?.constructor?.name
-    if (!name || !KEEP_PLUGIN_NAMES.has(name)) return false
-    if (!isDev && DEV_ONLY_PLUGIN_NAMES.has(name)) return false
-    return true
+    return !!name && KEEP_PLUGIN_NAMES.has(name)
   })
 }
 
-const CSS_LOADER_MARKERS = [
-  'css-loader',
-  'postcss-loader',
-  'lightningcss-loader',
-  'sass-loader',
-  'less-loader',
-  'resolve-url-loader',
-  'next-font-loader',
-  'next-flight-css-loader',
-  'next-style-loader',
-  'mini-css-extract',
-  'CssExtract',
-]
+/* -------------------------------------------------------------------------- */
+/* CSS URL handling                                                           */
+/* -------------------------------------------------------------------------- */
 
-const CSS_TEST_RE = /\.(css|s[ac]ss|less|styl)|target\.css/
+/**
+ * Matches the synthetic `…/next/font/{google,local}/target.css` module that
+ * `next-swc` emits for every `next/font` call. Mirrors `@storybook/nextjs`'s
+ * regex so the same paths route to our font loader (and are excluded from
+ * Rsbuild's CSS pipeline). The character classes cover both POSIX and Windows
+ * separators.
+ */
+export const TARGET_CSS_RE = /next(\\|\/|\\\\).*(\\|\/|\\\\)target\.css$/
 
-function isCssLoaderUse(use: any): boolean {
-  const name = loaderNameOf(use)
-  return !!name && CSS_LOADER_MARKERS.some((m) => name.includes(m))
-}
+/**
+ * Root-absolute (`/fonts/x.css`, `/images/y.png`) and scheme-absolute
+ * (`https://…`, `data:…`) URLs reference assets served at runtime, not modules
+ * to bundle. Next.js's CSS loaders pass them through unresolved (via
+ * `cssFileResolve`); Rsbuild's css-loader, left to its defaults, tries to
+ * resolve `/…` against the filesystem and fails the build. We mirror Next.js by
+ * skipping them in `tools.cssLoader`.
+ */
+export const isRuntimeCssUrl = (url: string): boolean =>
+  url.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(url)
 
-function isNextFontLoader(use: any): boolean {
-  const name = loaderNameOf(use)
-  return name === 'next-font-loader' || !!name?.endsWith('/next-font-loader')
-}
+/**
+ * Merge a runtime-URL passthrough `filter` into a css-loader `url`/`import`
+ * option, preserving any object form Rsbuild/the user already set (a boolean or
+ * `undefined` is replaced wholesale). Shared by both options in `tools.cssLoader`
+ * so the predicate lives in one place — see `isRuntimeCssUrl`.
+ */
+export const withRuntimeUrlFilter = (existing: unknown) => ({
+  ...(typeof existing === 'object' && existing !== null ? existing : {}),
+  filter: (url: string) => !isRuntimeCssUrl(url),
+})
 
-function isCssRule(rule: any): boolean {
-  if (!rule || typeof rule !== 'object') return false
+/* -------------------------------------------------------------------------- */
+/* Module rule factories                                                      */
+/* -------------------------------------------------------------------------- */
 
-  if (isCssLoaderUse(rule) || asUseArray(rule.use).some(isCssLoaderUse)) {
-    return true
-  }
-  if (rule.oneOf?.some(isCssRule)) return true
-  if (rule.rules?.some(isCssRule)) return true
-
-  if (rule.test) {
-    const patterns = Array.isArray(rule.test) ? rule.test : [rule.test]
-    const source = patterns
-      .map((t: any) => (t instanceof RegExp ? t.source : String(t)))
-      .join('|')
-    if (CSS_TEST_RE.test(source)) return true
-  }
-
-  return false
-}
-
-function isErrorLoaderUse(use: any): boolean {
-  const name = loaderNameOf(use)
-  return typeof name === 'string' && name.includes('error-loader')
-}
-
-const BARREL_TEST_RE = /__barrel_optimize__/
-const BARREL_NARROWED_TEST = /__barrel_optimize__/
-
-function flattenTestParts(test: any): any[] {
-  if (!test) return []
-  if (Array.isArray(test)) return test
-  if (typeof test === 'object' && Array.isArray(test.or)) return test.or
-  return [test]
+/**
+ * Rule that routes `next/font`'s synthetic `target.css` to our font loader as a
+ * JS module (runtime `<style>` injection + `{ className, style }`), so it must
+ * be parsed as JS rather than handed to rspack's CSS handling. `loaderPath` is
+ * resolved by `preset.ts` (via `import.meta.resolve`) and passed in to keep this
+ * factory pure/testable.
+ */
+export function makeFontRule(loaderPath: string) {
+  return { test: TARGET_CSS_RE, loader: loaderPath, type: 'javascript/auto' }
 }
 
 /**
- * `next/dist/build/swc/options` rewrites `import { x } from '@scope/pkg'` into
- * `import { x } from '__barrel_optimize__?names=x!=!@scope/pkg'` when
- * `optimizePackageImports` is enabled (default for many libs in Next 15+).
- * The synthetic specifier needs Next.js's own JS rule chain to resolve — without
- * it, rspack reports "no loader for this file type" on every MUI/lodash import.
+ * Rule that routes `optimizePackageImports`' `__barrel_optimize__?names=…!=!<pkg>`
+ * matchResource through the Next.js SWC loader chain. The `!=!` matchResource is
+ * what rule-matching keys off, so the request never hits Rsbuild's `.tsx?`/`.js`
+ * rule — the real (often TS) barrel source would otherwise be parsed as plain JS
+ * and throw. Returns `null` when there is no SWC chain (Next.js bridge absent).
  */
-function isBarrelOptimizeRule(rule: any): boolean {
-  return flattenTestParts(rule?.test).some((t) => {
-    if (typeof t === 'string') return t.includes('__barrel_optimize__')
-    if (t instanceof RegExp) return BARREL_TEST_RE.test(t.source)
-    return false
-  })
+export function makeBarrelRule(
+  nextLoaderChain: any[] | null,
+): { test: RegExp; use: any[] } | null {
+  return nextLoaderChain
+    ? { test: /__barrel_optimize__/, use: nextLoaderChain }
+    : null
 }
 
-/**
- * Strip Next.js's `_app.js`-only Pages-Router CSS guards.
- *
- * Next.js's CSS rule chain has two restrictions that don't apply to Storybook:
- *
- * 1. An `error-loader` branch that throws "Global CSS cannot be imported from
- *    files other than your Custom <App>". Storybook has no `_app.js`, so any
- *    `import './globals.css'` from `preview.tsx` would hit it.
- * 2. The remaining `oneOf` branches restrict by `issuer` (pages/_app.js or
- *    node_modules). Storybook imports match neither, so without stripping
- *    `issuer` rspack falls back to JS-parsing the .css file.
- *
- * Applied recursively before `prepareNextCssRules` consumes the chain.
- */
-function stripNextCssRestrictions(rule: any): any {
-  if (!rule || typeof rule !== 'object') return rule
-  if (Array.isArray(rule.oneOf)) {
-    // Next.js's client rule mixes CSS branches with JS branches (`next-swc-loader`,
-    // `next-flight-loader`) under one `oneOf`. Pulling the whole rule into Storybook
-    // makes the JS branches re-run our SWC chain on TSX files, producing duplicate
-    // `$RefreshSig$` declarations. Keep only branches that are themselves CSS or
-    // exclusively handle `__barrel_optimize__` virtual specifiers (see
-    // `isBarrelOptimizeRule`).
-    rule.oneOf = rule.oneOf
-      .filter((r: any) => !asUseArray(r?.use).some(isErrorLoaderUse))
-      .filter((r: any) => isCssRule(r) || isBarrelOptimizeRule(r))
-      .map((r: any) => {
-        // Barrel branches' `test` typically `or`s the file-extension regex with
-        // the barrel marker (e.g. `{ or: [/\.tsx?$/, '__barrel_optimize__'] }`).
-        // Narrow to barrel only so this branch does not also catch regular TSX.
-        if (!isCssRule(r) && isBarrelOptimizeRule(r)) {
-          r.test = BARREL_NARROWED_TEST
-        }
-        delete r.issuer
-        return stripNextCssRestrictions(r)
-      })
-  }
-  if (Array.isArray(rule.rules)) {
-    rule.rules = rule.rules.map(stripNextCssRestrictions)
-  }
-  if (isCssRule(rule)) delete rule.issuer
-  return rule
-}
+/* -------------------------------------------------------------------------- */
+/* resolve.fallback merge                                                     */
+/* -------------------------------------------------------------------------- */
+
+type FallbackValue = string | string[] | false | (string | false)[]
+export type FallbackMap = Record<string, FallbackValue>
 
 /**
- * Extract Next.js CSS rules and splice our URL-rewrite loader before every
- * `next-font-loader`. Why the rewriter: `next-font-loader` emits CSS with
- * `url(/_next/static/media/[hash])` but writes binaries to `static/media/`,
- * relying on a Next.js dev-server alias we don't have. See
- * `loaders/next-font-url-rewrite.cjs`. Spliced *before* next-font-loader so
- * it runs *after* it (loaders apply right-to-left).
- *
- * Also strips the Pages-Router `_app.js`-only guards (see
- * `stripNextCssRestrictions`) so Storybook imports work without users having
- * to patch `tools.rspack` from `main.ts`.
+ * Node builtins floor — every builtin mapped to `false`. Merged *under* Next.js's
+ * `resolve.fallback` (see `mergeFallback`) so Next.js-supplied polyfills still
+ * win. Bare specifiers only; the `node:`-prefixed forms are dropped earlier by
+ * `IgnoreNodeProtocolPlugin`. Sourced from `node:module`'s `builtinModules` so
+ * every builtin is covered (`querystring`, `punycode`, `url`, ...) — a
+ * hand-written allowlist drifts behind Node releases and creates "module not
+ * found" errors for transitive deps importing obscure builtins.
  */
-export function prepareNextCssRules(
-  rawRules: any[],
-  rewriterPath: string,
-): any[] {
-  const rules = rawRules.filter(isCssRule).map(stripNextCssRestrictions)
-  walkRules(rules, (rule) => {
-    if (!rule.use) return
-    const uses = asUseArray(rule.use)
-    const fontIdx = uses.findIndex(isNextFontLoader)
-    if (fontIdx < 0) return
-    uses.splice(fontIdx, 0, { loader: rewriterPath })
-    rule.use = uses
-  })
-  return rules
+export const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
+  builtinModules.map((m) => [m, false as const]),
+)
+
+/**
+ * Layer `resolve.fallback` in precedence order (later generally wins):
+ *   1. `builtinFloor`    every Node builtin → `false`
+ *   2. `rsbuildFallback` Rsbuild defaults / user `tools.rspack` overrides
+ *   3. `nextFallback`    Next.js's polyfills — applied ONLY where the running
+ *      value is `false` or unset. Rsbuild defaults `fs`/`stream`/`assert`/… to
+ *      `false` even on browser builds, which would suppress Next.js's polyfills
+ *      (`stream-browserify`, `buffer`, `util`) and break libs like Victory that
+ *      import `readable-stream`. Letting Next.js win over a `false` is
+ *      restorative; a non-`false` user entry is real intent we must preserve.
+ *   4. `userFallback`    `next.config.webpack` delta — the final word.
+ */
+export function mergeFallback(
+  builtinFloor: FallbackMap,
+  rsbuildFallback: FallbackMap | undefined,
+  nextFallback: FallbackMap,
+  userFallback: FallbackMap,
+): FallbackMap {
+  const fallback: FallbackMap = { ...builtinFloor, ...rsbuildFallback }
+  for (const [k, v] of Object.entries(nextFallback)) {
+    if (fallback[k] === false || fallback[k] === undefined) fallback[k] = v
+  }
+  Object.assign(fallback, userFallback)
+  return fallback
+}
+
+/* -------------------------------------------------------------------------- */
+/* Rule dedup signature                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Stable signature for deduping rules by their `test`. Only RegExp tests are
+ * comparable — `RegExp.toString()` (e.g. `/\.svg$/`). `{ and: […] }` /
+ * `{ or: […] }` shapes would collapse to `[object Object]` and cross-match
+ * unrelated rules, so they (and string/function tests) return `null`, meaning
+ * "not comparable" — the caller then leaves such rules untouched.
+ */
+export function ruleTestSignature(rule: any): string | null {
+  return rule?.test instanceof RegExp ? rule.test.toString() : null
 }

@@ -1,4 +1,3 @@
-import { builtinModules } from 'node:module'
 import { dirname, isAbsolute, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
@@ -10,11 +9,17 @@ import { extractNextRspackConfig, getNextVersion } from './utils/next-config'
 import {
   buildNextLoaderChain,
   dedupProvidePluginKeys,
+  type FallbackMap,
   filterNextAliases,
   filterNextPlugins,
-  prepareNextCssRules,
+  makeBarrelRule,
+  makeFontRule,
+  mergeFallback,
+  NODE_BUILTINS_FALLBACK,
   replaceSwcRules,
-  sanitizeReactRefreshForProd,
+  ruleTestSignature,
+  TARGET_CSS_RE,
+  withRuntimeUrlFilter,
 } from './utils/preset-helpers'
 
 const resolve = (id: string) => fileURLToPath(import.meta.resolve(id))
@@ -26,7 +31,9 @@ const LEGACY_PREVIEW_PATH = resolve('storybook-next-rsbuild/config/preview')
 const NEXT_IMAGE_MOCK = resolve('storybook-next-rsbuild/next-image-mock')
 const SWC_SHIM = resolve('storybook-next-rsbuild/swc-loader-shim')
 const REFRESH_ENTRY = resolve('storybook-next-rsbuild/react-refresh-entry')
-const FONT_URL_REWRITE = resolve('storybook-next-rsbuild/next-font-url-rewrite')
+const FONT_LOADER = resolve(
+  'storybook-next-rsbuild/storybook-nextjs-font-loader',
+)
 const STYLED_JSX_DIR = dirname(resolve('styled-jsx/package.json'))
 
 export const core: PresetProperty<'core'> = async (config, options) => {
@@ -99,56 +106,25 @@ class NoopTraceSpanPlugin {
 }
 
 /**
- * Node.js builtins floor — merged *under* Next.js's `resolve.fallback`, so
- * Next.js-supplied polyfills (e.g. `process`) still win.
+ * Suppresses all `node:`-prefixed imports in the browser bundle — the single
+ * mechanism for `node:` handling (the per-builtin `resolve.alias` map this used
+ * to duplicate has been removed).
  *
- * Sourced from `node:module`'s `builtinModules` so every builtin is covered
- * (`querystring`, `punycode`, `url`, `events`, ...). A hand-written allowlist
- * inevitably drifts behind Node releases and creates "module not found" errors
- * for transitive deps that import obscure builtins.
- */
-const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
-  builtinModules.flatMap((m) => [
-    [m, false as const],
-    [`node:${m}`, false as const],
-  ]),
-)
-
-/**
- * Aliases for `node:`-protocol builtins. Rsbuild ships a pre-resolve guard
- * that errors on bare `node:*` requests *before* webpack's `resolve.fallback`
- * fires, so `fallback` alone can't suppress the build error. Mapping each
- * `node:foo` to `false` via `resolve.alias` short-circuits resolution at the
- * point Rsbuild checks. The non-prefixed forms stay in `fallback` only —
- * adding them to alias would also intercept legitimate `import { ... } from 'fs'`
- * before webpack's fallback layer has a chance to provide a polyfill (e.g.
- * Next.js's `buffer`, `process`, `stream-browserify`).
- */
-const NODE_PROTOCOL_ALIAS: Record<string, false> = Object.fromEntries(
-  builtinModules.map((m) => [`node:${m}`, false as const]),
-)
-
-/**
- * Suppresses all `node:`-prefixed imports in the browser bundle.
+ * `IgnorePlugin` taps `NormalModuleFactory.beforeResolve` and drops a matching
+ * request *before* resolution starts, so it preempts both Rsbuild's pre-resolve
+ * `node:` guard and rspack's "need an additional plugin to handle 'node:' URIs"
+ * module-build error. A `resolve.fallback`/`alias` entry can't do this as
+ * reliably because those layers run during/after resolution.
  *
- * Rspack hard-errors on bare `node:foo` with "need an additional plugin to
- * handle 'node:' URIs". The check fires at module-build stage, *after* both
- * `resolve.alias` and `resolve.fallback`, so neither layer alone suppresses
- * it.
+ * Prefix-stripping (NormalModuleReplacementPlugin: `node:foo` → `foo`) is the
+ * other common idiom, but it breaks for `node:`-only modules absent from
+ * `builtinModules` on the running Node (e.g. `node:sqlite` pre-22.5), surfacing
+ * "Can't resolve 'sqlite'". The Storybook preview is a browser bundle, so any
+ * `node:*` import is dead code; replacing it with an empty module is correct.
  *
- * Stripping the prefix (NormalModuleReplacementPlugin: `node:foo` → `foo`)
- * works for builtins listed in `node:module.builtinModules`, but newer
- * deps (e.g. undici importing `node:sqlite`, Node 22.5+ only) reach modules
- * that *aren't* in builtinModules on older Node releases — the strip then
- * surfaces a "Can't resolve 'sqlite'" error.
- *
- * The Storybook preview is a browser bundle, so any `node:*` import is dead
- * code by definition. `IgnorePlugin` replaces them with empty modules,
- * matching the webpack idiom for "blocked imports."
- *
- * `compiler.webpack.IgnorePlugin` is the version-stable way to reach the
- * rspack class without importing `@rspack/core` directly (framework-next
- * doesn't declare it as a dep).
+ * `compiler.webpack.IgnorePlugin` is the version-stable way to reach the rspack
+ * class without importing `@rspack/core` directly (framework-next doesn't
+ * declare it as a dep).
  */
 class IgnoreNodeProtocolPlugin {
   apply(compiler: any) {
@@ -195,19 +171,17 @@ export const rsbuildFinal: NonNullable<
       : resolvePath(options.configDir ?? process.cwd(), nextConfigPath)
     : undefined
 
+  // Storybook builds in two modes: dev server (`storybook dev`) and static
+  // build (`build-storybook`). We extract Next.js's config in the MATCHING mode
+  // (`getBaseWebpackConfig({ dev })`), so the emitted loaders/plugins/defines
+  // already reflect the target — no post-hoc stripping of React Refresh, the
+  // `NODE_ENV` define, or `next-swc-loader.dev` is needed.
+  const isDev = options.configType !== 'PRODUCTION'
+
   const extraction = await extractNextRspackConfig(
     resolvedNextConfigPath ? dirname(resolvedNextConfigPath) : undefined,
+    { dev: isDev },
   )
-
-  // Storybook builds in two modes: dev server (`storybook dev`) and static
-  // build (`build-storybook`). Next.js's `getBaseWebpackConfig()` is always
-  // invoked in dev mode by `extractNextRspackConfig` (see utils/next-config.ts),
-  // so its output carries dev-only artefacts (React Refresh plugin/loader,
-  // `process.env.NODE_ENV: "development"` define, `next-swc-loader.dev=true`).
-  // We strip those when Storybook is building for production, otherwise the
-  // resulting bundle is broken (`$RefreshSig$` ReferenceError) and ships React's
-  // dev path.
-  const isDev = options.configType !== 'PRODUCTION'
 
   // Layering: Next.js base aliases (filtered) → Storybook overrides
   // (next/image, styled-jsx) → user delta. User aliases win over Next.js,
@@ -225,36 +199,38 @@ export const rsbuildFinal: NonNullable<
     }
   }
   const allAliases: Record<string, string | string[] | false> = {
-    ...NODE_PROTOCOL_ALIAS,
     ...filterNextAliases(extraction.alias),
     ...getStorybookOverrideAliases(),
     ...userAliasDelta,
   }
 
-  const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM, {
-    isDev,
-  })
+  const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM)
   if (nextLoaderChain) {
     logger.info('Using Next.js SWC loader for JS/TS compilation')
   }
 
-  const nextPlugins = filterNextPlugins(extraction.rawPlugins, { isDev })
+  const nextPlugins = filterNextPlugins(extraction.rawPlugins)
 
-  const nextCssRules = prepareNextCssRules(
-    extraction.rawRules,
-    FONT_URL_REWRITE,
-  )
-  if (nextCssRules.length > 0) {
-    logger.info(
-      `Using Next.js CSS pipeline (${nextCssRules.length} rules injected)`,
-    )
-  }
+  // Rsbuild owns all real CSS (.css/.module.css/.scss/...). The only Next.js
+  // CSS concern we keep is `next/font`: `next-swc` rewrites `next/font/*` calls
+  // into a synthetic `target.css` module, which we hand to a dedicated loader
+  // (ported from `@storybook/nextjs`) instead of pulling Next.js's whole CSS
+  // rule chain. See `makeFontRule` and `loaders/storybook-nextjs-font-loader.cjs`.
+  const nextFontRule = makeFontRule(FONT_LOADER)
 
-  // `process.env.NODE_ENV` is extracted from Next.js's dev DefinePlugin and
-  // would override Rsbuild's correct prod value. Drop it in prod and let
-  // Rsbuild's own define provide the canonical value.
+  // `optimizePackageImports` (default-on for many libs in Next 15+, e.g.
+  // lucide-react, @mui/material) makes `next-swc` rewrite barrel imports into
+  // `__barrel_optimize__?names=…!=!<pkg>` requests that bypass Rsbuild's
+  // `.tsx?`/`.js` rule; `makeBarrelRule` routes them through the SWC shim chain
+  // so the real (often TS) barrel source compiles instead of being parsed as raw
+  // JS and throwing. `null` when the Next.js bridge is unavailable.
+  const nextBarrelRule = makeBarrelRule(nextLoaderChain)
+
+  // Rsbuild owns `process.env.NODE_ENV` — it always defines the value matching
+  // its build mode. Drop Next.js's copy so there's a single source of truth and
+  // no duplicate-define divergence.
   const nextDefines: Record<string, string> = { ...extraction.defines }
-  if (!isDev) delete nextDefines['process.env.NODE_ENV']
+  delete nextDefines['process.env.NODE_ENV']
 
   return mergeRsbuildConfig(config, {
     source: {
@@ -265,21 +241,25 @@ export const rsbuildFinal: NonNullable<
     },
     tools: {
       /**
-       * Strip Rsbuild's CSS pipeline only when we have Next.js's CSS rules to
-       * replace it — otherwise (e.g. when bridge extraction fails and falls
-       * back to `EMPTY_EXTRACTION`) we'd leave Storybook with no CSS handling
-       * at all, breaking even plain `.css` imports. Running both is not an
-       * option: it double-extracts and breaks `next/font` target.css.
-       * `CHAIN_ID` isn't exported from `@rsbuild/core`'s public entry, so this
-       * hook is the only stable access.
+       * Match Next.js's lenient URL handling: leave root-absolute / external
+       * `url()` and `@import` targets untouched instead of resolving them as
+       * modules (see `isRuntimeCssUrl`). Relative paths still resolve normally.
+       */
+      cssLoader: (config) => {
+        config.url = withRuntimeUrlFilter(config.url)
+        config.import = withRuntimeUrlFilter(config.import)
+        return config
+      },
+      /**
+       * Keep Rsbuild's CSS pipeline intact and only carve out `next/font`'s
+       * synthetic `target.css`, which our dedicated font loader handles. Without
+       * this exclude, css-loader would also try to process `target.css` and
+       * collide with the font loader. `CHAIN_ID` isn't exported from
+       * `@rsbuild/core`'s public entry, so this hook is the only stable access.
        */
       bundlerChain: (chain, { CHAIN_ID }) => {
-        if (nextCssRules.length === 0) return
         if (chain.module.rules.has(CHAIN_ID.RULE.CSS)) {
-          chain.module.rules.delete(CHAIN_ID.RULE.CSS)
-        }
-        if (chain.plugins.has(CHAIN_ID.PLUGIN.MINI_CSS_EXTRACT)) {
-          chain.plugins.delete(CHAIN_ID.PLUGIN.MINI_CSS_EXTRACT)
+          chain.module.rule(CHAIN_ID.RULE.CSS).exclude.add(TARGET_CSS_RE)
         }
       },
       rspack: async (rspackConfig) => {
@@ -289,42 +269,19 @@ export const rsbuildFinal: NonNullable<
         rspackConfig.plugins ??= []
         rspackConfig.ignoreWarnings ??= []
 
-        // Fallback precedence: user delta (from next.config.webpack) > rsbuild
-        // user (via tools.rspack) > Next.js polyfills > our builtin floor.
-        // The user delta wins over Rsbuild's own `tools.rspack` fallback only
-        // when the same key is set in both — that mirrors what would happen
-        // inside Next.js itself, since the user `webpack()` hook runs last.
-        // Fallback merge — order matters:
-        //   1. Our builtin floor (every Node builtin → false)
-        //   2. Rsbuild's defaults / user `tools.rspack` overrides
-        //   3. Next.js's polyfills (only for keys still at `false` or unset) —
-        //      Rsbuild defaults `fs`/`stream`/`assert`/... to `false` even on
-        //      the browser build, which would suppress Next.js's polyfills
-        //      (`stream-browserify`, `buffer`, `util`) and break libs like
-        //      Victory that import `readable-stream`. Letting Next.js win over
-        //      a `false` is restorative, not destructive: Rsbuild's `false`
-        //      means "no opinion" for builtins, while a user-supplied non-false
-        //      entry is real intent we must preserve.
-        //   4. User `next.config.webpack` delta has the final word.
-        // Rspack types `fallback` values as `string | string[] | false |
-        // (string | false)[]`; we narrow back to the webpack-classic shape
-        // because every entry we put in is either a literal `false` or a
-        // resolved string. The `(string | false)[]` variant only appears in
-        // user-supplied configs we don't construct.
-        const fallback: Record<
-          string,
-          string | string[] | false | (string | false)[]
-        > = {
-          ...NODE_BUILTINS_FALLBACK,
-          ...rspackConfig.resolve.fallback,
-        }
-        for (const [k, v] of Object.entries(extraction.fallback)) {
-          if (fallback[k] === false || fallback[k] === undefined) {
-            fallback[k] = v
-          }
-        }
-        Object.assign(fallback, extraction.userDelta.fallback)
-        rspackConfig.resolve.fallback = fallback
+        // Layer resolve.fallback: builtin floor → Rsbuild/user-tools.rspack →
+        // Next.js polyfills (only over `false`/unset) → next.config.webpack
+        // delta (final word). See `mergeFallback` for the full precedence
+        // rationale (notably why Next.js's `stream-browserify` must win over
+        // Rsbuild's `stream: false` so libs like Victory keep working).
+        rspackConfig.resolve.fallback = mergeFallback(
+          NODE_BUILTINS_FALLBACK,
+          // rspack types `fallback` loosely (per-key boolean); we only ever read
+          // string/false entries from it, so narrow to the webpack-classic shape.
+          rspackConfig.resolve.fallback as FallbackMap | undefined,
+          extraction.fallback,
+          extraction.userDelta.fallback,
+        )
         if (extraction.resolveLoader) {
           // Field-level merge: scalars follow "Next.js wins" (last spread), but
           // `modules` concatenate and `alias` unions so user-supplied loader
@@ -373,10 +330,12 @@ export const rsbuildFinal: NonNullable<
               'Next.js SWC integration may not work correctly.',
           )
         }
-        // Unshift so Next.js's specific matchers (e.g. `next/font/google/target.css`)
-        // beat any generic file rules remaining in the chain.
-        if (nextCssRules.length > 0) {
-          rspackConfig.module.rules.unshift(...nextCssRules)
+        // Unshift so the `target.css` matcher beats any generic `.css` rule
+        // still in the chain. Harmless when no `next/font` is used — the rule
+        // only matches the synthetic `…/next/font/*/target.css` module.
+        rspackConfig.module.rules.unshift(nextFontRule)
+        if (nextBarrelRule) {
+          rspackConfig.module.rules.unshift(nextBarrelRule)
         }
 
         // See `dedupProvidePluginKeys` doc — Rsbuild's pre-registered
@@ -499,14 +458,8 @@ export const rsbuildFinal: NonNullable<
         // SvgoParserError. Dedup only spans (next.config delta) ↔ (storybook
         // webpackFinal additions); Next.js/Rsbuild CSS rules that
         // legitimately share `/\.css$/` (e.g. via `oneOf` branches) stay
-        // untouched.
-        //
-        // Signature is `RegExp.toString()` — only RegExp `test` values are
-        // dedup-comparable. `{ and: [...] }` / `{ or: [...] }` shapes
-        // collapse to `[object Object]` and would cross-match unrelated
-        // rules, so we skip them.
-        const ruleTestSignature = (r: any): string | null =>
-          r?.test instanceof RegExp ? r.test.toString() : null
+        // untouched. `ruleTestSignature` returns `null` for non-RegExp tests
+        // so `{ and: [...] }` / `{ or: [...] }` shapes never cross-match.
         const userFinalAddedTests = new Set<string>()
         for (const r of rspackConfig.module.rules as any[]) {
           if (rulesSnapshotBeforeUserFinal.has(r)) continue
@@ -527,19 +480,6 @@ export const rsbuildFinal: NonNullable<
             }
             return true
           })
-        }
-
-        // Run prod sanitization LAST so it covers every rule introduced
-        // above — Rsbuild's, replaceSwcRules' shim chain, Next.js CSS rule's
-        // `oneOf` (which embeds `__barrel_optimize__` branches with raw
-        // `next-swc-loader`), Next.js plugins, AND any user-delta rules.
-        // Running this earlier misses the unshift'd CSS-block barrel rules
-        // and leaks `$ReactRefreshRuntime$.refresh(...)` into prod bundles.
-        if (!isDev) {
-          // `rspackConfig.module.rules` was defaulted to `[]` at the top of
-          // this `tools.rspack` handler; the union type still reports
-          // `RuleSetRules | undefined`.
-          sanitizeReactRefreshForProd(rspackConfig.module.rules as any[])
         }
 
         return rspackConfig
