@@ -280,8 +280,10 @@ export type FallbackMap = Record<string, FallbackValue>
 /**
  * Node builtins floor — every builtin mapped to `false`. Merged *under* Next.js's
  * `resolve.fallback` (see `mergeFallback`) so Next.js-supplied polyfills still
- * win. Bare specifiers only; the `node:`-prefixed forms are dropped earlier by
- * `IgnoreNodeProtocolPlugin`. Sourced from `node:module`'s `builtinModules` so
+ * win. Bare specifiers only; `node:`-prefixed imports are normalized to these
+ * bare names earlier by `StripNodeProtocolPlugin` (preset.ts) before resolution,
+ * so they land on this same floor. Sourced from `node:module`'s `builtinModules`
+ * so
  * every builtin is covered (`querystring`, `punycode`, `url`, ...) — a
  * hand-written allowlist drifts behind Node releases and creates "module not
  * found" errors for transitive deps importing obscure builtins.
@@ -289,6 +291,29 @@ export type FallbackMap = Record<string, FallbackValue>
 export const NODE_BUILTINS_FALLBACK: Record<string, false> = Object.fromEntries(
   builtinModules.map((m) => [m, false as const]),
 )
+
+/**
+ * Maps a `node:`-prefixed import to the specifier it should resolve to in the
+ * browser bundle (used by `StripNodeProtocolPlugin` in preset.ts):
+ *   - known builtin (`node:path`) → bare name (`path`), caught by
+ *     `NODE_BUILTINS_FALLBACK`'s `false` floor or a Next.js-supplied polyfill;
+ *   - `node:`-only specifier with no bare counterpart (`node:sqlite`,
+ *     `node:test`) → `emptyModule`, so a dead server-only import doesn't surface
+ *     as a "Can't resolve 'sqlite'" build failure;
+ *   - any non-`node:` request → returned unchanged.
+ *
+ * Stripping the scheme *before* resolution is required because rspack's native
+ * `node:` scheme handler runs ahead of `resolve.fallback`, so a
+ * `resolve.fallback['node:path']` entry never gets consulted.
+ */
+export const resolveNodeProtocolRequest = (
+  request: string,
+  emptyModule: string,
+): string => {
+  if (!request.startsWith('node:')) return request
+  const bare = request.slice('node:'.length)
+  return bare in NODE_BUILTINS_FALLBACK ? bare : emptyModule
+}
 
 /**
  * Layer `resolve.fallback` in precedence order (later generally wins):

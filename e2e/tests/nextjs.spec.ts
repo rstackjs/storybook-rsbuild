@@ -446,4 +446,20 @@ test.describe(sandbox.name, () => {
     await expect(probe).toBeVisible()
     await expect(probe).toHaveCSS('color', 'rgb(255, 199, 0)')
   })
+
+  test('node: protocol imports load as empty modules instead of crashing the chunk', async ({
+    page,
+  }) => {
+    // Regression target: a `node:`-prefixed import must not throw
+    // "Cannot find module 'node:path'" when the story chunk evaluates.
+    // IgnoreNodeProtocolPlugin should replace it with an empty module so the
+    // probe renders (with `sep` undefined → `<empty>`).
+    const moduleErrors: string[] = []
+    page.on('pageerror', (err) => moduleErrors.push(err.message))
+    const frame = await openStory(page, 'stories-nodeprotocol--default')
+    const probe = frame.getByTestId('node-protocol-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toContainText('node:path sep =')
+    expect(moduleErrors.join('\n')).not.toMatch(/Cannot find module 'node:/)
+  })
 })

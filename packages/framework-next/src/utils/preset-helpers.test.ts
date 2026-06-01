@@ -11,6 +11,7 @@ import {
   NODE_BUILTINS_FALLBACK,
   readProvidedMap,
   replaceSwcRules,
+  resolveNodeProtocolRequest,
   ruleTestSignature,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
@@ -446,6 +447,45 @@ describe('mergeFallback (resolve.fallback precedence)', () => {
     expect(NODE_BUILTINS_FALLBACK.querystring).toBe(false)
     expect(NODE_BUILTINS_FALLBACK.punycode).toBe(false)
     expect(NODE_BUILTINS_FALLBACK.stream).toBe(false)
+  })
+
+  it('keeps the floor bare-only — node: scheme is normalized by the strip plugin', () => {
+    // The fallback floor must NOT carry `node:`-prefixed keys: rspack resolves
+    // the `node:` scheme before consulting resolve.fallback, so such a key is
+    // dead. resolveNodeProtocolRequest strips the scheme to land on the bare key.
+    expect(NODE_BUILTINS_FALLBACK['node:path']).toBeUndefined()
+    expect(NODE_BUILTINS_FALLBACK.path).toBe(false)
+  })
+})
+
+describe('resolveNodeProtocolRequest (node: scheme handling)', () => {
+  const EMPTY = '/abs/empty-module.cjs'
+
+  it('strips node: from a builtin so it lands on the bare fallback floor', () => {
+    expect(resolveNodeProtocolRequest('node:path', EMPTY)).toBe('path')
+    expect(resolveNodeProtocolRequest('node:fs', EMPTY)).toBe('fs')
+  })
+
+  it('strips node: from a subpath builtin (node:fs/promises)', () => {
+    // builtinModules includes the `fs/promises` subpath on supported Node, so
+    // it stays a bare specifier; if a Node lacks it, it falls to the shim — both
+    // resolve to an empty module, never a build error.
+    const out = resolveNodeProtocolRequest('node:fs/promises', EMPTY)
+    expect(out === 'fs/promises' || out === EMPTY).toBe(true)
+  })
+
+  it('routes node:-only specifiers with no bare builtin to the empty shim', () => {
+    // node:test / node:sqlite have no bare-name counterpart in builtinModules,
+    // so plain stripping would surface "Can't resolve 'test'". They map to the
+    // empty shim instead so a dead server-only import never breaks the build.
+    expect(resolveNodeProtocolRequest('node:test', EMPTY)).toBe(EMPTY)
+    expect(resolveNodeProtocolRequest('node:sqlite', EMPTY)).toBe(EMPTY)
+  })
+
+  it('leaves non-node: requests untouched', () => {
+    expect(resolveNodeProtocolRequest('path', EMPTY)).toBe('path')
+    expect(resolveNodeProtocolRequest('./local', EMPTY)).toBe('./local')
+    expect(resolveNodeProtocolRequest('lodash', EMPTY)).toBe('lodash')
   })
 })
 

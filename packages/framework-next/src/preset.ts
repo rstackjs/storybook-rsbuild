@@ -17,6 +17,7 @@ import {
   mergeFallback,
   NODE_BUILTINS_FALLBACK,
   replaceSwcRules,
+  resolveNodeProtocolRequest,
   ruleTestSignature,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
@@ -34,6 +35,7 @@ const REFRESH_ENTRY = resolve('storybook-next-rsbuild/react-refresh-entry')
 const FONT_LOADER = resolve(
   'storybook-next-rsbuild/storybook-nextjs-font-loader',
 )
+const EMPTY_MODULE = resolve('storybook-next-rsbuild/empty-module')
 const STYLED_JSX_DIR = dirname(resolve('styled-jsx/package.json'))
 
 export const core: PresetProperty<'core'> = async (config, options) => {
@@ -105,32 +107,45 @@ class NoopTraceSpanPlugin {
   }
 }
 
+const NODE_PROTOCOL_RE = /^node:/
+
 /**
- * Suppresses all `node:`-prefixed imports in the browser bundle — the single
- * mechanism for `node:` handling (the per-builtin `resolve.alias` map this used
- * to duplicate has been removed).
+ * Normalizes `node:`-prefixed imports in the browser bundle by stripping the
+ * scheme before resolution, mirroring upstream `@storybook/nextjs`
+ * (`nodePolyfills/webpack.ts`).
  *
- * `IgnorePlugin` taps `NormalModuleFactory.beforeResolve` and drops a matching
- * request *before* resolution starts, so it preempts both Rsbuild's pre-resolve
- * `node:` guard and rspack's "need an additional plugin to handle 'node:' URIs"
- * module-build error. A `resolve.fallback`/`alias` entry can't do this as
- * reliably because those layers run during/after resolution.
+ * Why not `IgnorePlugin({ resourceRegExp: /^node:/ })` (the previous approach):
+ * it *does* match, but it codegens a `__rspack_missing_module()` stub that
+ * THROWS `Cannot find module 'node:path'` the moment the namespace is touched —
+ * so a story importing `node:path` crashes at render even though the build
+ * succeeds. And `resolve.fallback['node:path'] = false` doesn't help either:
+ * rspack's native `node:` scheme handler runs *before* the fallback table, so
+ * the scheme errors as "Unhandled scheme" first. Both verified against the
+ * pinned `@rspack/core` (see `e2e/tests/nextjs.spec.ts` node: probe).
  *
- * Prefix-stripping (NormalModuleReplacementPlugin: `node:foo` → `foo`) is the
- * other common idiom, but it breaks for `node:`-only modules absent from
- * `builtinModules` on the running Node (e.g. `node:sqlite` pre-22.5), surfacing
- * "Can't resolve 'sqlite'". The Storybook preview is a browser bundle, so any
- * `node:*` import is dead code; replacing it with an empty module is correct.
+ * `NormalModuleReplacementPlugin`'s callback rewrites `resource.request` ahead
+ * of scheme handling, so:
+ *   - `node:path` → `path`: an ordinary bare builtin, caught by the existing
+ *     `NODE_BUILTINS_FALLBACK` floor (→ rspack's real empty module) or, where
+ *     Next.js supplies one, its polyfill.
+ *   - `node:sqlite` / `node:test` (no bare-builtin counterpart, so plain
+ *     stripping would surface "Can't resolve 'sqlite'") → an empty shim, so a
+ *     dead server-only import never breaks the browser build.
  *
- * `compiler.webpack.IgnorePlugin` is the version-stable way to reach the rspack
- * class without importing `@rspack/core` directly (framework-next doesn't
- * declare it as a dep).
+ * `compiler.webpack.NormalModuleReplacementPlugin` reaches the rspack class
+ * without importing `@rspack/core` directly (framework-next doesn't declare it).
  */
-class IgnoreNodeProtocolPlugin {
+class StripNodeProtocolPlugin {
   apply(compiler: any) {
-    const IgnorePlugin = compiler.webpack?.IgnorePlugin
-    if (!IgnorePlugin) return
-    new IgnorePlugin({ resourceRegExp: /^node:/ }).apply(compiler)
+    const NormalModuleReplacementPlugin =
+      compiler.webpack?.NormalModuleReplacementPlugin
+    if (!NormalModuleReplacementPlugin) return
+    new NormalModuleReplacementPlugin(NODE_PROTOCOL_RE, (resource: any) => {
+      resource.request = resolveNodeProtocolRequest(
+        resource.request,
+        EMPTY_MODULE,
+      )
+    }).apply(compiler)
   }
 }
 
@@ -354,7 +369,7 @@ export const rsbuildFinal: NonNullable<
           rspackConfig.plugins.push(new ReactRefreshInitPlugin(REFRESH_ENTRY))
         }
 
-        rspackConfig.plugins.push(new IgnoreNodeProtocolPlugin())
+        rspackConfig.plugins.push(new StripNodeProtocolPlugin())
 
         // User delta from `next.config.webpack(config, opts)` — appended last
         // so it lands AFTER both Rsbuild's defaults and Next.js's base. Bypasses

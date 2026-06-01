@@ -4,6 +4,7 @@ const config: BuildEntries = {
   // Raw JS files that bypass the bundler — they run in the user's Storybook
   // build and must resolve `next` from the user's project, not ours.
   extraOutputs: {
+    './empty-module': './loaders/empty-module.cjs',
     './next-image-mock': './loaders/next-image-mock.js',
     './storybook-nextjs-font-loader':
       './loaders/storybook-nextjs-font-loader.cjs',
