@@ -1,0 +1,9 @@
+:root {
+  --sb-swatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23ff4785'/%3E%3C/svg%3E");
+}
+
+.sb-ext-url-probe {
+  width: 16px;
+  height: 16px;
+  background-image: var(--sb-swatch);
+}

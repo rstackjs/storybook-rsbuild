@@ -35,8 +35,16 @@ class StorybookUserPluginProbe {
 }
 
 const nextConfig: NextConfig = {
+  // `@sandboxes/nextjs-barrel` is a TS re-export barrel: listing it here makes
+  // next-swc emit `__barrel_optimize__` for its named imports, exercising the
+  // matchResource → SWC-chain rule (`makeBarrelRule`) against TS source.
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', '@sandboxes/nextjs-barrel'],
+  },
+  // SWC styled-components transform — must flow through our extracted loader
+  // chain (exercised by the StyledComponents story).
+  compiler: {
+    styledComponents: true,
   },
   transpilePackages: ['@sandboxes/nextjs-transpiled'],
   webpack: (config, { webpack }) => {
