@@ -1,10 +1,8 @@
 import './globals.css'
 import type { Meta, StoryObj } from 'storybook-next-rsbuild'
 
-// Regression target: Next.js's global CSS rule survives `prepareNextCssRules`
-// extraction. If Rsbuild's CSS pipeline isn't fully replaced, global imports
-// either error at build (Next.js error-loader fires for non-_app issuers) or
-// silently drop styles.
+// Regression target: a global `.css` import from preview must apply its styles.
+// Rsbuild owns plain CSS, so this guards that global imports aren't dropped.
 function GlobalCssProbe() {
   return (
     <p className="sb-global-probe" data-testid="global-css-probe">

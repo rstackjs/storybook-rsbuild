@@ -1,5 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+import { pluginSass } from '@rsbuild/plugin-sass'
 import type { StorybookConfig } from 'storybook-next-rsbuild'
 
 const getAbsolutePath = (value: string): any => {
@@ -23,6 +25,11 @@ const config: StorybookConfig = {
     options: { forwardNextConfigPlugins: true },
   },
   staticDirs: ['../public'],
+  // Enable Sass for the Scss story's `.module.scss`. @rsbuild/plugin-sass 1.x is
+  // compatible with the pinned @rsbuild/core 1.x and merges into the config the
+  // framework's own rsbuildFinal bridge produces.
+  rsbuildFinal: (config) =>
+    mergeRsbuildConfig(config, { plugins: [pluginSass()] }),
   // Steal .svg from Rsbuild's default asset rule so the SVGR rule the user
   // added via `next.config.webpack()` is the one that ultimately processes
   // them. Mirrors the safe-wallet pattern: SVGR cooperation typically needs

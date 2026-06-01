@@ -80,11 +80,12 @@ test.describe(sandbox.name, () => {
     const heading = frame.getByRole('heading', { name: 'Inter (Google Font)' })
     await expect(heading).toBeVisible()
 
-    // next/font emits a hashed class prefixed with `__className_` / `__Inter`;
-    // exact hash is non-deterministic so match loosely.
+    // The ported @storybook/nextjs font loader emits a deterministic
+    // `<family>-<style>` class (e.g. `inter-normal`), not Next's native
+    // `__className_<hash>`. See loaders/storybook-nextjs-font-loader.cjs.
     const wrapper = heading.locator('..')
     const className = await wrapper.getAttribute('class')
-    expect(className).toMatch(/(__Inter|__className_)/)
+    expect(className).toMatch(/inter-normal/)
   })
 
   test('next/font exposes a CSS variable that resolves to the font family', async ({
@@ -365,5 +366,84 @@ test.describe(sandbox.name, () => {
     const probe = frame.getByTestId('user-fallback-probe')
     await expect(probe).toBeVisible()
     await expect(probe).toHaveText(/resolved to empty module/)
+  })
+
+  test('root-absolute url() in CSS builds and passes through as a runtime URL', async ({
+    page,
+  }) => {
+    // Regression target (safe-wallet): Rsbuild's css-loader tried to resolve
+    // `/vercel.svg` as a module and failed the build; we mirror Next.js and
+    // leave root-absolute urls untouched (isRuntimeCssUrl).
+    const frame = await openStory(page, 'stories-cssabsoluteurl--default')
+    const probe = frame.getByTestId('css-abs-url-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS('background-image', /url\(.*vercel\.svg.*\)/)
+  })
+
+  test('data: URL in a CSS custom property survives the css-loader passthrough', async ({
+    page,
+  }) => {
+    // Regression target (transit/proposalsapp): css-loader must not try to
+    // resolve a data:/external URL as a module.
+    const frame = await openStory(page, 'stories-cssexternalurl--default')
+    const probe = frame.getByTestId('css-ext-url-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS(
+      'background-image',
+      /url\(["']?data:image\/svg\+xml/,
+    )
+  })
+
+  test('optimizePackageImports compiles a TS re-export barrel via __barrel_optimize__', async ({
+    page,
+  }) => {
+    // Regression target (safe-wallet @mui): the barrel matchResource bypasses
+    // the .tsx rule, so without makeBarrelRule the TS source would be parsed as
+    // raw JS and throw. lucide-react (JS) doesn't exercise this; this does.
+    const frame = await openStory(page, 'stories-optimizedimports--ts-barrel')
+    await expect(frame.getByTestId('barrel-ts-badge')).toHaveText('ok')
+  })
+
+  test('Tailwind utilities are expanded by the PostCSS pipeline', async ({
+    page,
+  }) => {
+    // Regression target: 6/8 gauntlet projects run Tailwind through Rsbuild's
+    // PostCSS. Arbitrary-value utilities prove `@tailwind utilities` expanded.
+    const frame = await openStory(page, 'stories-tailwind--default')
+    const probe = frame.getByTestId('tw-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS('color', 'rgb(255, 71, 133)')
+    await expect(probe).toHaveCSS('font-weight', '700')
+  })
+
+  test('SCSS modules compile via @rsbuild/plugin-sass and apply scoped styles', async ({
+    page,
+  }) => {
+    // Regression target (oak): pins the consumer contract that .scss works when
+    // @rsbuild/plugin-sass is enabled, with CSS-module scoping intact.
+    const frame = await openStory(page, 'stories-scss--default')
+    const probe = frame.getByTestId('scss-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS('border-color', 'rgb(0, 128, 0)')
+  })
+
+  test('styled-components applies styles via the next-swc transform', async ({
+    page,
+  }) => {
+    // Regression target (oak): the styled-components SWC transform flows through
+    // our extracted next-swc loader chain.
+    const frame = await openStory(page, 'stories-styledcomponents--default')
+    const probe = frame.getByTestId('sc-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS('color', 'rgb(255, 71, 133)')
+  })
+
+  test('@emotion/styled injects styles into the preview', async ({ page }) => {
+    // Regression target (safe-wallet): @emotion/styled resolves and injects
+    // styles through Rsbuild's bundle.
+    const frame = await openStory(page, 'stories-emotion--default')
+    const probe = frame.getByTestId('emotion-probe')
+    await expect(probe).toBeVisible()
+    await expect(probe).toHaveCSS('color', 'rgb(255, 199, 0)')
   })
 })
