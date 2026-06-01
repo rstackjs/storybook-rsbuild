@@ -34,6 +34,7 @@
       "types": "./dist/config/preview.d.ts",
       "default": "./dist/config/preview.js"
     },
+    "./empty-module": "./loaders/empty-module.cjs",
     "./headers.mock": {
       "types": "./dist/export-mocks/headers/index.d.ts",
       "default": "./dist/export-mocks/headers/index.js"
