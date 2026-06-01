@@ -5,7 +5,8 @@ const config: BuildEntries = {
   // build and must resolve `next` from the user's project, not ours.
   extraOutputs: {
     './next-image-mock': './loaders/next-image-mock.js',
-    './next-font-url-rewrite': './loaders/next-font-url-rewrite.cjs',
+    './storybook-nextjs-font-loader':
+      './loaders/storybook-nextjs-font-loader.cjs',
     './react-refresh-entry': './loaders/react-refresh-entry.cjs',
     './swc-loader-shim': './loaders/swc-loader-shim.cjs',
   },
@@ -48,10 +49,6 @@ const config: BuildEntries = {
       {
         exportEntries: ['./node'],
         entryPoint: './src/node/index.ts',
-      },
-      {
-        exportEntries: ['./rspack-helpers'],
-        entryPoint: './src/rspack-helpers.ts',
       },
     ],
   },
