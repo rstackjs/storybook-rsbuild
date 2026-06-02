@@ -1,0 +1,60 @@
+import { PackageManagerTabs } from '@theme'
+
+# Vue
+
+Storybook for Vue & Rsbuild 帮助你使用与应用相同的 Rsbuild 配置来预览和迭代 Vue 组件。
+
+## 环境要求
+
+<div style={{ width: '100%', maxWidth: '400px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `vue` | ≥ 3 |
+| `@rsbuild/core` | ≥ 1.0.1 |
+| `storybook` | ≥ 10.0.0 |
+
+</div>
+
+## 快速开始
+
+在一个已有的、基于 Rsbuild 的 Vue 项目中执行以下步骤。
+
+### 安装
+
+安装 Vue framework 包和 `@rsbuild/core`。尽管 `storybook-vue3-rsbuild` 已将 `@rsbuild/core` 声明为 peer dependency，但仍建议将其作为直接的 dev dependency 列出，以便版本锁定与 lockfile 审计保持清晰明确。
+
+<PackageManagerTabs command="install @rsbuild/core storybook-vue3-rsbuild -D" />
+
+### 配置 `.storybook/main.ts`
+
+```js
+import { StorybookConfig } from 'storybook-vue3-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-vue3-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  rsbuildFinal: (config) => {
+    // Customize the final Rsbuild config here
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
+  },
+}
+
+export default config
+```
+
+准备就绪！可以查看 [Vue 3 sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/vue3) 获取完整参考，并浏览 [Storybook 文档](https://storybook.js.org/docs)了解各项功能指南。
+
+## 后续步骤
+
+现在 Storybook 已经运行起来，接下来探索如何为你的 Vue 组件创建 story：
+
+- **[编写 Stories](https://storybook.js.org/docs/writing-stories)**：了解 Component Story Format（CSF）。
+- **[Vue Essentials](https://storybook.js.org/docs/get-started/frameworks/vue3-vite)**：面向 Storybook 中 Vue 开发的专门指南。
+
+## 选项
+
+framework 特定的选项及其默认值，请参阅[配置指南](/guide/configuration#framework-options)。

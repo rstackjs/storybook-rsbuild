@@ -1,0 +1,86 @@
+import { PackageManagerTabs } from '@theme'
+
+# Rslib
+
+该 addon 会从你的 Rslib 配置文件中加载一份可复用的 Rsbuild config，使 `storybook-builder-rsbuild` 与你的库构建所使用的配置保持一致。
+
+它还允许你在 Storybook 内开发 `mf` [(Module Federation)](https://rslib.rs/guide/basic/output-format#mf) 格式。
+
+完整的参考实现请查看 [React 组件库示例](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rslib-react-component)。
+
+## 快速开始
+
+### 安装
+
+<PackageManagerTabs command="install @rsbuild/core storybook-addon-rslib -D" />
+
+请直接安装 `@rsbuild/core`，这样 addon 与你的 framework 包所使用的版本就会固定在你自己的 lockfile 中。请将其与你在项目 [framework 指南](/guide/framework) 中所选的 framework 包（例如 `storybook-react-rsbuild`）配合使用。
+
+### 配置 `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+export default {
+  addons: ['storybook-addon-rslib'],
+}
+```
+
+或者手动配置该 addon：
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+export default {
+  addons: [
+    {
+      name: 'storybook-addon-rslib',
+      options: {
+        // Check options section.
+      },
+    },
+  ],
+}
+```
+
+## Module Federation
+
+请参阅 [Rslib Module Federation 文档](https://rslib.rs/guide/advanced/module-federation)，以便在 Storybook 中加载 `mf` 产物前先做好准备。
+
+## 选项
+
+```ts
+export interface AddonOptions {
+  rslib?: {
+    /**
+     * `cwd` passed to loadConfig of Rslib
+     * @default undefined
+     */
+    cwd?: string
+    /**
+     *  `path` passed to loadConfig of Rslib
+     * @default undefined
+     */
+    configPath?: string
+    /**
+     * The lib config index in `lib` field to use, will be merged with the other fields in the config.
+     * Set to a number to use the lib config at that index.
+     * Set to `false` to disable using the lib config.
+     * @default 0
+     */
+    libIndex?: number | false
+    /**
+     * Modify the Rslib lib config before transforming it to Rsbuild config which will be merged
+     * with Storybook. You can modify the configuration in the config parameters in place.
+     * @experimental subject to change at any time
+     * @default undefined
+     */
+    modifyLibConfig?: (config: LibConfig) => void
+    /**
+     * Modify the Rsbuild config transformed from lib config before merging with Storybook
+     * config. You can modify the configuration in the config parameters in place.
+     * @experimental subject to change at any time
+     * @default undefined
+     */
+    modifyLibRsbuildConfig?: (config: RsbuildConfig) => void
+  }
+}
+```

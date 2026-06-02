@@ -1,0 +1,185 @@
+# 配置
+
+Storybook Rsbuild 提供了多种自定义构建流程和行为的方式。本指南介绍可在 `.storybook/main.ts` 中使用的配置项。
+
+:::tip Storybook 文档
+本指南聚焦于 Rsbuild 特有的配置。关于通用的 Storybook 配置（stories、addons、refs 等），请参阅 [Storybook Configure](https://storybook.js.org/docs/configure) 文档。
+:::
+
+## rsbuildFinal
+
+`rsbuildFinal` 字段让你能够直接访问 Rsbuild 配置。你可以用它来自定义构建配置，类似于 Webpack builder 中的 [webpackFinal](https://storybook.js.org/docs/builders/webpack#extending-storybooks-webpack-config)。
+
+该函数接收当前的 Rsbuild 配置和一个 options 对象，并应返回修改后的配置。
+
+:::warning 使用 `mergeRsbuildConfig` 进行修改
+始终使用来自 `@rsbuild/core` 的 [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) 来修改配置。直接修改诸如 `config.tools.rspack = {...}` 之类的属性可能不会生效，因为内部配置可能是函数/对象组成的数组，直接赋值可能会被静默忽略。
+:::
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild';
+import { mergeRsbuildConfig } from '@rsbuild/core';
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: [],
+  async rsbuildFinal(config, { configType }) {
+    // Customize Rsbuild config here
+    if (configType === 'PRODUCTION') {
+      return mergeRsbuildConfig(config, {
+        performance: {
+          removeConsole: true,
+        },
+      });
+    }
+
+    // Example: add resolve alias
+    return mergeRsbuildConfig(config, {
+      resolve: {
+        alias: {
+          '@components': './src/components',
+        },
+      },
+    });
+  },
+};
+
+export default config;
+```
+
+## Builder 选项
+
+你可以通过 `core.builder` 选项配置底层的 Rsbuild builder。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild';
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  core: {
+    builder: {
+      name: 'storybook-builder-rsbuild',
+      options: {
+        // Path to your existing rsbuild.config.ts
+        // Defaults to the root rsbuild.config.ts if found
+        rsbuildConfigPath: './custom-rsbuild.config.ts',
+        
+        // Enable filesystem cache for faster rebuilds
+        // Default: false
+        fsCache: true,
+        
+        // Enable lazy compilation (experimental)
+        // lazyCompilation: true,
+
+        // Specify Rsbuild environment to use (for multi-environment configs)
+        // environment: 'web',
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+### 选项参考
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `rsbuildConfigPath` | `string` | `cwd/rsbuild.config.ts` | 待合并的已有 Rsbuild 配置文件路径。 |
+| `fsCache` | `boolean` | `false` | 启用 Rspack 的持久化文件系统缓存。 |
+| `lazyCompilation` | `boolean` | `false` | 启用 lazy compilation 以加快开发启动速度。 |
+| `environment` | `string` | `undefined` | 从 Rsbuild 配置中选择特定的 [environment](https://rsbuild.rs/config/environments)。 |
+
+## Webpack Addons 兼容性
+
+由于 Rspack 兼容 webpack 的 loader/plugin API，你通常可以使用为 Webpack 设计的 Storybook addon。为此，请使用 `webpackAddons` 字段而非 `addons`。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild';
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Addons that depend on Webpack loaders/plugins
+  webpackAddons: [
+    '@storybook/addon-coverage',
+  ],
+};
+
+export default config;
+```
+
+## Framework 选项
+
+framework 特有的选项让你能够为 React、Vue 等定制行为。
+
+### React 选项
+
+对于 `storybook-react-rsbuild`，你可以配置 `reactDocgen` 和 legacy root API。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild';
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-react-rsbuild',
+    options: {
+      // Configure strict mode
+      strictMode: true,
+      
+      // Use legacy ReactDOM.render instead of createRoot (React 18+)
+      legacyRootApi: false,
+    },
+  },
+  stories: [],
+  typescript: {
+    // Configure docgen for TypeScript
+    // 'react-docgen-typescript' | 'react-docgen' | false
+    reactDocgen: 'react-docgen-typescript',
+    
+    // Pass options to react-docgen-typescript-plugin
+    reactDocgenTypescriptOptions: {
+      propFilter: (prop) => {
+        return prop.parent ? !/node_modules/.test(prop.parent.fileName) : true;
+      },
+    },
+  }
+};
+
+export default config;
+```
+
+## TypeScript 选项
+
+Storybook Rsbuild 使用 `@rsbuild/plugin-type-check` 进行类型检查。你可以通过 `typescript` 字段对其进行配置。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild';
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  typescript: {
+    // Enable/disable fork-ts-checker-webpack-plugin
+    check: true,
+    
+    // Options passed to fork-ts-checker-webpack-plugin
+    checkOptions: {
+      typescript: {
+        memoryLimit: 4096,
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+通用的 TypeScript 配置请参阅 [Storybook TypeScript 文档](https://storybook.js.org/docs/configure/integration/typescript)。

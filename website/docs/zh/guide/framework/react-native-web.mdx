@@ -1,0 +1,371 @@
+import { PackageManagerTabs } from '@theme'
+
+# React Native Web
+
+Storybook for React Native Web & Rsbuild 让你能够开发并记录借助 [react-native-web](https://necolas.github.io/react-native-web/) 在 Web 上运行的 React Native 组件。
+
+该 framework 扩展了 `storybook-react-rsbuild`，提供完整的 React Native Web 兼容能力，包括 alias 解析、Web 专属扩展名以及对 React Native 包的转译。
+
+## 环境要求
+
+<div style={{ width: '100%', maxWidth: '400px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `react` | ≥ 16.8 |
+| `react-native-web` | ≥ 0.19.0 |
+| `@rsbuild/core` | ≥ 1.5.0 |
+| `@rsbuild/plugin-react` | ≥ 1.0.0 |
+| `storybook` | ≥ 10.1.0 |
+
+</div>
+
+## 快速开始
+
+### 安装
+
+安装 framework 包及其 peer dependency。`@rsbuild/core` 与 `@rsbuild/plugin-react` 都直接列出，以保证版本锁定和 lockfile 审计清晰无歧义。
+
+<PackageManagerTabs command="install @rsbuild/core @rsbuild/plugin-react storybook-react-native-web-rsbuild react-native-web -D" />
+
+### 配置 `rsbuild.config.ts`
+
+创建或更新你的 Rsbuild 配置，引入 React plugin：
+
+```ts
+import { defineConfig } from '@rsbuild/core'
+import { pluginReact } from '@rsbuild/plugin-react'
+
+export default defineConfig({
+  plugins: [pluginReact()],
+})
+```
+
+### 配置 `.storybook/main.ts`
+
+```ts
+import type { StorybookConfig } from 'storybook-react-native-web-rsbuild'
+
+const config: StorybookConfig = {
+  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
+  framework: {
+    name: 'storybook-react-native-web-rsbuild',
+    options: {},
+  },
+}
+
+export default config
+```
+
+## 特性
+
+该 framework 会自动处理：
+
+- **Alias 解析**：`react-native` → `react-native-web`
+- **Web 扩展名**：优先解析 `.web.tsx`、`.web.ts`、`.web.js` 文件
+- **全局变量定义**：设置 `__DEV__`、`EXPO_OS` 等 React Native 全局变量
+- **包转译**：转译 `react-native`、`@react-native`、`expo` 和 `@expo` 等包
+- **React docgen**：通过 react-docgen 完整支持 props 文档
+
+## Framework 选项
+
+```ts
+interface FrameworkOptions {
+  /**
+   * Additional node_modules that need to be transpiled.
+   * Packages starting with `react-native`, `@react-native`, `expo`, and `@expo`
+   * are included by default.
+   */
+  modulesToTranspile?: string[]
+
+  /**
+   * Options passed to the underlying rsbuild-plugin-react-native-web plugin.
+   */
+  pluginOptions?: PluginReactNativeWebOptions
+}
+
+interface PluginReactNativeWebOptions {
+  /**
+   * Additional node_modules that need to be transpiled.
+   * @example ['my-react-native-library']
+   */
+  modulesToTranspile?: string[]
+
+  /**
+   * The JSX runtime to use.
+   * @default 'automatic'
+   */
+  jsxRuntime?: 'automatic' | 'classic'
+
+  /**
+   * The source for JSX imports when using the automatic runtime.
+   * @default 'react'
+   * @example 'nativewind' for NativeWind v4+
+   */
+  jsxImportSource?: string
+
+  /**
+   * Modules that should not be tree-shaken.
+   * @default ['react-native-css-interop', 'expo-modules-core']
+   */
+  noTreeshakeModules?: string[]
+}
+```
+
+### 示例：转译额外的包
+
+部分 React Native 库发布的是未经转译的代码。将它们加入 `modulesToTranspile`：
+
+```ts
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-react-native-web-rsbuild',
+    options: {
+      modulesToTranspile: [
+        'react-native-reanimated',
+        '@react-navigation/native',
+      ],
+    },
+  },
+}
+```
+
+## 编写 Stories
+
+使用标准的 React Native 组件来编写 story：
+
+```tsx
+// Button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react'
+import { Button } from './Button'
+
+const meta: Meta<typeof Button> = {
+  title: 'Components/Button',
+  component: Button,
+}
+
+export default meta
+type Story = StoryObj<typeof Button>
+
+export const Primary: Story = {
+  args: {
+    label: 'Press me',
+    variant: 'primary',
+  },
+}
+```
+
+```tsx
+// Button.tsx
+import { Text, TouchableOpacity, StyleSheet } from 'react-native'
+
+export function Button({ label, onPress, variant = 'primary' }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.button, styles[variant]]}>
+      <Text style={styles.text}>{label}</Text>
+    </TouchableOpacity>
+  )
+}
+
+const styles = StyleSheet.create({
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  primary: {
+    backgroundColor: '#007AFF',
+  },
+  text: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+})
+```
+
+## NativeWind 支持
+
+该 framework 支持 [NativeWind](https://www.nativewind.dev/)，可在 React Native 组件中使用 Tailwind CSS。
+
+### 安装
+
+<PackageManagerTabs command="install nativewind react-native-css-interop react-native-safe-area-context tailwindcss postcss autoprefixer -D" />
+
+:::tip
+建议安装 `react-native-safe-area-context`，以避免 `react-native-css-interop` 产生构建警告。
+:::
+
+### 配置
+
+1. **配置 Tailwind CSS** —— 创建 `tailwind.config.js`：
+
+```js
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  presets: [require('nativewind/preset')],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+2. **创建全局 CSS** —— 创建 `src/global.css`：
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+3. **在 preview 中引入 CSS** —— 更新 `.storybook/preview.tsx`：
+
+```tsx
+import '../src/global.css'
+
+const preview = {
+  // your preview config
+}
+
+export default preview
+```
+
+4. **配置 JSX import source** —— 更新 `.storybook/main.ts`：
+
+```ts
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-react-native-web-rsbuild',
+    options: {
+      pluginOptions: {
+        jsxImportSource: 'nativewind',
+      },
+    },
+  },
+}
+```
+
+### 用法
+
+```tsx
+import { View, Text } from 'react-native'
+
+export function Card({ title, children }) {
+  return (
+    <View className="p-4 bg-white rounded-lg shadow-md">
+      <Text className="text-xl font-bold text-gray-800">{title}</Text>
+      {children}
+    </View>
+  )
+}
+```
+
+## React Native Reanimated
+
+该 framework 为 Web 上的 [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/) 提供内置支持。
+
+### 安装
+
+<PackageManagerTabs command="install react-native-reanimated react-native-worklets" />
+
+### Framework 会处理的内容
+
+该 framework 会自动：
+
+- 定义 Reanimated 所需的 `_WORKLET` 和 `_frameTimestamp` 全局变量
+- 转换 Reanimated 的 webUtils 以兼容 ESM
+- 处理 pnpm/monorepo 环境下的模块解析
+
+### 用法
+
+```tsx
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
+
+export function FadeInView({ children }) {
+  return (
+    <Animated.View entering={FadeIn.duration(500)} exiting={FadeOut}>
+      {children}
+    </Animated.View>
+  )
+}
+```
+
+## Expo 支持
+
+该 framework 可与 Expo 项目配合使用。请确保你的 `metro.config.js` 或打包器配置不会与 Rsbuild 冲突。
+
+对于 Expo 专属的全局变量，plugin 会自动定义：
+
+- `EXPO_OS` → `'web'`
+- `process.env.EXPO_OS` → `'web'`
+
+## 后续步骤
+
+- **[React Native Web 文档](https://necolas.github.io/react-native-web/)**：了解所支持的 API
+- **[编写 Stories](https://storybook.js.org/docs/writing-stories)**：了解 Component Story Format（CSF）的基础知识
+- **[示例 Sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/react-native-web)**：查看一个可运行的示例
+
+## 故障排查
+
+### "React is not defined" 错误
+
+请确保已安装 `@rsbuild/plugin-react` 并在 `rsbuild.config.ts` 中完成配置。该 plugin 会启用自动 JSX runtime。
+
+### React Native 包的 Module not found 错误
+
+将出问题的包加入 framework 选项中的 `modulesToTranspile`。
+
+### `react-native` 导入的 TypeScript 错误
+
+将 `@types/react-native` 安装为 dev dependency，或创建一个 `react-native.d.ts` 文件：
+
+```ts
+declare module 'react-native' {
+  export * from 'react-native-web'
+}
+```
+
+### React Native 包中的 Flow 语法错误
+
+部分较旧的 React Native 包在发布前可能未剥离 [Flow](https://flow.org/) 类型注解。如果你遇到与 Flow 类型相关的语法错误（例如类型注解中出现 `Unexpected token :`），可以使用 Babel 来剥离 Flow 类型。
+
+1. 安装所需的包：
+
+```bash
+pnpm add -D @babel/core babel-loader @babel/preset-flow @babel/preset-react
+```
+
+2. 在 `.storybook/main.ts` 中添加自定义 Rsbuild 配置：
+
+```ts
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-react-native-web-rsbuild',
+    options: {},
+  },
+  rsbuildFinal: async (config) => {
+    return mergeRsbuildConfig(config, {
+      tools: {
+        bundlerChain: (chain) => {
+          // Add babel-loader for packages with Flow syntax
+          chain.module
+            .rule('flow')
+            .test(/\.jsx?$/)
+            .include.add(/node_modules\/(react-native|@react-native)/)
+            .end()
+            .use('babel')
+            .loader('babel-loader')
+            .options({
+              presets: ['@babel/preset-flow', '@babel/preset-react'],
+            })
+        },
+      },
+    })
+  },
+}
+```
+
+该配置使用 Babel 处理 React Native 包，在它们交由 SWC 处理之前剥离 Flow 类型注解。

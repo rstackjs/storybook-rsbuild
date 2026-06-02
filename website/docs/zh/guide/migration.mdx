@@ -1,0 +1,283 @@
+import { PackageManagerTabs } from '@theme'
+
+# 迁移
+
+本指南介绍如何将现有的 Storybook 项目从 **webpack5** 或 **Vite** framework 迁移到 **Storybook Rsbuild**（例如 `storybook-react-rsbuild`）。
+
+:::tip Using an AI coding agent?
+你的 agent 可以自动完成此次迁移。安装 agent skills 并让它迁移你的项目：
+
+<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+
+:::
+
+:::info Storybook versions
+
+请将你的 Storybook 版本与对应的 storybook-rsbuild 版本匹配：
+
+| Storybook | Storybook Rsbuild |
+| --------- | ----------------- |
+| v10       | `^3`              |
+| v9        | `^2`              |
+| v8        | `^1`              |
+
+:::
+
+## 从 Storybook Webpack5 Framework 迁移
+
+如果你的 `.storybook/main.ts` 使用了 webpack5 framework 包（例如 `@storybook/react-webpack5`、`@storybook/vue3-webpack5`），请按照本节操作。
+
+### 1. 替换包
+
+卸载旧的 webpack5 framework 包，并安装对应的 Rsbuild 版本以及 `@rsbuild/core`。
+
+例如，迁移一个 React 项目：
+
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild -D" />
+
+然后移除旧的包：
+
+<PackageManagerTabs command="remove @storybook/builder-webpack5 @storybook/react-webpack5" />
+
+framework 包（例如 `storybook-react-rsbuild`）已将 `storybook-builder-rsbuild` 作为依赖项包含在内——你**无需**单独安装 builder。
+
+#### 包映射关系
+
+| 旧（webpack5）                        | 新（Rsbuild）                        |
+| ------------------------------------- | ------------------------------------ |
+| `@storybook/react-webpack5`           | `storybook-react-rsbuild`           |
+| `@storybook/vue3-webpack5`            | `storybook-vue3-rsbuild`            |
+| `@storybook/html-webpack5`            | `storybook-html-rsbuild`            |
+| `@storybook/web-components-webpack5`  | `storybook-web-components-rsbuild`  |
+
+### 2. 更新 `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+// Before
+// import type { StorybookConfig } from '@storybook/react-webpack5'
+// After
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  // Before: framework: '@storybook/react-webpack5',
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+### 3. 将 `webpackFinal` 转换为 `rsbuildFinal`
+
+:::warning Use `mergeRsbuildConfig` for modifications
+请始终使用来自 `@rsbuild/core` 的 [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) 来修改配置。直接修改 `config.tools.rspack = {...}` 这类属性可能不会生效，因为内部配置可能是由函数/对象组成的数组，直接赋值可能会被静默忽略。
+:::
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Before:
+  // webpackFinal: async (config) => {
+  //   config.resolve.alias['@components'] = path.resolve(__dirname, '../src/components')
+  //   config.module.rules.push({ test: /\.svg$/, use: ['@svgr/webpack'] })
+  //   return config
+  // },
+
+  // After:
+  rsbuildFinal: async (config) => {
+    return mergeRsbuildConfig(config, {
+      resolve: {
+        alias: {
+          '@components': './src/components',
+        },
+      },
+      // For SVG, use @rsbuild/plugin-svgr
+    })
+  },
+}
+
+export default config
+```
+
+:::tip Use relative paths in `resolve.alias`
+Rsbuild 会相对于项目根目录解析 alias 值。请使用 `'./src/components'`，而不是 `path.resolve(__dirname, '../src/components')`。相对路径写法更简洁，并且能避免 ESM 配置中 `__dirname` 带来的问题。
+:::
+
+### 4. 处理依赖 webpack 的 addon
+
+部分 Storybook addon 在内部使用了 `webpackFinal`。请将它们从 `addons` 移动到 `webpackAddons`：
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Regular addons (framework-agnostic)
+  addons: [
+    '@storybook/addon-docs',
+    '@storybook/addon-onboarding',
+  ],
+  // Addons that depend on webpack loaders/plugins
+  webpackAddons: [
+    '@storybook/addon-coverage',
+  ],
+}
+
+export default config
+```
+
+`webpackAddons` 字段会运行每个 addon 的 `webpackFinal` 钩子，并自动将生成的 webpack 配置转换为 Rspack 配置。
+
+:::tip Common addons that need `webpackAddons`
+有一些 addon 在内部挂载了 `webpackFinal`，必须移动到 `webpackAddons`（或替换为 Rsbuild 原生等价方案）：
+
+- `@storybook/addon-styling-webpack` —— 全局 CSS / PostCSS / Sass / Less。可通过 `webpackAddons` 接入，或替换为 [`@rsbuild/plugin-postcss`](https://rsbuild.rs/plugins/list/plugin-postcss)、[`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) 或 [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less)。
+- `@storybook/addon-coverage` —— 收集测试覆盖率；通过 `webpackAddons` 接入。
+- `@storybook/preset-create-react-app` —— CRA 兼容性；通过 `webpackAddons` 接入。
+
+如果某个 addon 的名称以 `-webpack` 结尾，或其文档提到了 `webpackFinal`，则可以认为它需要这样处理。即使 `storybook build` 仍然通过，静默丢弃一个仅支持 webpack 的 addon 也是一种功能退化。
+:::
+
+### 5. 转换常见的 webpack 模式
+
+| webpack 模式                          | Rsbuild 等价方案                                        |
+| ------------------------------------- | ------------------------------------------------------- |
+| `config.resolve.alias`                | `rsbuildFinal` 中的 `resolve.alias`                     |
+| `config.resolve.extensions`           | `resolve.extensions`（Rsbuild 已有合理的默认值）         |
+| `config.module.rules`（loaders）       | `tools.rspack` 或 Rsbuild plugins                       |
+| `config.plugins`（webpack plugins）    | 对于 Rspack plugins 使用 `tools.rspack`                 |
+| `DefinePlugin`                        | `source.define`                                         |
+| `css-loader` / `style-loader`         | 内置支持，如需自定义可使用 `tools.cssLoader`             |
+| `sass-loader`                         | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
+| `less-loader`                         | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
+| `file-loader` / `url-loader`          | 内置 asset modules                                      |
+| SVGR                                  | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
+
+:::tip Rspack plugin compatibility
+并非所有 webpack plugin 都与 Rspack 兼容。详情请查阅 [Rspack 兼容性指南](https://rspack.rs/guide/compatibility/plugin)。
+:::
+
+---
+
+## 从 Storybook Vite Framework 迁移
+
+如果你的 `.storybook/main.ts` 使用了 Vite framework 包（例如 `@storybook/react-vite`、`@storybook/vue3-vite`），请按照本节操作。
+
+### 1. 替换包
+
+卸载旧的 Vite framework 包，并安装对应的 Rsbuild 版本以及 `@rsbuild/core`。
+
+例如，迁移一个 React 项目：
+
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild -D" />
+
+然后移除旧的包：
+
+<PackageManagerTabs command="remove @storybook/builder-vite @storybook/react-vite" />
+
+#### 包映射关系
+
+| 旧（Vite）                            | 新（Rsbuild）                        |
+| ------------------------------------- | ------------------------------------ |
+| `@storybook/react-vite`              | `storybook-react-rsbuild`           |
+| `@storybook/vue3-vite`               | `storybook-vue3-rsbuild`            |
+| `@storybook/html-vite`               | `storybook-html-rsbuild`            |
+| `@storybook/web-components-vite`     | `storybook-web-components-rsbuild`  |
+
+### 2. 更新 `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+// Before
+// import type { StorybookConfig } from '@storybook/react-vite'
+// After
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  // Before: framework: '@storybook/react-vite',
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+### 3. 将 `viteFinal` 转换为 `rsbuildFinal`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  // Before:
+  // viteFinal: async (config) => {
+  //   config.resolve.alias['@'] = path.resolve(__dirname, '../src')
+  //   return config
+  // },
+
+  // After:
+  rsbuildFinal: async (config) => {
+    return mergeRsbuildConfig(config, {
+      resolve: {
+        alias: {
+          '@': './src',
+        },
+      },
+    })
+  },
+}
+
+export default config
+```
+
+:::tip Use relative paths in `resolve.alias`
+Rsbuild 会相对于项目根目录解析 alias 值。请使用 `'./src'`，而不是 `path.resolve(__dirname, '../src')`。相对路径写法更简洁，并且能避免 ESM 配置中 `__dirname` 带来的问题。
+:::
+
+### 4. 转换常见的 Vite 模式
+
+| Vite 模式                     | Rsbuild 等价方案                                        |
+| ----------------------------- | ------------------------------------------------------- |
+| `resolve.alias`               | `rsbuildFinal` 中的 `resolve.alias`                     |
+| `plugins: [react()]`         | 由 framework 包自动配置                                  |
+| `css.preprocessorOptions`    | `@rsbuild/plugin-sass` 或 `@rsbuild/plugin-less`       |
+| `define`                      | `source.define`                                         |
+| `server.proxy`               | `server.proxy`                                          |
+| `build.target`               | `output.target`                                         |
+
+:::tip Vite plugins are not compatible
+Vite plugin 无法与 Rsbuild 一起使用。请在 [Rsbuild plugin 列表](https://rsbuild.rs/plugins/list/) 中查找等价的 Rsbuild plugin。
+:::
+
+---
+
+## 验证
+
+迁移完成后，请验证：
+
+1. `npx storybook dev` 能够无错误启动
+2. 所有 stories 都能正确渲染
+3. HMR 正常工作（编辑某个组件，能看到它更新）
+4. `npx storybook build` 能够成功完成
+5. addon 功能正常（尤其是 docs、controls、actions）
+
+## 调试
+
+启用 Rsbuild 调试模式以检查生成的配置：
+
+```bash
+DEBUG=rsbuild storybook dev
+```
+
+查看 CLI 输出，确认 Rsbuild 和 Rspack 配置文件被写入的位置。

@@ -1,0 +1,135 @@
+import { PackageManagerTabs } from '@theme'
+
+# 快速上手
+
+![Storybook Rsbuild](https://github.com/rstackjs/storybook-rsbuild/assets/7237365/00165054-9e3e-4a15-8a99-27985989b9d2)
+
+<p style={{ display: 'flex', gap: '5px' }}>
+  <a href="https://www.npmjs.com/package/storybook-builder-rsbuild">
+    <img
+      src="https://img.shields.io/npm/v/storybook-builder-rsbuild?style=flat-square&color=ff4785"
+      alt="latest version"
+    />
+  </a>
+  <a href="https://npmcharts.com/compare/storybook-builder-rsbuild,storybook-react-rsbuild,storybook-react-vue,storybook-vue3-rsbuild,storybook-vue3-rsbuild?interval=7&log=false">
+    <img
+      src="https://img.shields.io/npm/dm/storybook-builder-rsbuild?style=flat-square&color=%23ff4785"
+      alt="NPM downloads per month"
+    />
+  </a>
+  <a href="https://github.com/rstackjs/storybook-rsbuild/blob/main/LICENSE">
+    <img
+      src="https://img.shields.io/npm/l/storybook-builder-rsbuild?style=flat-square&color=%23ff4785"
+      alt="license"
+    />
+  </a>
+</p>
+
+:::info Storybook 版本
+
+`main` 分支提供面向 Storybook v10 的 Rsbuild builder 以及各 framework 集成。请使用下表匹配你的 Storybook 版本，并在升级到 v10 前阅读[官方迁移指南](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#from-version-9x-to-1000)。
+
+| Storybook | Storybook Rsbuild                                                     |
+| --------- | --------------------------------------------------------------------- |
+| v10       | [^3.0.0](https://github.com/rstackjs/storybook-rsbuild)         |
+| v9        | [^2.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v2) |
+| v8        | [^1.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v1) |
+
+:::
+
+Storybook Rsbuild 让你能够使用 [Rsbuild](https://rsbuild.rs) 作为 Storybook 的构建引擎，从而获得更快的启动和构建速度。
+
+:::tip 在使用 AI 编程助手？
+如果你使用 [Claude Code](https://code.claude.com)、[Codex](https://openai.com/codex)、[OpenCode](https://opencode.ai) 或其他 AI 编程助手，可以安装我们的 agent skills 以获得引导式的安装与迁移：
+
+<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+
+这些 skills 会教你的 agent 如何配置 `rsbuildFinal`、设置 framework 集成，以及从 webpack/Vite 迁移。
+:::
+
+## 快速开始
+
+最快的上手方式是使用 Storybook CLI。
+
+### 新项目
+
+如果你正在搭建一个新项目，我们推荐先创建一个 Rsbuild 项目，然后再添加 Storybook。
+
+```bash
+# 1. Create a new Rsbuild project
+npm create rsbuild@latest
+
+# 2. Initialize Storybook (in the project root)
+npx storybook@latest init
+```
+
+Storybook 会检测到 Rsbuild 并自动为你配置 `storybook-builder-rsbuild`，同时还会向你的项目添加示例 stories。若想了解生成的文件，请查看 [Storybook 项目结构](https://storybook.js.org/docs/configure/user-interface/sidebar-and-urls)。
+
+### 已有项目
+
+如果你正在将一个已有的 Storybook 项目迁移到 Rsbuild，请安装相应的 framework 包并更新你的 `.storybook/main.ts`。
+
+详细的迁移指南请参阅 **[Frameworks](/guide/framework/react)** 章节。
+
+## 包
+
+| Package                                                                                                                             | 提供的能力                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | 由 Rsbuild 驱动的 Storybook builder                  |
+| [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-react)                   | 为 Rsbuild 配置的 React framework 集成     |
+| [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-vue3)                     | 为 Rsbuild 配置的 Vue 3 framework 集成     |
+| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | 原生 JavaScript/TypeScript 集成              |
+| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit 与 Web Components 集成                     |
+| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | 在 Storybook 中复用 Rslib 配置的 addon |
+| [storybook-addon-modernjs](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-modernjs)                   | 在 Storybook 中复用 Modern.js 配置的 addon |
+
+## 使用
+
+:::info Peer dependency 要求
+
+- **`@rsbuild/core >= 1.0.1`** — Storybook Rsbuild 依赖稳定的 Rsbuild 1.0 运行时。背景信息请参阅 [1.0 发布公告](https://rsbuild.rs/community/releases/v1-0)。
+- **`storybook >= 10.0.0`** — 这些包已针对 Storybook 10 验证。升级指引可参阅 [Storybook 发布说明](https://storybook.js.org/blog/storybook-10/)。
+
+:::
+
+使用 v8 兼容版本的包时，你无需直接安装 `storybook-builder-rsbuild`。`storybook-react-rsbuild`、`storybook-vue3-rsbuild` 等 framework 包已经为你内置了它。
+
+使用下列 framework 指南将 Storybook Rsbuild 接入你的项目。
+
+## 与 framework 一起使用
+
+### React
+
+参见[集成 React](/guide/framework/react)。
+
+### Vue
+
+参见[集成 Vue](/guide/framework/vue)。
+
+### 原生 JS/TS
+
+参见[集成原生 JavaScript / TypeScript](/guide/framework/vanilla)。
+
+### Web components
+
+参见[集成 web components（Lit）](/guide/framework/web-components)。
+
+## 集成
+
+### 与 Modern.js
+
+在 Storybook 中复用你已有的 Modern.js 配置。
+
+参见[集成 Modern.js](/guide/integrations/modernjs)。
+
+### 与 Rslib
+
+在 Storybook 中复用你已有的 Rslib 配置。
+
+参见[集成 Rslib](/guide/integrations/rslib)。
+
+### 与 Rspack
+
+将 Storybook Rsbuild 连接到已有的 Rspack 配置。
+
+参见[集成 Rspack](/guide/integrations/rspack)。

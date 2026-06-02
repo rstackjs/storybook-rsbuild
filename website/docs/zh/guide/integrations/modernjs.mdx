@@ -1,0 +1,131 @@
+import { PackageManagerTabs } from '@theme'
+
+# Modern.js
+
+该 addon 会从你的 Modern.js 配置文件中加载一份可复用的 Rsbuild config，使 `storybook-builder-rsbuild` 复用你的应用已经信赖的同一套配置。
+
+## 快速开始
+
+查看 [Modern.js React 示例](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/modernjs-react)，了解该集成在真实项目中的用法。
+
+### 安装
+
+<PackageManagerTabs command="install @rsbuild/core storybook-builder-rsbuild storybook-addon-modernjs -D" />
+
+请在同一个 workspace 中安装 `@rsbuild/core`。否则该 addon 无法读取你的 Modern.js 配置。
+
+请尽量与 `@modern-js/app-tools` 所使用的版本保持一致。如果你安装了不同的版本，`storybook-addon-modernjs` 会打印一条警告并给出推荐版本。
+
+### 配置 `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: ['storybook-addon-modernjs'],
+  framework: ['storybook-react-rsbuild'],
+}
+export default config
+```
+
+## 结合 Module Federation
+
+完整流程请参阅 [Module Federation 示例](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/modernjs-react-mf)。
+
+### 安装
+
+如果你的 Modern.js 应用使用了 Module Federation，请安装 `@module-federation/storybook-addon`。
+
+<PackageManagerTabs command="install @module-federation/storybook-addon -D" />
+
+### 配置 `.storybook/main.ts`
+
+添加该 addon 并手动传入 `remotes` 选项。Storybook 无法自动推断它。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+// import moduleFederationConfig from '../module-federation.config'
+const moduleFederationConfig = { remotes: {} }
+
+const config: StorybookConfig = {
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: [
+    'storybook-addon-modernjs',
+    {
+      name: '@module-federation/storybook-addon',
+      options: {
+        remotes: moduleFederationConfig.remotes,
+      },
+    },
+  ],
+  framework: ['storybook-react-rsbuild'],
+}
+export default config
+```
+
+### 配置 `modern.config.ts`
+
+使用 `@module-federation/storybook-addon` 时，请在 Storybook 运行期间于 `modern.config.ts` 中禁用 `moduleFederationPlugin`。
+
+一种做法是检查由你的 Storybook 脚本设置的环境变量。
+
+```json title="package.json"
+{
+  "scripts": {
+    "storybook": "STORYBOOK=true storybook dev -p 6006"
+  }
+}
+```
+
+```ts title="modern.config.ts"
+import { appTools, defineConfig } from '@modern-js/app-tools'
+import { moduleFederationPlugin } from '@module-federation/modern-js'
+
+// https://modernjs.dev/en/configure/app/usage
+export default defineConfig({
+  runtime: {
+    router: true,
+  },
+  plugins: [
+    appTools({
+      bundler: 'rspack',
+    }),
+    ...(process.env.STORYBOOK ? [] : [moduleFederationPlugin()]),
+  ],
+})
+```
+
+## 局限性
+
+Modern.js 拥有自己的 plugin 系统，会在将配置交给 Rsbuild 之前对其进行转换。
+
+Modern.js 还会在内部处理用户配置，在 Rsbuild 看到结果之前执行复杂的改动。
+
+:::tip
+因此，该 addon 在 Modern.js 中存在一些局限性。
+:::
+
+### 🎗 支持的用法
+
+- Modern.js 配置文件
+- 用于修改配置的 Modern.js plugin
+- Rsbuild plugin
+
+### 😪 不支持的用法
+
+- 不能使用 webpack，仅支持 Rspack
+- SSR 配置在 Storybook 中不会生效
+- 运行时能力，例如 `<Link>` 导航
+- [Modern.js plugin](https://modernjs.dev/plugin/cli-plugins/api.html) 只会调用 `config` 和 `resolveConfig` 这两个 hook
+
+### ☎️ 联系我们
+
+我们目前是通过 Storybook addon（而非 Storybook framework）来支持 Storybook 的。因此，Modern.js 的部分功能在 Storybook 中不可用。
+
+如果你对 Modern.js 与 Storybook 有任何疑问或建议，欢迎随时联系我们。
+
+- [GitHub](https://github.com/web-infra-dev/modern.js)
+- [Modern.js Discord](https://discord.gg/qPCqYg38De)
