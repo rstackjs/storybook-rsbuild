@@ -176,10 +176,10 @@ describe('buildNextLoaderChain', () => {
     expect(buildNextLoaderChain(rules, SHIM)).toBeNull()
   })
 
-  it('matches App Router rules with next-swc-loader but no react-refresh-loader', () => {
-    // Next.js App Router output emits client rules without the
-    // `builtin:react-refresh-loader` paired in — it's injected by
-    // `ReactRefreshRspackPlugin` instead. Older matcher required both.
+  it('falls back to a refresh-less next-swc-loader rule when none is paired', () => {
+    // When no rule pairs `builtin:react-refresh-loader` (e.g. prod extraction,
+    // or a stripped-down config), a lone `next-swc-loader` rule still maps to
+    // the shim. This is the fallback tier — not the preferred dev path.
     const swcOpts = { isServer: false }
     const rules = [
       {
@@ -189,6 +189,34 @@ describe('buildNextLoaderChain', () => {
     ]
     const chain = buildNextLoaderChain(rules, SHIM)
     expect(chain).toEqual([{ loader: SHIM, options: swcOpts }])
+  })
+
+  it('prefers the refresh-paired client rule over an earlier refresh-less rule', () => {
+    // Real bug: Next.js emits the `issuerLayer: 'api-node'` rule (next-swc
+    // alone, no flight) BEFORE the client rule that pairs
+    // `builtin:react-refresh-loader`. First-match-wins served stories without
+    // the Fast Refresh footer, so edits remounted the component and lost React
+    // state. The selector must reach the refresh-paired rule.
+    const clientOpts = { isServer: false, hasReactRefresh: true }
+    const rules = [
+      {
+        issuerLayer: 'api-node',
+        test: /\.tsx?$/,
+        use: [{ loader: 'next-swc-loader', options: { isServer: false } }],
+      },
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'next-swc-loader', options: clientOpts },
+        ],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: SHIM, options: clientOpts },
+    ])
   })
 
   it('prefers the plain client rule over flight-paired variants', () => {

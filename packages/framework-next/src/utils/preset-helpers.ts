@@ -54,17 +54,25 @@ export function filterNextAliases(
  * (`dev` / `hasReactRefresh`) and the presence of the refresh loader already
  * reflect the build mode. No post-hoc prod stripping is needed.
  *
- * Picking the "client" rule: Pages Router puts the loader chain at the top
- * level alongside `builtin:react-refresh-loader`. App Router emits multiple
- * nested rules under `oneOf` branches — some pair `next-swc-loader` with
- * `next-flight-loader` (RSC), others ship the plain client transform. We
- * prefer the plainest rule (just `next-swc-loader`, no flight pairings) since
- * Storybook stories run as client components.
+ * Picking the "client" rule: Next.js emits several `next-swc-loader` rules —
+ * RSC rules pair it with `next-flight-*`, the `issuerLayer: 'api-node'`
+ * API-route rule ships it alone, and the real client rule pairs it with
+ * `builtin:react-refresh-loader`. We must reach that last one: it is the only
+ * rule that carries the per-module Fast Refresh footer (the `module.hot.accept`
+ * self-accept). So we skip flight-paired rules and, among the rest, prefer the
+ * refresh-paired rule — falling back to a plain rule, then any rule (e.g. prod
+ * extraction, where Next.js emits no refresh loader at all). Picking a
+ * refresh-less rule (the bug this guards against: the `api-node` rule sorts
+ * before the client rule) serves stories without the footer, so SWC's
+ * `$RefreshReg$`/`$RefreshSig$` calls bind to the no-op globals in
+ * `react-refresh-entry.cjs`, nothing self-accepts, and edits remount the
+ * component — losing React state (plain HMR, not Fast Refresh).
  */
 export function buildNextLoaderChain(
   rawRules: any[],
   shimPath: string,
 ): any[] | null {
+  let refreshSwcRule: any = null
   let plainSwcRule: any = null
   let anySwcRule: any = null
   walkRules(rawRules, (rule) => {
@@ -74,10 +82,14 @@ export function buildNextLoaderChain(
     )
     if (!hasSwc) return
     anySwcRule ??= rule
-    const hasFlight = names.some((n) => n?.includes('next-flight'))
-    if (!hasFlight && !plainSwcRule) plainSwcRule = rule
+    if (names.some((n) => n?.includes('next-flight'))) return
+    if (names.some((n) => n?.includes('react-refresh-loader'))) {
+      refreshSwcRule ??= rule
+    } else {
+      plainSwcRule ??= rule
+    }
   })
-  const clientRule = plainSwcRule ?? anySwcRule
+  const clientRule = refreshSwcRule ?? plainSwcRule ?? anySwcRule
   if (!clientRule) return null
 
   return asUseArray(clientRule.use).flatMap((use) => {
