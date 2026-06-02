@@ -9,6 +9,8 @@
  * re-derives every row from the registry and fails on drift.
  *
  * Run: `pnpm tsx ./scripts/check-version-matrix.mts`  (network required).
+ * Manual gate — not wired into CI (the `npm view` calls need network); run it
+ * locally before a version bump or after editing the matrix table.
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
