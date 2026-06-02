@@ -1,0 +1,57 @@
+import { PackageManagerTabs } from '@theme'
+
+# Vanilla JS / TS
+
+为原生 JavaScript 或 TypeScript 项目使用 Storybook，在保持 Rsbuild 流水线不变的同时预览 UI 组件。
+
+## 环境要求
+
+<div style={{ width: '100%', maxWidth: '400px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `@rsbuild/core` | ≥ 1.0.1 |
+| `storybook` | ≥ 10.0.0 |
+
+</div>
+
+## 快速开始
+
+以下步骤假设你已经有一个不使用特定 framework 的 Rsbuild 项目。
+
+### 安装
+
+安装 HTML framework 包和 `@rsbuild/core`。尽管 `storybook-html-rsbuild` 将 `@rsbuild/core` 声明为 peer，仍建议将其作为直接的 dev dependency 列出，以保证版本锁定和 lockfile 审计清晰无歧义。
+
+<PackageManagerTabs command="install @rsbuild/core storybook-html-rsbuild -D" />
+
+### 配置 `.storybook/main.ts`
+
+```js
+import { StorybookConfig } from 'storybook-html-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-html-rsbuild',
+  stories: ['../src/**/*.stories.@(js|mjs|ts)'],
+  rsbuildFinal: (config) => {
+    // Customize the final Rsbuild config here
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
+  },
+}
+
+export default config
+```
+
+大功告成！查看 [vanilla TypeScript sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/vanilla-ts) 了解实际配置效果，并继续探索 [Storybook 文档](https://storybook.js.org/docs)。
+
+## 后续步骤
+
+- **[编写 Stories](https://storybook.js.org/docs/writing-stories)**：了解如何为原生 JavaScript/TypeScript 编写 story。
+- **[测试](https://storybook.js.org/docs/writing-tests)**：了解如何测试你的 UI 组件。
+
+## 选项
+
+framework 专属的选项及其默认值，请参阅[配置指南](/guide/configuration#framework-options)。

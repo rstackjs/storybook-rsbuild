@@ -12,6 +12,7 @@ import { pluginFontOpenSans } from 'rspress-plugin-font-open-sans'
 
 const siteUrl = 'https://storybook.rsbuild.rs'
 const siteDescription = 'Storybook builder and frameworks powered by Rsbuild.'
+const siteDescriptionZh = '由 Rsbuild 驱动的 Storybook builder 与 frameworks。'
 const heroImage = `${siteUrl}/storybook-rsbuild.svg`
 
 export default defineConfig({
@@ -69,6 +70,18 @@ export default defineConfig({
       docRepoBaseUrl:
         'https://github.com/rstackjs/storybook-rsbuild/tree/main/website/docs',
     },
+    locales: [
+      {
+        lang: 'en',
+        label: 'English',
+        description: siteDescription,
+      },
+      {
+        lang: 'zh',
+        label: '简体中文',
+        description: siteDescriptionZh,
+      },
+    ],
   },
   builderConfig: {
     plugins: [

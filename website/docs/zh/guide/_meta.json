@@ -1,0 +1,17 @@
+[
+  "index",
+  "configuration",
+  "examples",
+  {
+    "type": "dir",
+    "name": "framework",
+    "label": "Framework"
+  },
+  {
+    "type": "dir",
+    "name": "integrations",
+    "label": "集成"
+  },
+  "migration",
+  "troubleshooting"
+]

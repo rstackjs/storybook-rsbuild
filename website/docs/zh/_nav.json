@@ -1,0 +1,42 @@
+[
+  {
+    "text": "指南",
+    "link": "/guide/",
+    "activeMatch": "/guide/"
+  },
+  {
+    "text": "配置",
+    "link": "/guide/configuration",
+    "activeMatch": "/guide/configuration"
+  },
+  {
+    "text": "示例",
+    "link": "/guide/examples",
+    "activeMatch": "/guide/examples"
+  },
+  {
+    "text": "Storybook",
+    "link": "https://storybook.js.org/docs"
+  },
+  {
+    "text": "Rsbuild",
+    "link": "https://rsbuild.rs"
+  },
+  {
+    "text": "版本",
+    "items": [
+      {
+        "text": "Changelog",
+        "link": "https://github.com/rstackjs/storybook-rsbuild/releases"
+      },
+      {
+        "text": "v2.x (Storybook 9)",
+        "link": "https://storybook-v2.rsbuild.rs/"
+      },
+      {
+        "text": "v1.x (Storybook 8)",
+        "link": "https://github.com/rstackjs/storybook-rsbuild/blob/v1/website/docs/guide/"
+      }
+    ]
+  }
+]

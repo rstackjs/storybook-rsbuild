@@ -1,0 +1,90 @@
+import { PackageManagerTabs } from '@theme'
+
+# Rspack
+
+Rsbuild 构建于 Rspack 之上，因此你在 Rsbuild 中应用的任何配置同样适用于原生 Rspack 项目。本指南将介绍如何将 Storybook Rsbuild 接入已有的 Rspack 配置。
+
+完整的参考实现请查看 [Rspack React sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rspack-react-18)。
+
+## 配置
+
+### 1. 安装依赖
+
+以一个 React 示例为起点，安装 `storybook-react-rsbuild`（参见 [React framework 指南](/guide/framework/react)），并添加 Rspack 支持所需的 Rsbuild 包。
+
+<PackageManagerTabs command="install @rsbuild/core @rsbuild/plugin-react -D" />
+
+请确保已安装以下包：
+
+- `storybook`
+- `@rsbuild/core`
+- `@rsbuild/plugin-react`
+- `storybook-react-rsbuild`
+
+### 2. 创建 `rsbuild.config.ts`
+
+Storybook Rsbuild 读取项目 Rsbuild config 的方式，与 [`@storybook/builder-webpack5` 支持自定义 webpack 配置](https://storybook.js.org/docs/builders/webpack#import-a-custom-webpack-configuration) 的方式相同。请在此处配置 Rspack 应用的基础设置。
+
+```ts title="rsbuild.config.ts"
+import { defineConfig } from '@rsbuild/core'
+import { pluginReact } from '@rsbuild/plugin-react'
+
+export default defineConfig({
+  plugins: [pluginReact()],
+})
+```
+
+### 3. 配置 `.storybook/main.ts`
+
+请参照 [React framework 指南](/guide/framework/react#configure-storybookmaints) 中的设置，使 Storybook 使用 Rsbuild builder。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  addons: []
+}
+
+export default config
+```
+
+此时，`npx storybook dev` 应该会使用默认的 `@rsbuild/core` 和 `@rsbuild/plugin-react` 配置启动。如果你的项目已有自己的 `rspack.config`，请继续执行步骤 4 —— story 打包只会看到 `rsbuild.config.ts` 中定义的内容，因此任何未在此处镜像的自定义 rules、plugins 或 aliases 都会在你的 stories 中悄无声息地缺失。
+
+### 4. 镜像已有的 `rspack.config`
+
+如果你的项目为应用构建维护了一份自定义的 `rspack.config.ts` / `rspack.config.cjs`，请在 `rsbuild.config.ts` 中镜像其关键部分。Storybook 不会读取 `rspack.config`，它读取的是 `rsbuild.config.ts`，因此必须显式保持两者的一致性。
+
+在迁移已有的 Rspack 项目时，请逐一检查你的 `rspack.config`，并镜像以下每一项（如果它们被自定义过）：
+
+- **`resolve.alias`** —— 直接在 `rsbuild.config.ts` 的 [`resolve.alias`](https://rsbuild.rs/config/resolve/alias) 下设置；或者如果你希望维持单一信息源，也可以通过 `tools.rspack` 合并。
+- **自定义 `module.rules`（loader）** —— 通过 [`tools.rspack`](https://rsbuild.rs/config/tools/rspack) 合并。注意，Rsbuild 的内置 plugin（`pluginReact`、`pluginSass` 等）已经注册了最常见的 loader；只有项目特有的 rules（例如 `@svgr/webpack`、带自定义选项的 `less-loader`、内部代码生成 loader）才需要迁移。
+- **自定义 `plugins`** —— 通过 `tools.rspack` 合并。
+- **自定义 `externals`、`output.publicPath`、`experiments` 等** —— 通过 `tools.rspack` 合并。
+
+下面的示例导入了一份已有的 Rspack 配置，并镜像了它的 `resolve.alias` 以及一条自定义的 `less-loader` rule：
+
+```ts title="rsbuild.config.ts" {3,8-10,12-15}
+import { defineConfig } from '@rsbuild/core'
+import { pluginReact } from '@rsbuild/plugin-react'
+// import rspackConfig from './rspack.config.cjs'
+const rspackConfig = { resolve: { alias: { '@app': './src' } }, module: { rules: [{}, {}, { loader: 'less-loader' }] } } as any
+
+export default defineConfig({
+  plugins: [pluginReact()],
+  resolve: {
+    alias: rspackConfig.resolve?.alias,
+  },
+  tools: {
+    rspack: (config) => {
+      const lessLoader = rspackConfig.module.rules[2]
+      config.module!.rules!.push(lessLoader)
+      return config
+    },
+  },
+})
+```
+
+每一个自定义钩子都可参阅 [`tools.rspack`](https://rsbuild.rs/config/tools/rspack)。

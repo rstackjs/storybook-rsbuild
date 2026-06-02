@@ -1,0 +1,58 @@
+import { PackageManagerTabs } from '@theme'
+
+# Web Components
+
+Storybook for Web Components & Rsbuild 专为 Lit 和 custom-element 项目打造，让你无需脱离 Rsbuild 工作流即可获得快速的组件预览。
+
+## 环境要求
+
+<div style={{ width: '100%', maxWidth: '400px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `lit` | ≥ 2 (or ≥ 3) |
+| `@rsbuild/core` | ≥ 1.0.1 |
+| `storybook` | ≥ 10.0.0 |
+
+</div>
+
+## 快速开始
+
+在一个渲染 Web Components 的 Rsbuild 项目中完成以下步骤。
+
+### 安装
+
+安装 Web Components framework 包和 `@rsbuild/core`。尽管 `storybook-web-components-rsbuild` 将 `@rsbuild/core` 声明为 peer，仍建议将其作为直接的 dev dependency 列出，以保证版本锁定和 lockfile 审计清晰无歧义。
+
+<PackageManagerTabs command="install @rsbuild/core storybook-web-components-rsbuild -D" />
+
+### 配置 `.storybook/main.ts`
+
+```js
+import { StorybookConfig } from 'storybook-web-components-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: 'storybook-web-components-rsbuild',
+  stories: ['../src/**/*.stories.@(js|mjs|ts)'],
+  rsbuildFinal: (config) => {
+    // Customize the final Rsbuild config here
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
+  },
+}
+
+export default config
+```
+
+一切就绪！查看 [web components sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/lit) 获取完整参考，并浏览 [Storybook 文档](https://storybook.js.org/docs) 了解更深入的指引。
+
+## 后续步骤
+
+- **[编写 Stories](https://storybook.js.org/docs/writing-stories)**：了解 Web Components 的 CSF 基础知识。
+- **[Lit 代码片段](https://storybook.js.org/docs/get-started/frameworks/web-components-vite)**：使用 Lit 和通用 Web Components 的示例。
+
+## 选项
+
+framework 专属的选项及其默认值，请参阅[配置指南](/guide/configuration#framework-options)。

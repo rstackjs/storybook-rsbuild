@@ -1,0 +1,178 @@
+# 故障排查
+
+## 部署 Storybook 到子目录或子路径
+
+> 自 v3.3.3 起。在 v3.3.2 及更早版本中，默认的 `assetPrefix` 为 `'/'`（绝对路径），子目录部署需要手动配置。
+
+Rsbuild builder 默认使用相对资源路径 —— 与官方的 Vite（`base: './'`）和 webpack（`publicPath: ''`）builder 一致。Storybook 可以部署到任意子目录（例如 `https://example.com/storybook/`），无需额外配置。
+
+## 从 CDN 提供静态资源
+
+> 自 v3.3.3 起。在 v3.3.2 及更早版本中不支持此功能。
+
+若要从独立的 CDN 源（例如 `https://cdn.example.com/assets/`）提供 Storybook 的 JS/CSS 产物，请将 [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix) 设置为 CDN URL：
+
+```js
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  // --snip--
+  rsbuildFinal: (config) => {
+    return mergeRsbuildConfig(config, {
+      output: {
+        assetPrefix: 'https://cdn.example.com/',
+      },
+    })
+  },
+  // --snip--
+}
+```
+
+preview 模板能够正确处理绝对 URL，因此 JS/CSS 产物会从 CDN 加载，而 `iframe.html` 仍可保留在源服务器上。注意，由于产物通过 ES module import 加载，CDN 必须提供合适的 [CORS 响应头](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)。
+
+> [!NOTE]
+> 相较于[官方 webpack5 builder](https://github.com/storybookjs/storybook/issues/23481)，这是一项改进 —— 后者因模板始终在 import 路径前加上 `./`，并不支持 CDN 资源托管。
+
+## CSS `url()` 对静态资源的引用
+
+> 在 v3.3.2 及更早版本中，从根路径提供服务时 CSS `url()` 能正常工作，因为默认的 `assetPrefix` 为 `'/'`。自 v3.3.3 起，默认值改为 `''`（相对路径）以支持子目录，从而引入了这一限制。
+
+当 CSS 文件通过 `url()` 引用其他资源时（例如 `background: url('./image.png')`），生成的路径在生产构建中可能解析错误。这是因为 Rspack 输出的 `url()` 路径相对于输出根目录，而浏览器却相对于 CSS 文件所在位置进行解析。这是使用相对路径的一项已知权衡，[官方 Storybook builder 也存在同样的限制](https://github.com/storybookjs/storybook/issues/23447)。
+
+如果你的 story 依赖 CSS `url()` 引用，可以通过 [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix) 切换为绝对路径：
+
+```js
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  // --snip--
+  rsbuildFinal: (config) => {
+    return mergeRsbuildConfig(config, {
+      output: {
+        assetPrefix: '/',
+      },
+    })
+  },
+  // --snip--
+}
+```
+
+> [!NOTE]
+> 设置 `assetPrefix: '/'` 可以修复从根路径提供服务时的 CSS `url()` 引用，但会破坏子目录部署。请根据你的部署场景选择合适的方案。
+
+## `Template.toString()` 在 Docs 源码片段中显示编译后的代码
+
+当使用 CSF 2 的 `Template.bind({})` 模式，并通过 `Template.toString()` 在 Docs addon 中展示源码时，片段显示的是 bundler 编译后的输出，而非你的原始源码。
+
+这是符合预期的 —— `Function.prototype.toString()` 序列化的是**运行时**函数，而该函数已被 bundler 转换过。这并非 Rsbuild builder 特有的行为；webpack 和 Vite 也是如此。
+
+Storybook 推荐使用 [CSF 3 格式](https://storybook.js.org/docs/api/csf)配合自动源码片段功能，或通过 [docs source 参数](https://storybook.js.org/docs/api/doc-blocks/doc-block-source)手动提供源码。更多细节请参阅 [Storybook Docs 文档](https://storybook.js.org/docs/writing-docs/autodocs)。
+
+## 由意外文件引发的构建错误
+
+> [!NOTE]
+> 此问题主要影响较旧的 Rspack 版本。新版 Rspack 能正确处理 `webpackInclude`。
+
+如果你遇到 Rspack 打包了不该打包的文件（例如位于意外位置的 Markdown 文件），可以使用 `rspack.IgnorePlugin` 将其排除。
+
+```js
+// .storybook/main.js
+import path from 'path'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+export default {
+  framework: 'storybook-react-rsbuild',
+  async rsbuildFinal(config) {
+    return mergeRsbuildConfig(config, {
+      tools: {
+        rspack: (config, { addRules, appendPlugins, rspack, mergeConfig }) => {
+          return mergeConfig(config, {
+            plugins: [
+              new rspack.IgnorePlugin({
+                checkResource: (resource, context) => {
+                  const absPathHasExt = path.extname(resource)
+                  if (absPathHasExt === '.md') {
+                    return true
+                  }
+
+                  return false
+                },
+              }),
+            ],
+          })
+        },
+      },
+    })
+  },
+}
+```
+
+## MSW 集成与 lazy compilation
+
+当 `mockServiceWorker.js` 出现在某个 `staticDirs` 条目中时 —— 这是 [`msw-storybook-addon`](https://github.com/mswjs/msw-storybook-addon) 以及任何手动搭建的 MSW 配置所采用的约定 —— builder 会自动禁用 lazy compilation，并在启动时输出一条警告。
+
+这样做是必要的，因为 MSW 的 Service Worker 会拦截 preview iframe 发出的每一个 `fetch`，包括 dev-server 的 lazy-compilation RPC（`POST /lazy-compilation-using-`）。SW 的 passthrough 会重新发起一个全新的 `fetch(clonedRequest)`，而 dev-server 会中止它，这可能导致 story 在冷加载时卡在空白 iframe 上。该问题的根源在于 lazy-compilation 运行时通过有状态的 RPC 通道与 dev-server 通信的方式 —— 并非 builder 本身的缺陷 —— 当手动启用 lazy compilation 时，官方的 `@storybook/builder-webpack5` 同样受其影响。上游 [mswjs/msw#834](https://github.com/mswjs/msw/issues/834) 讨论了一个相关的失败模式（SW 拦截 dev-server 的 HMR SSE）。
+
+保留这一自动禁用行为是最稳妥的选择。如果你从未显式设置 `lazyCompilation`，则无需做任何处理。
+
+如果你的项目需要在使用 MSW 的同时启用 lazy compilation，请在 builder 选项中显式设置 `lazyCompilation` —— 显式值始终优先于 MSW 的自动禁用：
+
+```ts
+// .storybook/main.ts
+export default {
+  framework: {
+    options: {
+      builder: {
+        // Opt back in — expect occasional blank iframes on cold loads.
+        lazyCompilation: { entries: false },
+      },
+    },
+  },
+}
+```
+
+重新启用后，请修补 `public/mockServiceWorker.js`，让 lazy-compilation RPC 绕过 MSW。在 `fetch` 事件监听器的顶部、MSW 自身逻辑运行之前，加入这段守卫代码：
+
+```js
+// public/mockServiceWorker.js
+self.addEventListener('fetch', function (event) {
+  // Let Rspack / webpack's lazy-compilation RPC bypass MSW so the
+  // dev-server sees the original client request, not a re-issued clone.
+  if (event.request.url.includes('/lazy-compilation-using-')) {
+    return
+  }
+  // ...existing MSW handler logic
+})
+```
+
+注意事项：
+
+- `msw init` 会重新生成 `mockServiceWorker.js` 并覆盖该补丁。升级 MSW 后请重新应用它，或通过一个 postinstall 脚本自动化处理 —— 在守卫代码缺失时将其追加进去。
+- 该绕过严格限定在 lazy-compilation 路径上；普通的 story 请求仍会经过 MSW，你的 handler 行为照旧。
+- 这段子串匹配同时覆盖了 Rspack 实现（同源的 `POST /lazy-compilation-using-`）和 webpack5 实现（专用随机端口上的 `GET /lazy-compilation-using-<module-path>`），因此即便你日后切换到启用了 lazy compilation 的官方 webpack5 builder，同一段守卫代码也依然有效。
+
+## 为什么 sandboxes 使用 `getAbsolutePath` 来解析 framework？
+
+请参阅 [Storybook 的 FAQ](https://storybook.js.org/docs/faq#how-do-i-fix-module-resolution-in-special-environments) 了解原因。
+
+## 如何查看 Storybook 所使用的 Rsbuild 或 Rspack 配置？
+
+Rsbuild 提供了 [CLI 调试模式](https://rsbuild.rs/guide/debug/debug-mode)。在运行 Storybook 时启用它，即可输出所生成配置文件的路径。
+
+开发环境：
+
+```bash
+DEBUG=rsbuild storybook dev
+```
+
+生产环境：
+
+```bash
+DEBUG=rsbuild storybook build
+```
+
+查看 CLI 输出，即可知道 Rsbuild 和 Rspack 配置被写入到了何处。
+
+## 我可以直接将这个 builder 与 Rspack 一起使用吗？
+
+可以。Rsbuild 构建于 Rspack 之上，因此你可以将自己的 Rspack 配置传入 Rsbuild builder。请参阅 [Rspack 集成指南](/guide/integrations/rspack)了解具体做法。
