@@ -76,31 +76,6 @@ export function getNextVersion(): [number, number] | null {
   return cachedVersion
 }
 
-/**
- * Verify that `@rspack/core` from `next-rspack` and from `@rsbuild/core` align.
- * Both are our direct dependencies so they should match at publish time; this
- * catches drift from user overrides or duplicate installations.
- */
-function verifyRspackVersionAlignment(): void {
-  try {
-    const rsbuildVersion: string = req('@rspack/core/package.json').version
-    const nextRspackEntry = req.resolve('next-rspack')
-    const nextReq = createRequire(nextRspackEntry)
-    const nextVersion: string = nextReq('@rspack/core/package.json').version
-
-    if (rsbuildVersion !== nextVersion) {
-      logger.warn(
-        `@rspack/core version mismatch: Rsbuild uses ${rsbuildVersion}, ` +
-          `but next-rspack uses ${nextVersion}. ` +
-          'This may cause incompatible plugins/rules. ' +
-          'Consider aligning @rsbuild/core and next-rspack versions.',
-      )
-    }
-  } catch {
-    // Best-effort — don't block startup
-  }
-}
-
 const PREVIEW_KEYS = {
   previewModeId: 'storybook-preview',
   previewModeSigningKey: 'storybook-signing-key',
@@ -449,8 +424,6 @@ async function doExtract(
   walkRules(rawRules, (r) => {
     if (r.resolve?.fallback) Object.assign(fallback, r.resolve.fallback)
   })
-
-  verifyRspackVersionAlignment()
 
   const userDelta = getUserDelta()
   const deltaSummary =
