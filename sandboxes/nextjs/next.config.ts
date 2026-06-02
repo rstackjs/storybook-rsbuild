@@ -1,22 +1,12 @@
 import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
 
-// Exercises every shape of user webpack delta we extract:
-//   1. Append a rule with a *bare* loader name (`@svgr/webpack`) — locks in
-//      `resolveLoader.modules` fallback to the consumer's `node_modules`.
-//   2. Mutate an existing Next.js rule (image `exclude = /\.svg$/`) — locks in
-//      that `tools.rspack` runs the user hook against the live rspack config
-//      so mutations on pre-existing rules survive (safe-wallet pattern).
-//   3. Add a `resolve.alias` entry — locks in delta-driven alias forwarding
-//      (anticapture pattern).
-//   4. Push a non-trivial plugin instance — locks in `forwardNextConfigPlugins:
-//      false` dropping user plugins by default (proposalsapp / safe-wallet
-//      pattern, where forwarded plugins crash rspack's IPC channel).
+// Exercises every user webpack-delta shape the bridge extracts: bare-loader
+// rule, mutated Next rule, resolve.alias, resolve.fallback, forwarded plugins.
 class StorybookUserPluginProbe {
   apply(compiler: any) {
-    // If this plugin actually runs, it writes a marker asset that the e2e can
-    // detect. With the default `forwardNextConfigPlugins: false` the marker
-    // must NOT appear — that's the regression signal.
+    // Writes a marker asset when the plugin runs; the e2e asserts it is absent
+    // under the default forwardNextConfigPlugins: false.
     compiler.hooks.thisCompilation.tap(
       'StorybookUserPluginProbe',
       (compilation: any) => {
@@ -48,7 +38,7 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ['@sandboxes/nextjs-transpiled'],
   webpack: (config, { webpack }) => {
-    // (2) Steal SVG from the default image rule before SVGR claims it.
+    // (2) Mutate an existing Next rule: steal SVG from the default asset rule.
     for (const rule of config.module?.rules ?? []) {
       if (
         rule &&
@@ -76,22 +66,14 @@ const nextConfig: NextConfig = {
         new URL('./src/stories/user-alias-target.ts', import.meta.url),
       ),
     }
-    // (4) User-added resolve.fallback for a non-builtin module. Mirrors
-    // proposalsapp's pattern of stubbing server-side deps (pg, jsdom, …) so
-    // a transitive browser bundle doesn't try to resolve them.
+    // (4) User-added resolve.fallback stubbing a non-builtin module.
     config.resolve.fallback = {
       ...(config.resolve.fallback as Record<string, string | false>),
       'sandbox-fake-native': false,
     }
-    // (5) Plugins forwarded only when framework option
-    // `forwardNextConfigPlugins: true` (set in `.storybook/main.ts`).
-    // - DefinePlugin: positive assertion via story `UserDefine` reading
-    //   __USER_DEFINE__ at runtime.
-    // - StorybookUserPluginProbe: silent regression target — taps
-    //   `compilation.hooks.processAssets`, which is the hook that crashed
-    //   rspack IPC for safe-wallet's CopyPlugin. If the framework regresses
-    //   how `processAssets`-using plugins are forwarded, every story will
-    //   fail to render (build crash).
+    // (5) Plugins forwarded only under forwardNextConfigPlugins: true.
+    // DefinePlugin is asserted by the UserDefine story; StorybookUserPluginProbe
+    // taps processAssets (the hook that crashes rspack IPC when mis-forwarded).
     config.plugins = config.plugins ?? []
     config.plugins.push(
       new webpack.DefinePlugin({

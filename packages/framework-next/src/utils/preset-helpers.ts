@@ -114,7 +114,9 @@ export function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
  * Allowlist of Next.js plugins to inject into Storybook. Allowlist (not
  * denylist) because Next.js adds/renames plugins across versions and an
  * unknown new plugin may write to disk, throw, or pollute the bundle.
- * - `CssExtractRspackPlugin`: drives the CSS pipeline; required for `next/font` target.css
+ * - `CssExtractRspackPlugin`: Next's CSS-extract plugin, kept defensively. It is
+ *   inert in practice — Rsbuild owns the CSS pipeline and `next/font` is injected
+ *   at runtime by the font loader, so no Next.js CSS rules ever feed it.
  * - `ProvidePlugin` / `RspackProvidePlugin`: defines globals like `Buffer` /
  *   `process` that browser-built Node libs (next-auth, openid-client, ...)
  *   rely on. Rsbuild doesn't auto-provide these, so without keeping Next.js's
