@@ -65,13 +65,12 @@ export const previewAnnotations: PresetProperty<'previewAnnotations'> = (
   return annotations
 }
 
-function getStorybookOverrideAliases() {
-  return {
-    'next/image$': NEXT_IMAGE_MOCK,
-    'styled-jsx': STYLED_JSX_DIR,
-    'styled-jsx/style': join(STYLED_JSX_DIR, 'style'),
-    'styled-jsx/style.js': join(STYLED_JSX_DIR, 'style'),
-  }
+// Every value is a module-load-time constant, so build the map once.
+const STORYBOOK_OVERRIDE_ALIASES = {
+  'next/image$': NEXT_IMAGE_MOCK,
+  'styled-jsx': STYLED_JSX_DIR,
+  'styled-jsx/style': join(STYLED_JSX_DIR, 'style'),
+  'styled-jsx/style.js': join(STYLED_JSX_DIR, 'style'),
 }
 
 /**
@@ -261,7 +260,7 @@ export const rsbuildFinal: NonNullable<
   }
   const allAliases: Record<string, string | string[] | false> = {
     ...filterNextAliases(extraction.alias),
-    ...getStorybookOverrideAliases(),
+    ...STORYBOOK_OVERRIDE_ALIASES,
     ...userAliasDelta,
   }
 
