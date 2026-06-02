@@ -9,6 +9,7 @@
     "bump": "bumpp",
     "check": "pnpm --parallel --filter \"./packages/**\" run check",
     "check-dependency-version": "pnpm tsx ./scripts/check-dependency-version.mts",
+    "check-version-matrix": "pnpm tsx ./scripts/check-version-matrix.mts",
     "dev": "pnpm --parallel --filter \"./packages/**\" run prep --watch",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
     "format": "biome check --write --unsafe",
