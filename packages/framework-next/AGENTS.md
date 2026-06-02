@@ -31,7 +31,7 @@ flowchart TD
     subgraph P2["2 — Cherry-pick (preset.ts)"]
         direction TB
         FNA["filterNextAliases<br/>drop react/react-dom"]
-        SOA["getStorybookOverrideAliases<br/>next/image, styled-jsx"]
+        SOA["STORYBOOK_OVERRIDE_ALIASES<br/>next/image, styled-jsx"]
         BLC["buildNextLoaderChain<br/>next-swc-loader → shim"]
         NFR["next/font target.css<br/>→ font loader rule"]
         FNP["filterNextPlugins<br/>allowlist"]
@@ -83,7 +83,7 @@ An earlier design extracted *always in dev* and then surgically stripped the dev
 
 ### Allowlist, not denylist, for plugins
 
-`rawPlugins` contains 18 entries, most of which are actively harmful in Storybook (`BuildManifestPlugin` writes to `.next/`, `NextExternalsPlugin` excludes modules we need bundled, etc.). A denylist would silently leak any new plugin Next.js adds. `KEEP_PLUGIN_NAMES` is a two-item allowlist; if Next.js adds something genuinely needed at story-time, we explicitly opt in. This has kept churn at ~0 across `15.3 → 16.2`. The same rule applies to `CSS_LOADER_MARKERS`.
+`rawPlugins` contains 18 entries, most of which are actively harmful in Storybook (`BuildManifestPlugin` writes to `.next/`, `NextExternalsPlugin` excludes modules we need bundled, etc.). A denylist would silently leak any new plugin Next.js adds. `KEEP_PLUGIN_NAMES` is a four-item allowlist (`CssExtractRspackPlugin`, `ProvidePlugin`, `RspackProvidePlugin`, `ReactRefreshRspackPlugin`); if Next.js adds something genuinely needed at story-time, we explicitly opt in. This has kept churn at ~0 across `15.3 → 16.2`.
 
 ### Bridge at the config boundary, not the plugin boundary
 
@@ -132,8 +132,11 @@ Every shim here exists because one of the four parties makes an assumption that 
 | `StripNodeProtocolPlugin` (`NormalModuleReplacementPlugin` `/^node:/`) | normalizes `node:`-prefixed imports before resolution (mirrors upstream `@storybook/nextjs`): a known builtin → bare name (caught by `NODE_BUILTINS_FALLBACK` → empty module, or a Next.js polyfill); a `node:`-only specifier with no bare counterpart (`node:sqlite`, `node:test`) → empty shim. Replaced `IgnorePlugin({resourceRegExp:/^node:/})`, which *matched* `node:path` but emitted a `__rspack_missing_module()` stub that throws `Cannot find module 'node:path'` at render (verified by the `node:` e2e probe); `resolve.fallback['node:path']=false` is also dead because rspack's scheme handler runs ahead of the fallback table | rspack natively stubs `node:*` for web targets, or Storybook's browser build gains a `node:` externals preset |
 | `filterNextAliases` (drop react/react-dom) | Next.js aliases react to `next/dist/compiled/react`; Storybook needs the real react | Next.js and Storybook agree on a shared React resolution |
 | `filterNextPlugins` (allowlist) | `rawPlugins` contains build-time, runtime-harmful plugins | Next.js splits "build" vs "render-time" plugins in its output |
+| `dedupProvidePluginKeys` (rebuilds Next's `ProvidePlugin` via `new plugin.constructor(filtered)`) | Rsbuild and Next.js both register `ProvidePlugin` with overlapping keys (e.g. `process`) at differing values — Rsbuild ships a resolved path, Next.js a bare specifier — so rspack warns on the duplicate and Next's bare entry can shadow Rsbuild's | Rsbuild stops pre-registering `ProvidePlugin`, or rspack stops warning on benign duplicate keys |
+| `isStorybookClaimedRule` (drops user `next.config.webpack()` rules whose `test` matches `.mdx`) | `@next/mdx` and `@storybook/addon-docs` both claim `.mdx`; rspack fuses the two loader chains into one broken `Module build failed` | rspack stops concatenating loader chains across matching rules, or addon-docs scopes its MDX rule by issuer |
+| `instrumentUserWebpack` externals-array coercion | `NEXT_RSPACK=true` client-dev emits `externals` as a non-array, but user `webpack()` hooks assume `config.externals.push(...)` | Next.js emits `externals` as an array under `NEXT_RSPACK`, or user hooks stop assuming array shape |
 | `styled-jsx` alias pointing at resolved dir | dual-package resolution + singletons across `styled-jsx` / `styled-jsx/style` | styled-jsx ships a modern `exports` map |
-| `ignoreWarnings: [/has been used, it will be mocked/]` | Next.js compiled modules use `__dirname`, which Rspack mocks in browser builds | never (quality-of-life filter) |
+| `ignoreWarnings: [/(has been used, it will be mocked\|is used and has been mocked)/]` | Next.js compiled modules use `__dirname`, which Rspack mocks in browser builds; the warning wording differs across rspack versions, so both arms are matched | never (quality-of-life filter) |
 
 **When something breaks, triage in this order:** (1) `getBaseWebpackConfig` signature drift — extend `buildWebpackConfigParams`, don't leak version checks elsewhere; (2) `next/dist/*` path renames — one edit in `next-internals.ts` or `utils/next-config.ts`; (3) new DOM expectations from Next.js runtime — check `next/dist/pages/_document.js`, add a shim in `preview.tsx`.
 
