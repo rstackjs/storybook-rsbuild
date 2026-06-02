@@ -4,54 +4,11 @@ import { PackageManagerTabs } from '@theme'
 
 Storybook for Next.js & Rsbuild 通过 `next-rspack` 把 Storybook 的 preview runtime 桥接到 Next.js 自己的构建管线上，让你能在隔离环境中开发 Next.js 组件，同时复用与应用完全相同的 loaders、SWC 选项和 `next.config.ts` 配置。
 
-这个 framework **不引入任何自有的构建配置语言**：你照常通过 `next.config.ts` 配置应用，bridge 会原样复用它。决定*任意一项设置应该写在哪里*的唯一规则,就是[配置心智模型](#configuration-mental-model) —— 请先读它，本页其余部分都是参考手册。
+这个 framework **不引入任何自有的构建配置语言**：你照常通过 `next.config.ts` 配置应用，bridge 会原样复用它 —— [配置心智模型](#configuration-mental-model)会讲清楚任意一项设置该写在哪里。
 
 :::warning 实验性
 `storybook-next-rsbuild` 依赖 Next.js 内部实现，并跟随 Next.js 的发布节奏演进。任何 `next` 的 minor 或 patch 升级都可能破坏兼容性 —— 请锁定 `next` 以保证可复现性，并让 `storybook-next-rsbuild` 与 `next` 一起升级。
 :::
-
-## 配置心智模型 {#configuration-mental-model}
-
-`storybook-next-rsbuild` 用 Next.js 自己的 config loader 加载你的 `next.config.{js,ts}`，请 `next-rspack` 产出完整的构建配置，再把得到的 aliases、loaders、defines 和 plugins 合并进 Rsbuild。由此得出最需要内化的一点:
-
-> **凡是 Next.js 负责编译的东西 → 写在 `next.config.ts`(Next.js 风格)。**
-> **凡是属于 Storybook preview 构建本身的东西 → 写在 `.storybook/main.ts`(通过 `rsbuildFinal` 的 Rsbuild 风格,或通过 `webpackFinal` 的 webpack 风格)。**
-
-没有第三种 framework 专属的配置面需要学习或保持同步。让 `next dev` 跑通的那套配置,已经足以让 Storybook 跑通,因为同一份 `next.config.ts` 同时驱动两者 —— 在 **dev**(`storybook dev`)和 **production**(`storybook build`)两种模式下都是如此,它们会以匹配的 mode 抽取 Next.js 的配置。
-
-### 各自的归属 {#who-owns-what}
-
-| 关注点 | 归属 | 配置位置 | 风格 |
-| :--- | :--- | :--- | :--- |
-| `'use client'` / `server-only`、JSX runtime、SWC transforms | Next.js | `next.config.ts`(自动) | Next.js |
-| `transpilePackages`、`optimizePackageImports` | Next.js | `next.config.ts` | Next.js |
-| `compiler.*`(如 `styledComponents`、`emotion`) | Next.js | `next.config.ts` | Next.js |
-| 模块 `resolve.alias` / `fallback`、自定义 loaders(如 SVGR) | Next.js | `next.config.ts` → `webpack()` | Next.js |
-| `next/font`、`next/image` | Framework(已桥接) | `next.config.ts`(自动) | Next.js |
-| CSS Modules、全局 CSS、PostCSS / Tailwind | Rsbuild | 开箱即用 | — |
-| Sass / Less 预处理器 | Rsbuild | `.storybook/main.ts` → `rsbuildFinal` | Rsbuild |
-| 仅 Storybook preview 需要的构建微调 | Storybook builder | `.storybook/main.ts` → `rsbuildFinal` / `webpackFinal` | Rsbuild / webpack |
-
-这种划分遵循 bridge 的设计 —— 每个工具各司其长:**Next.js 负责 JS/TS 编译与模块解析;Rsbuild 负责 CSS 管线;Storybook 负责 preview 与 React runtime。** 完整的设计原理(Next.js、Rspack、Rsbuild、Storybook 之间的「四方契约」)见 [`packages/framework-next/AGENTS.md`](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-next/AGENTS.md)。
-
-### 一项设置该写在哪里 {#deciding-where-a-setting-goes}
-
-1. **为了让 `next dev` / `next build` 跑通,你会把它写进 `next.config.ts` 吗?** 那就留在那里 —— 它会被自动桥接。不要再复制一份到 `.storybook`。
-2. **它是一个需要插件支持的 CSS 预处理器(Sass、Less、Stylus)吗?** 通过 `rsbuildFinal` 添加对应的 Rsbuild 插件。在 Storybook 中跑 CSS 管线的是 Rsbuild 而非 Next.js,所以你要按 Rsbuild 的方式来扩展。(CSS Modules、纯 CSS,以及 PostCSS/Tailwind 无需任何配置。)
-3. **它是只有 Storybook preview 才需要的微调吗**(只给 stories 用的 alias、某条规则的改写)? 用 `rsbuildFinal`(Rsbuild 风格)或 `webpackFinal`(webpack 风格)。
-
-### 与 `@storybook/nextjs-vite` 相同 vs. 此处不同 {#same-as-storybooknextjs-vite-vs-different-here}
-
-运行时行为 —— decorators、mocks 以及编写 story 的 API —— 都移植自 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite)。因此对于下表左列的一切,**请直接 follow 官方 Storybook 文档**,本页只给出链接。右列才是本 framework 真正不同的地方,下文会详细展开。
-
-| ✅ 相同 —— follow 官方文档(已链接) | ⚠️ 此处不同 —— 请读下文对应小节 |
-| :--- | :--- |
-| [`next/image`](#nextimage)、[`next/font`](#nextfont)、[`next/head`](#nexthead)、[`next/link`、`next/dynamic`](#nextlink--nextdynamic) | Rsbuild 负责 CSS 管线 → [Sass / Less 需手动开启](#sass--less) |
-| story 的 routing/navigation **参数**与 [segments](#route-params--layout-segments) | [两个 router 始终都挂载](#routing--navigation) —— `appDirectory` 无效 |
-| [CSS Modules、Tailwind/PostCSS、styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [版本矩阵与 `@rspack/core` 不变量](#version-matrix) |
-| [绝对导入、aliases、subpath imports、tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` 的 plugins 受选项门控](#what-gets-bridged-from-nextconfigwebpack) |
-| [`*.mock` subpath API](#mocking-nextjs-apis-in-stories)(`cache`/`headers`/`navigation`/`router`) | [`node:` 协议与 Node 内置模块](#node-protocol--node-builtins)的处理 |
-| [SWC transforms、`transpilePackages`、`optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Next 16+ 不再支持 runtime config](#runtime-config) |
 
 ## 环境要求 {#requirements}
 
@@ -146,6 +103,51 @@ export default config
 ```
 
 相对的 `nextConfigPath` 以 Storybook 配置目录(`.storybook`)为基准解析;绝对路径则原样使用。
+
+## 配置心智模型 {#configuration-mental-model}
+
+`storybook-next-rsbuild` 用 Next.js 自己的 config loader 加载你的 `next.config.{js,ts}`，请 `next-rspack` 产出完整的构建配置，再把得到的 aliases、loaders、defines 和 plugins 合并进 Rsbuild。由此得出最需要内化的一点:
+
+> **凡是 Next.js 负责编译的东西 → 写在 `next.config.ts`(Next.js 风格)。**
+> **凡是属于 Storybook preview 构建本身的东西 → 写在 `.storybook/main.ts`(通过 `rsbuildFinal` 的 Rsbuild 风格,或通过 `webpackFinal` 的 webpack 风格)。**
+
+没有第三种 framework 专属的配置面需要学习或保持同步。让 `next dev` 跑通的那套配置,已经足以让 Storybook 跑通,因为同一份 `next.config.ts` 同时驱动两者 —— 在 **dev**(`storybook dev`)和 **production**(`storybook build`)两种模式下都是如此,它们会以匹配的 mode 抽取 Next.js 的配置。
+
+### 各自的归属 {#who-owns-what}
+
+| 关注点 | 归属 | 配置位置 | 风格 |
+| :--- | :--- | :--- | :--- |
+| `'use client'` / `server-only`、JSX runtime、SWC transforms | Next.js | `next.config.ts`(自动) | Next.js |
+| `transpilePackages`、`optimizePackageImports` | Next.js | `next.config.ts` | Next.js |
+| `compiler.*`(如 `styledComponents`、`emotion`) | Next.js | `next.config.ts` | Next.js |
+| 模块 `resolve.alias` / `fallback`、自定义 loaders(如 SVGR) | Next.js | `next.config.ts` → `webpack()` | Next.js |
+| `next/font`、`next/image` | Framework(已桥接) | `next.config.ts`(自动) | Next.js |
+| CSS Modules、全局 CSS、PostCSS / Tailwind | Rsbuild | 开箱即用 | — |
+| Sass / Less 预处理器 | Rsbuild | `.storybook/main.ts` → `rsbuildFinal` | Rsbuild |
+| 仅 Storybook preview 需要的构建微调 | Storybook builder | `.storybook/main.ts` → `rsbuildFinal` / `webpackFinal` | Rsbuild / webpack |
+
+这种划分遵循 bridge 的设计 —— 每个工具各司其长:**Next.js 负责 JS/TS 编译与模块解析;Rsbuild 负责 CSS 管线;Storybook 负责 preview 与 React runtime。** 完整的设计原理(Next.js、Rspack、Rsbuild、Storybook 之间的「四方契约」)见 [`packages/framework-next/AGENTS.md`](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-next/AGENTS.md)。
+
+### 一项设置该写在哪里 {#deciding-where-a-setting-goes}
+
+1. **为了让 `next dev` / `next build` 跑通,你会把它写进 `next.config.ts` 吗?** 那就留在那里 —— 它会被自动桥接。不要再复制一份到 `.storybook`。
+2. **它是一个需要插件支持的 CSS 预处理器(Sass、Less、Stylus)吗?** 通过 `rsbuildFinal` 添加对应的 Rsbuild 插件。在 Storybook 中跑 CSS 管线的是 Rsbuild 而非 Next.js,所以你要按 Rsbuild 的方式来扩展。(CSS Modules、纯 CSS,以及 PostCSS/Tailwind 无需任何配置。)
+3. **它是只有 Storybook preview 才需要的微调吗**(只给 stories 用的 alias、某条规则的改写)? 用 `rsbuildFinal`(Rsbuild 风格)或 `webpackFinal`(webpack 风格)。
+
+### 与 `@storybook/nextjs-vite` 相同 vs. 此处不同 {#same-as-storybooknextjs-vite-vs-different-here}
+
+运行时行为 —— decorators、mocks 以及编写 story 的 API —— 都移植自 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite)。因此对于下表左列的一切,**请直接 follow 官方 Storybook 文档**,本页只给出链接。右列才是本 framework 真正不同的地方,下文会详细展开。
+
+| ✅ 相同 —— follow 官方文档(已链接) | ⚠️ 此处不同 —— 请读下文对应小节 |
+| :--- | :--- |
+| [`next/image`](#nextimage)、[`next/font`](#nextfont)、[`next/head`](#nexthead)、[`next/link`、`next/dynamic`](#nextlink--nextdynamic) | Rsbuild 负责 CSS 管线 → [Sass / Less 需手动开启](#sass--less) |
+| story 的 routing/navigation **参数**与 [segments](#route-params--layout-segments) | [两个 router 始终都挂载](#routing--navigation) —— `appDirectory` 无效 |
+| [CSS Modules、Tailwind/PostCSS、styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [版本矩阵与 `@rspack/core` 不变量](#version-matrix) |
+| [绝对导入、aliases、subpath imports、tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` 的 plugins 受选项门控](#what-gets-bridged-from-nextconfigwebpack) |
+| [`*.mock` subpath API](#mocking-nextjs-apis-in-stories)(`cache`/`headers`/`navigation`/`router`) | [`node:` 协议与 Node 内置模块](#node-protocol--node-builtins)的处理 |
+| [SWC transforms、`transpilePackages`、`optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Next 16+ 不再支持 runtime config](#runtime-config) |
+
+> **经验法则:** 如果某个 Next.js 或 Storybook 特性在本页完全没有提及,默认按官方 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) 文档来 —— runtime 正是移植自它。唯一不能照搬的是**构建/打包配置**:请忽略上游的 `viteFinal` 指引,改为通过 `next.config.ts`(桥接)加 `rsbuildFinal` / `webpackFinal` 来驱动构建,如上所述。
 
 ## Framework 选项 {#framework-options}
 
