@@ -1,6 +1,6 @@
 /**
  * Validates the `@rsbuild/core` ↔ `next-rspack` version matrix documented in
- * `website/docs/guide/framework/next.mdx` against the live npm registry.
+ * `website/docs/en/guide/framework/next.mdx` against the live npm registry.
  *
  * The framework's invariant (see `packages/framework-next` check-rspack-invariant):
  * the `@rspack/core` that `@rsbuild/core@<x>` pins MUST equal the one
@@ -16,7 +16,17 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const MDX = path.join(root, 'website/docs/guide/framework/next.mdx')
+// The English doc is the source of truth the matrix parser expects; the zh
+// mirror carries the same table data. Fail loudly if it ever moves again
+// instead of surfacing a raw ENOENT from the reader below.
+const MDX = path.join(root, 'website/docs/en/guide/framework/next.mdx')
+if (!fs.existsSync(MDX)) {
+  console.error(
+    `Version-matrix doc not found at ${MDX}. ` +
+      'Update the MDX path in scripts/check-version-matrix.mts if the doc moved.',
+  )
+  process.exit(1)
+}
 
 /** `npm view <spec> <field> --json`, parsed. Returns undefined on empty. */
 function npmView(spec: string, field: string): unknown {
