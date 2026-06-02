@@ -473,7 +473,9 @@ test.describe(sandbox.name, () => {
     // loader-chain selection that must pick the rule paired with
     // `builtin:react-refresh-loader` (the only one emitting the
     // `module.hot.accept` Fast Refresh footer). The spec edits the committed
-    // FastRefresh fixture in place and always restores it.
+    // FastRefresh fixture in place and restores it in `finally` — a hard kill
+    // (SIGKILL/OOM) between the edit and restore can leave a one-token V1→V2
+    // diff, an accepted residual risk inherent to HMR e2e.
     const probePath = path.resolve(
       sandbox.relativeDir,
       'src/stories/FastRefresh.tsx',

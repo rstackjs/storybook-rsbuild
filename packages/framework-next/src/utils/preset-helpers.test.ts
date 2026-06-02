@@ -219,6 +219,62 @@ describe('buildNextLoaderChain', () => {
     ])
   })
 
+  it('selects the refresh-paired rule regardless of order (not first-match)', () => {
+    // Mirror of the api-node case with the order flipped: the refresh-paired
+    // rule comes FIRST. It must still win — selection buckets rules by
+    // capability, it is not order-dependent.
+    const clientOpts = { isServer: false, hasReactRefresh: true }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'next-swc-loader', options: clientOpts },
+        ],
+      },
+      {
+        issuerLayer: 'api-node',
+        test: /\.tsx?$/,
+        use: [{ loader: 'next-swc-loader', options: { isServer: false } }],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: SHIM, options: clientOpts },
+    ])
+  })
+
+  it('never selects a flight-paired rule even when it also carries refresh', () => {
+    // App Router emits an SSR rule pairing `builtin:react-refresh-loader` WITH
+    // `next-flight-loader`. The flight guard runs before refresh classification
+    // so that rule is skipped for the refresh-only client rule — selecting the
+    // flight one would compile client stories down the RSC path.
+    const clientOpts = { isServer: false, hasReactRefresh: true }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'next-flight-loader' },
+          { loader: 'next-swc-loader', options: { isServer: true } },
+        ],
+      },
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'next-swc-loader', options: clientOpts },
+        ],
+      },
+    ]
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: SHIM, options: clientOpts },
+    ])
+  })
+
   it('prefers the plain client rule over flight-paired variants', () => {
     const swcOpts = { isServer: false }
     const rules = [
