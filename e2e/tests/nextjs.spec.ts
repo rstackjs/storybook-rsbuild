@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
 import { previewFrame, waitForPreviewReady } from '../utils/assertions'
@@ -461,5 +463,49 @@ test.describe(sandbox.name, () => {
     await expect(probe).toBeVisible()
     await expect(probe).toContainText('node:path sep =')
     expect(moduleErrors.join('\n')).not.toMatch(/Cannot find module 'node:/)
+  })
+
+  test('Fast Refresh hot-updates a component and preserves its React state', async ({
+    page,
+  }) => {
+    // Editing a component must hot-update the preview AND preserve hook state; a
+    // remount / full reload resets the counter to 0. Regression guard for the
+    // loader-chain selection that must pick the rule paired with
+    // `builtin:react-refresh-loader` (the only one emitting the
+    // `module.hot.accept` Fast Refresh footer). The spec edits the committed
+    // FastRefresh fixture in place and always restores it.
+    const probePath = path.resolve(
+      sandbox.relativeDir,
+      'src/stories/FastRefresh.tsx',
+    )
+    const original = fs.readFileSync(probePath, 'utf8')
+    let didNavigate = false
+    page.on('framenavigated', (navigatedFrame) => {
+      if (navigatedFrame.url().includes('iframe.html')) didNavigate = true
+    })
+
+    try {
+      const frame = await openStory(page, 'stories-fastrefresh--default')
+      await frame.getByTestId('fr-inc').click()
+      await frame.getByTestId('fr-inc').click()
+      await frame.getByTestId('fr-inc').click()
+      await expect(frame.getByTestId('fr-count')).toHaveText('3')
+
+      didNavigate = false
+      fs.writeFileSync(
+        probePath,
+        original.replace('FR_MARKER_V1', 'FR_MARKER_V2'),
+      )
+
+      // The edit must reach the preview...
+      await expect(frame.getByTestId('fr-marker')).toHaveText('FR_MARKER_V2', {
+        timeout: 30_000,
+      })
+      // ...with hook state preserved and without a full preview reload.
+      await expect(frame.getByTestId('fr-count')).toHaveText('3')
+      expect(didNavigate).toBe(false)
+    } finally {
+      fs.writeFileSync(probePath, original)
+    }
   })
 })
