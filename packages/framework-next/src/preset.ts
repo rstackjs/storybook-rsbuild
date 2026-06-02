@@ -149,6 +149,52 @@ class StripNodeProtocolPlugin {
   }
 }
 
+const SASS_RE = /\.s[ac]ss(\?|$)/
+
+/** Walk a (possibly nested) rspack `rules` array for a Sass-capable rule. */
+const rulesHandleSass = (rules: unknown): boolean =>
+  Array.isArray(rules) &&
+  rules.some((rule: any) => {
+    if (!rule || typeof rule !== 'object') return false
+    if (rule.test instanceof RegExp && rule.test.test('a.scss')) return true
+    const use = JSON.stringify(rule.use ?? rule.loader ?? '')
+    if (use.includes('sass-loader')) return true
+    return rulesHandleSass(rule.oneOf) || rulesHandleSass(rule.rules)
+  })
+
+/**
+ * Preflight hint for the most common "works in `next dev`, not in Storybook"
+ * surprise. Rsbuild owns the CSS pipeline here, so Sass is opt-in via
+ * `@rsbuild/plugin-sass` — but a project that imports `.scss` and never wired
+ * the plugin only learns that from a cryptic "Module parse failed" deep in the
+ * build. When a `.scss`/`.sass` request appears and no rule handles it, emit one
+ * actionable warning pointing at the docs.
+ */
+class SassPreflightPlugin {
+  apply(compiler: any) {
+    let checked = false
+    compiler.hooks.normalModuleFactory.tap(
+      'StorybookSassPreflight',
+      (nmf: any) => {
+        nmf.hooks.beforeResolve.tap('StorybookSassPreflight', (data: any) => {
+          if (checked || !SASS_RE.test(data?.request ?? '')) return
+          // Scanned lazily so the rules array is fully assembled (plugin-sass
+          // registers its rule via Rsbuild's chain, before this fires).
+          checked = true
+          if (rulesHandleSass(compiler.options?.module?.rules)) return
+          logger.warn(
+            `Found a Sass import ("${data.request}") but no Sass loader is ` +
+              'configured. storybook-next-rsbuild delegates the CSS pipeline to ' +
+              'Rsbuild, so Sass is opt-in: install `@rsbuild/plugin-sass` and add ' +
+              '`pluginSass()` via `rsbuildFinal` in .storybook/main.ts. See ' +
+              'https://storybook.rsbuild.rs/guide/framework/next#sass--less',
+          )
+        })
+      },
+    )
+  }
+}
+
 /**
  * Injects `react-refresh/runtime.injectIntoGlobalHook()` as a global entry.
  * Next.js's simplified `ReactRefreshRspackPlugin` only provides
@@ -369,7 +415,10 @@ export const rsbuildFinal: NonNullable<
           rspackConfig.plugins.push(new ReactRefreshInitPlugin(REFRESH_ENTRY))
         }
 
-        rspackConfig.plugins.push(new StripNodeProtocolPlugin())
+        rspackConfig.plugins.push(
+          new StripNodeProtocolPlugin(),
+          new SassPreflightPlugin(),
+        )
 
         // User delta from `next.config.webpack(config, opts)` — appended last
         // so it lands AFTER both Rsbuild's defaults and Next.js's base. Bypasses
