@@ -150,3 +150,6 @@ compiled/
 
 # Storybook scripts
 /code/bench
+
+# Claude Code machine-local runtime lock (keep .claude/skills tracked)
+.claude/scheduled_tasks.lock

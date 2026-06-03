@@ -10,14 +10,14 @@
     "storybook": "storybook dev -p 6010"
   },
   "dependencies": {
-    "@lynx-js/react": "^0.117.0"
+    "@lynx-js/react": "^0.121.1"
   },
   "devDependencies": {
-    "@lynx-js/react-rsbuild-plugin": "^0.13.0",
-    "@lynx-js/rspeedy": "^0.13.6",
-    "@lynx-js/web-core": "^0.19.9",
-    "@lynx-js/web-elements": "^0.12.0",
-    "@rsbuild/core": "^2.0.0-rc.0",
+    "@lynx-js/react-rsbuild-plugin": "^0.16.3",
+    "@lynx-js/rspeedy": "^0.14.5",
+    "@lynx-js/web-core": "^0.21.0",
+    "@lynx-js/web-elements": "^0.12.3",
+    "@rsbuild/core": "^2.0.6",
     "@storybook/addon-docs": "10.3.4",
     "@storybook/web-components": "10.3.4",
     "@types/node": "^22.0.0",

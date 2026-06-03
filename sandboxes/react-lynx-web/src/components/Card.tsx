@@ -1,11 +1,12 @@
 import './Card.css'
 
-export function Card() {
-  const { title = 'Hello', body = 'This is a card' } = lynx.__globalProps as {
-    title?: string
-    body?: string
-  }
-
+export function Card({
+  title = 'Hello',
+  body = 'This is a card',
+}: {
+  title?: string
+  body?: string
+}) {
   return (
     <page>
       <view className="Card">

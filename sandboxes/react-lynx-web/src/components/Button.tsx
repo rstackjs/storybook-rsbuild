@@ -4,15 +4,13 @@ import './Button.css'
 import lynxLogo from '../assets/lynx-logo.png'
 import reactLogo from '../assets/react-logo.png'
 
-export function Button() {
-  const globalProps = lynx.__globalProps as {
-    label?: string
-    primary?: boolean
-  }
-
-  const label = globalProps?.label ?? 'Button'
-  const primary = globalProps?.primary ?? false
-
+export function Button({
+  label = 'Button',
+  primary = false,
+}: {
+  label?: string
+  primary?: boolean
+}) {
   const [count, setCount] = useState(0)
   const [alterLogo, setAlterLogo] = useState(false)
 
