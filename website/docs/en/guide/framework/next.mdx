@@ -119,8 +119,9 @@ There is no third, framework-specific config surface to learn or keep in sync. T
 | :--- | :--- | :--- | :--- |
 | `'use client'` / `server-only`, JSX runtime, SWC transforms | Next.js | `next.config.ts` (automatic) | Next.js |
 | `transpilePackages`, `optimizePackageImports` | Next.js | `next.config.ts` | Next.js |
+| Env vars (`NEXT_PUBLIC_*`, `next.config.env`, `.env*` files) | Next.js | `next.config.ts` / `.env*` (automatic) | Next.js |
 | `compiler.*` (e.g. `styledComponents`, `emotion`) | Next.js | `next.config.ts` | Next.js |
-| Module `resolve.alias` / `fallback`, custom loaders (e.g. SVGR) | Next.js | `next.config.ts` → `webpack()` | Next.js |
+| Module `resolve.alias` / `fallback`, custom loaders (e.g. SVGR) — except `react`* aliases ([pinned by Storybook](#what-gets-bridged-from-nextconfigwebpack)) | Next.js | `next.config.ts` → `webpack()` | Next.js |
 | `next/font`, `next/image` | Framework (bridged) | `next.config.ts` (automatic) | Next.js |
 | CSS Modules, global CSS, PostCSS / Tailwind | Rsbuild | works out of the box | — |
 | Sass / Less preprocessors | Rsbuild | `.storybook/main.ts` → `rsbuildFinal` | Rsbuild |
@@ -132,7 +133,14 @@ The split follows the bridge's design — each tool keeps what it does best: **N
 
 1. **Would you put it in `next.config.ts` to make `next dev` / `next build` work?** Leave it there — it's bridged automatically. Don't duplicate it into `.storybook`.
 2. **Is it a CSS preprocessor that needs a plugin (Sass, Less, Stylus)?** Add the matching Rsbuild plugin via `rsbuildFinal`. Rsbuild — not Next.js — runs the CSS pipeline in Storybook, so you extend it the Rsbuild way. (CSS Modules, plain CSS, and PostCSS/Tailwind need nothing.)
-3. **Is it a tweak only the Storybook preview needs** (an alias just for stories, a rule mutation)? Use `rsbuildFinal` (Rsbuild style) or `webpackFinal` (webpack style).
+3. **Is it a tweak only the Storybook preview needs** (an alias just for stories, a rule mutation)? Use `rsbuildFinal` for an alias or an Rsbuild plugin; use `webpackFinal` only to mutate an existing rspack rule — see [`rsbuildFinal` vs `webpackFinal`](#rsbuildfinal-vs-webpackfinal).
+
+### `rsbuildFinal` vs `webpackFinal`
+
+Both hooks extend the Storybook preview build, but they are **not interchangeable** — pick by altitude:
+
+- **`rsbuildFinal`** is the preferred, high-level surface. Reach for it first: add Rsbuild plugins (`pluginSass()`), `source.define` entries, or a stories-only `resolve.alias`. It's the surface the framework's own types advertise.
+- **`webpackFinal`** is the low-level escape hatch. Use it only to **introspect or mutate an existing rspack rule** — e.g. taking `.svg` away from Rsbuild's default asset rule for [SVGR](#advanced-custom-loaders-that-span-both-layers-eg-svgr). Unlike the stock builder, here `webpackFinal` runs **late, against the fully-assembled rspack config**, so the rules you want to read already exist.
 
 ### Same as `@storybook/nextjs-vite`, vs. different here
 
@@ -187,6 +195,11 @@ const config: StorybookConfig = {
 
 export default config
 ```
+
+**Two narrow exceptions beyond plugins** are filtered on purpose:
+
+- **`react` / `react-dom` / `react-server-dom-webpack` aliases** set in `next.config.webpack()` are dropped (with a warning). Storybook owns the React singleton — a second copy breaks hooks and context — so there is intentionally no escape hatch for repointing React.
+- **`.mdx` rules** (e.g. from `@next/mdx`) are dropped (with an info log): in Storybook, `.mdx` is owned by `@storybook/addon-docs`. Your page-MDX loader still applies to real Next.js pages, just not to Storybook docs.
 
 ## Supported Next.js features
 
@@ -395,7 +408,7 @@ export default config
 
 Pick the `@rsbuild/plugin-sass` version compatible with the `@rsbuild/core` your [version matrix](#version-matrix) row pins. Less works the same way with `@rsbuild/plugin-less`.
 
-### CSS-in-JS via the SWC compiler (styled-components, Emotion)
+### CSS-in-JS (styled-components via SWC, Emotion at runtime)
 
 These are Next.js compiler transforms, so you enable them the Next.js way — in `next.config.ts` — and they flow through the bridged `next-swc` chain. No Storybook-side wiring:
 
@@ -412,7 +425,7 @@ const nextConfig: NextConfig = {
 export default nextConfig
 ```
 
-Emotion needs no special transform — it's runtime CSS-in-JS and works as-is.
+Emotion needs no special transform — it's runtime CSS-in-JS and works as-is. (Next.js's `compiler.emotion` SWC transform is optional, and bridged too if you enable it.)
 
 ## Compilation & module resolution
 
@@ -430,6 +443,12 @@ These are Next.js-owned concerns: configure them in `next.config.ts` and they're
 ### Imports, aliases & tsconfig paths
 
 Root-relative absolute imports, module aliases (`@/...`), Node-standard subpath imports (`#...` from `package.json#imports`), and `tsconfig.json` `baseUrl`/`paths` all resolve, because the bridge forwards Next.js's resolved aliases. The behavior — and the "absolute imports cannot be mocked" caveat — matches upstream. **See [Imports](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#imports).**
+
+### Environment variables
+
+`NEXT_PUBLIC_*` variables and `next.config.ts`'s `env` key reach your stories automatically: Next.js compiles them into `process.env.*` through its `DefinePlugin`, and the bridge forwards those defines to Rsbuild as-is. Values from `.env`, `.env.local`, and `.env.development` are picked up too, because the framework loads your config through Next.js's own loader (which runs `@next/env`). There's nothing to redefine via `rsbuildFinal`'s `source.define`.
+
+One limit mirrors a real build: **server-only** env vars — those *without* the `NEXT_PUBLIC_` prefix — are not inlined into the client bundle, so they read as `undefined` in stories, exactly as they would in a client component under `next build`.
 
 ### `node:` protocol & Node builtins
 
@@ -535,6 +554,7 @@ One delta: the legacy `next/config` support is **version-gated**. Next.js 16 rem
 - **No `/_next/image` optimization.** `next/image` uses a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
 - **Sass/Less need an Rsbuild plugin.** Preprocessor support is opt-in via `rsbuildFinal` rather than inherited from Next.js (see [Sass / Less](#sass--less)).
 - **Runtime config is dropped on Next 16+** (see [Runtime config](#runtime-config)).
+- **Deployment/output keys are inert.** `output` (`export`/`standalone`), `basePath`, `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix.
 - **Version coupling.** The bridge depends on Next.js internal modules. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
 
 ## Next steps
