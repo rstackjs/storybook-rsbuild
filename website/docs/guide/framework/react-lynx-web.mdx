@@ -1,0 +1,316 @@
+import { PackageManagerTabs } from '@theme'
+
+# ReactLynx (Web)
+
+Storybook for ReactLynx Web & Rsbuild lets you develop [ReactLynx](https://lynxjs.org/) components in isolation by rendering each story through the upstream `<lynx-view>` web-core custom element.
+
+The framework wraps your existing [`@lynx-js/rspeedy`](https://github.com/lynx-family/lynx-stack) pipeline: it reads your `lynx.config.ts`, mounts the rspeedy dev server into Storybook's own server (single origin), and dispatches each story to a registered component — a story's `args` are spread onto the component as props.
+
+> **Experimental.** Review the [Limitations](#limitations) before adopting.
+
+## Requirements
+
+<div style={{ width: '100%', maxWidth: '520px' }}>
+
+| Package / tool | Version |
+| :--- | :--- |
+| An existing `@lynx-js/rspeedy` project with `pluginReactLynx()` | — |
+| `@lynx-js/rspeedy` | ≥ 0.14.0 |
+| `@lynx-js/react` | ≥ 0.121.0 |
+| `@lynx-js/web-core` | ≥ 0.21.0 |
+| `@lynx-js/web-elements` | ≥ 0.12.0 |
+| `@rsbuild/core` | ≥ 2.0.0 |
+| `storybook` | ≥ 10.1.0 |
+| Node.js | ≥ 20.6.0 |
+
+</div>
+
+:::info Browser support
+Matches `@lynx-js/web-core`: **Chrome ≥ 92, Safari ≥ 16.4**. The preview runs WASM plus a Web Worker, so older browsers cannot render stories.
+:::
+
+## Getting started
+
+You need an existing Lynx project — a `lynx.config.ts` that invokes `pluginReactLynx()`. The framework renders the **web** target, so your config must build a `web` environment.
+
+### Installation
+
+Your Lynx project already provides `@lynx-js/react`, `@lynx-js/rspeedy`, and `@lynx-js/react-rsbuild-plugin`. Add the framework and the web runtime (`@rsbuild/core` is listed directly so version pins and lockfile audits stay unambiguous):
+
+<PackageManagerTabs command="install storybook-react-lynx-web-rsbuild @lynx-js/web-core @lynx-js/web-elements @rsbuild/core -D" />
+
+### Configure `.storybook/main.ts`
+
+```ts
+import type { StorybookConfig } from 'storybook-react-lynx-web-rsbuild'
+
+const config: StorybookConfig = {
+  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
+  addons: ['@storybook/addon-docs'],
+  framework: {
+    name: 'storybook-react-lynx-web-rsbuild',
+    options: {},
+  },
+}
+
+export default config
+```
+
+### Configure `lynx.config.ts`
+
+This is your ordinary `@lynx-js/rspeedy` config — the **same one** `rspeedy dev` / `rspeedy build` use. The framework reads it but never rewrites it; it only injects a synthetic `__storybook__` dispatcher entry onto a private clone, so your plugins, environments, and `output` settings all apply exactly as they do outside Storybook.
+
+```ts
+import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
+import { defineConfig } from '@lynx-js/rspeedy'
+
+export default defineConfig({
+  plugins: [pluginReactLynx()],
+  environments: {
+    web: {},
+    lynx: {},
+  },
+})
+```
+
+:::warning The `web` environment is required
+This framework renders the web target. If your config declares an `environments` map, it **must** include a `web` key (an empty `web: {}` is fine). A config with no `environments` block at all is also fine — rspeedy synthesizes a default web environment. Otherwise Storybook fails to start with a branded error telling you the framework found environments but none named `web`.
+
+You do **not** add a `source.entry` per component — the framework injects its own dispatcher entry. Any `source.entry` you already have (e.g. your app's `main`) is preserved.
+:::
+
+### Register components in `.storybook/lynx-preview.tsx`
+
+Create `.storybook/lynx-preview.tsx` and register every component you want stories to reference. Pass each component **directly** — there are no `() => <Button />` wrappers and no manual prop threading:
+
+```tsx
+// .storybook/lynx-preview.tsx
+import { createLynxStorybook } from 'storybook-react-lynx-web-rsbuild/runtime'
+
+import { Button } from '../src/components/Button.tsx'
+import { Card } from '../src/components/Card.tsx'
+
+createLynxStorybook({
+  components: { Button, Card },
+})
+```
+
+Each component imports its own styles (e.g. `import './Button.css'` inside `Button.tsx`), so the dispatcher itself needs no CSS import.
+
+### Write a story
+
+Reference a registered component by name with `parameters.lynx.component`; the story's `args` flow to it as props:
+
+```ts
+// src/components/Button.stories.ts
+import type { Meta, StoryObj } from 'storybook-react-lynx-web-rsbuild'
+
+const meta = {
+  title: 'Example/Button',
+  parameters: {
+    lynx: { component: 'Button' },
+  },
+  argTypes: {
+    label: { control: 'text' },
+    primary: { control: 'boolean' },
+  },
+} satisfies Meta
+
+export default meta
+type Story = StoryObj
+
+export const Primary: Story = {
+  args: { primary: true, label: 'Button' },
+}
+```
+
+```tsx
+// src/components/Button.tsx — args arrive as ordinary props
+export function Button(
+  { label = 'Button', primary = false }: { label?: string; primary?: boolean },
+) {
+  // `label` / `primary` come straight from the story's `args`.
+}
+```
+
+### Run
+
+Add the standard Storybook scripts and start the dev server:
+
+```json
+{
+  "scripts": {
+    "storybook": "storybook dev",
+    "build-storybook": "storybook build"
+  }
+}
+```
+
+<PackageManagerTabs command="exec storybook dev" />
+
+The first start **blocks while rspeedy compiles the `.web.bundle`** — this is expected, not a hang. Once it's ready, your story renders inside a `<lynx-view>` and Storybook Controls update it live.
+
+For a complete runnable reference, see the [`react-lynx-web` sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/react-lynx-web).
+
+## Three configuration worlds
+
+This framework spans **three** configuration surfaces. Knowing which paradigm each one is removes the "do I set this in Lynx-style or Rsbuild-style?" ambiguity.
+
+| Surface | Style | What it controls |
+| :--- | :--- | :--- |
+| `lynx.config.ts` | **Lynx / rspeedy** (`defineConfig` + `pluginReactLynx`) | How your **component** `.web.bundle` is compiled — loaders, plugins, environments, `output`. Reused untouched. |
+| `.storybook/main.ts` → `rsbuildFinal` / `tools.rspack` | **Rsbuild / Rspack** | How Storybook's **preview shell** is built. The builder is `storybook-builder-rsbuild`, the same as the rest of this project. |
+| `.storybook/main.ts` → `framework` / `options` / `stories` / `addons` | **Storybook** | Storybook itself — which framework, framework options, where stories live, addons. |
+
+**Rule of thumb:** if your **component code** imports or uses it (an alias it resolves, a loader it needs, a define it reads), configure it in **`lynx.config.ts`**. If it only affects **Storybook's own preview page**, use **`rsbuildFinal`**.
+
+These are two different Rspack compilations: your `lynx.config.ts` builds the component `.web.bundle`; `rsbuildFinal` / `tools.rspack` tune the preview shell that hosts it.
+
+### Where does X go?
+
+| You want to… | Configure it in… |
+| :--- | :--- |
+| Add a Lynx loader / plugin, change `output.distPath`, add an environment | `lynx.config.ts` (Lynx / rspeedy) |
+| Resolve an alias your **component** imports | `lynx.config.ts` |
+| Tweak the Storybook **preview** build (alias / define / plugins for the preview shell) | `rsbuildFinal` in `main.ts` (Rsbuild) |
+| Set a framework option (`lynxConfigPath`, `lynxBundlePrefix`, lazy compilation) | `framework.options` in `main.ts` (Storybook) |
+
+### Deep build tuning (`rsbuildFinal` / `tools.rspack`)
+
+Because the builder is `storybook-builder-rsbuild`, you tune the Storybook **preview** build exactly as anywhere else in this project — with `rsbuildFinal` and `tools.rspack` in `.storybook/main.ts`. See the [Configuration guide](/guide/configuration#framework-options).
+
+```ts
+import type { StorybookConfig } from 'storybook-react-lynx-web-rsbuild'
+import { mergeRsbuildConfig } from '@rsbuild/core'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-react-lynx-web-rsbuild',
+    options: {},
+  },
+  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
+  rsbuildFinal: (config) => {
+    // Customize the Storybook PREVIEW build here — not the Lynx .web.bundle,
+    // which is built by your lynx.config.ts.
+    return mergeRsbuildConfig(config, {
+      // your custom config
+    })
+  },
+}
+
+export default config
+```
+
+## Framework Options
+
+These live in `.storybook/main.ts` under `framework.options`.
+
+### `lynxConfigPath`
+
+Path to your rspeedy/lynx config file, relative to the project root. Defaults to `lynx.config.ts` (also tries `.js`, `.mts`, `.mjs`).
+
+```ts
+framework: {
+  name: 'storybook-react-lynx-web-rsbuild',
+  options: {
+    lynxConfigPath: 'config/lynx.config.ts',
+  },
+}
+```
+
+### `lynxBundlePrefix`
+
+URL prefix under which compiled `.web.bundle` files are served in a **production** build. Defaults to `/lynx-bundles`. The dispatcher picks this up automatically; stories that pass an explicit `parameters.lynx.url` must include the matching prefix themselves. (In dev the bundle is served from the mounted rspeedy server's root, so this prefix does not apply there.) Most projects never set this — change it only if `/lynx-bundles` collides with another route in your deployment.
+
+### `builder.lazyCompilation`
+
+The framework disables Rsbuild lazy compilation in dev by default, because it breaks `@lynx-js/web-core`'s WASM worker (the async-wasm runtime helper is never installed in the worker, crashing dev with `__webpack_require__.v is not a function`). For a large component library you can opt back in:
+
+```ts
+framework: {
+  name: 'storybook-react-lynx-web-rsbuild',
+  options: {
+    builder: { lazyCompilation: true },
+  },
+}
+```
+
+`builder` is a `storybook-builder-rsbuild` option surfaced here — it tunes the **preview** build, not your rspeedy build.
+
+## Escape hatches
+
+| Hatch | When to reach for it |
+| :--- | :--- |
+| `parameters.lynx.url` | Point a story at a hand-hosted / remote `.web.bundle` instead of the dispatcher. |
+| `framework.options.lynxConfigPath` | Your `lynx.config.*` is not at the project root or uses a non-default name. |
+| `framework.options.lynxBundlePrefix` | The default `/lynx-bundles` production URL prefix collides with another route. |
+| `framework.options.builder.lazyCompilation` | A large component library where you want lazy compilation back on. |
+| `rsbuildFinal` / `tools.rspack` | Deep Rsbuild/Rspack tuning of the **preview** build (see [Configuration](/guide/configuration#framework-options)). |
+| Your own `lynx.config.ts` | Full rspeedy power for the **component** build — custom plugins, extra environments, `output.distPath`, etc. The framework leaves it intact. |
+| `useGlobalProps()` from `@lynx-js/react` | A component that reads the raw `globalProps` bag instead of args-as-props. |
+
+### `parameters.lynx.url`
+
+For advanced cases — remote bundles, custom prefixes, or a bundle hosted outside the framework — point `parameters.lynx.url` at the bundle directly. Prefer `component:` for day-to-day use.
+
+```ts
+parameters: { lynx: { url: 'https://cdn.example.com/my.web.bundle' } }
+```
+
+Resolution order is `url` → `component`. If the active `component:` is not registered in `.storybook/lynx-preview.tsx`, the runtime dispatcher renders a **visible error listing the registered component names** (so a typo is obvious); if the whole `.storybook/lynx-preview.*` file is missing, the preview shows an inline error telling you where to create it. Pass a `fallback` to `createLynxStorybook({ components, fallback })` to render your own placeholder for the unselected/unknown cases instead.
+
+### `useGlobalProps()`
+
+Components that prefer to read the raw `globalProps` bag (instead of taking args as props) can still call `useGlobalProps()` from `@lynx-js/react` — the dispatcher leaves the bag intact. Augment the `GlobalProps` interface for type safety:
+
+```tsx
+import { useGlobalProps } from '@lynx-js/react'
+
+declare module '@lynx-js/react' {
+  interface GlobalProps {
+    label?: string
+    primary?: boolean
+  }
+}
+```
+
+## Features
+
+- Runs your own `@lynx-js/rspeedy` pipeline in-process and mounts its dev server directly into Storybook's own server — single origin, no sidecar process and no reverse proxy to manage.
+- Editing a **story** soft-updates through Storybook's own HMR — no full page reload; the `<lynx-view>` re-renders with the new args/parameters.
+- Editing **component source** live-reloads the preview to pick up the rebuilt bundle (the `web` target has no React Fast-Refresh, so a rebuild is a reload).
+- Tweaking a control updates via `updateGlobalProps()` without remounting — component state survives arg changes.
+- Production build via `storybook build` that runs `rspeedy build` in-process and copies `.web.bundle` plus static assets into the Storybook output.
+
+## Limitations
+
+- **No Docs mode inline rendering.** ReactLynx components only run inside a `<lynx-view>` with WASM + Worker; docs pages that embed stories will render the empty custom element host.
+- **No `play()` interaction tests yet.** The component lives inside a shadow root and a cross-thread worker; upstream test harnesses need more work.
+- **No automatic args docgen.** `react-docgen` does not understand the ReactLynx transforms.
+- **Each story spawns a Worker.** Lynx runs background-thread JS in a dedicated Web Worker; switching between many stories in one session will accumulate memory pressure.
+- **Browser requirements match `@lynx-js/web-core`:** Chrome ≥ 92, Safari ≥ 16.4.
+- **Storybook must be served from the origin root.** The preview pins its asset `publicPath` to `/` (web-core's worker resolves shared chunks by absolute path), so a `storybook build` deployed under a sub-path — e.g. `https://host/storybook/` — would request preview assets from `/static/…` and 404. Deploy the static output at the root, or front it with a rewrite.
+
+## Troubleshooting
+
+### `No lynx.config.{ts,js,mts,mjs} found`
+
+The framework needs your Lynx config at the project root, or set `framework.options.lynxConfigPath`. Create one that invokes `pluginReactLynx()`.
+
+### `environments { … } but none named 'web'`
+
+Your `lynx.config.ts` declares an `environments` map without a `web` key. Add `web: {}` — this framework renders the web target.
+
+### A story shows "Unknown component …"
+
+`parameters.lynx.component` does not match a key you passed to `createLynxStorybook({ components })`. The error panel lists the registered names — check for a typo, or register the component.
+
+### Blank `<lynx-view>` / story doesn't render
+
+Confirm the first compile finished (the dev server blocks on it) and that your browser meets the floor (Chrome ≥ 92 / Safari ≥ 16.4).
+
+## Next Steps
+
+- **[Lynx documentation](https://lynxjs.org/)**: Learn ReactLynx and rspeedy.
+- **[Writing Stories](https://storybook.js.org/docs/writing-stories)**: The basics of Component Story Format (CSF).
+- **[Example Sandbox](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/react-lynx-web)**: A complete working setup.
