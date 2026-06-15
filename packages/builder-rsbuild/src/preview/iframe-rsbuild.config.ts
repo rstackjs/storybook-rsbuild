@@ -125,6 +125,7 @@ export default async (
     _modulesCount,
     build,
     tagsOptions,
+    htmlLang,
   ] = await Promise.all([
     presets.apply('core'),
     presets.apply('frameworkOptions'),
@@ -139,6 +140,7 @@ export default async (
     options.cache?.get('modulesCount', 1000),
     options.presets.apply('build'),
     presets.apply('tags', {}),
+    presets.apply<string>('htmlLang', 'en'),
   ])
 
   const stories = normalizeStories(nonNormalizedStories, {
@@ -481,6 +483,7 @@ export default async (
               ? { __STORYBOOK_BLOCKS_EMPTY_MODULE__: {} }
               : {}),
           },
+          htmlLang,
           headHtmlSnippet,
           bodyHtmlSnippet,
         },
