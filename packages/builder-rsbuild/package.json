@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@rsbuild/plugin-type-check": "^1.3.5",
-    "@vitest/mocker": "3.2.4",
+    "@vitest/mocker": "3.2.6",
     "browser-assert": "^1.2.1",
     "case-sensitive-paths-webpack-plugin": "^2.4.0",
     "cjs-module-lexer": "^2.2.0",
@@ -61,9 +61,9 @@
     "path-browserify": "^1.0.1",
     "picocolors": "^1.1.1",
     "process": "^0.11.10",
-    "rsbuild-plugin-html-minifier-terser": "^1.1.4",
+    "rsbuild-plugin-html-minifier-terser": "^1.1.5",
     "sirv": "^2.0.4",
-    "ts-dedent": "^2.2.0",
+    "ts-dedent": "^2.3.0",
     "url": "^0.11.4",
     "util": "^0.12.5",
     "util-deprecate": "^1.0.2"

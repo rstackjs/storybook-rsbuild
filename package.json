@@ -28,9 +28,9 @@
     ]
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@playwright/test": "^1.60.0",
-    "@rstest/core": "^0.10.3",
+    "@biomejs/biome": "^2.5.0",
+    "@playwright/test": "^1.61.0",
+    "@rstest/core": "^0.10.6",
     "@testing-library/jest-dom": "^6.9.1",
     "bumpp": "^10.4.1",
     "check-dependency-version-consistency": "^5.0.1",
@@ -42,7 +42,7 @@
     "simple-git-hooks": "^2.13.1",
     "sort-package-json": "^2.15.1",
     "tree-kill": "^1.2.2",
-    "ts-dedent": "^2.2.0",
+    "ts-dedent": "^2.3.0",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   },
