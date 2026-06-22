@@ -31,7 +31,10 @@
 			"groupName": "all non-major dependencies",
 			"groupSlug": "all-non-major",
 			"matchUpdateTypes": ["patch", "minor"],
-			"matchPackageNames": ["**", "!storybook", "!@storybook/**"]
+			// A list of only negative patterns matches every package except the
+			// excluded ones. `**` must not be combined with other patterns here —
+			// Renovate rejects it because `*`/`**` already match all patterns.
+			"matchPackageNames": ["!storybook", "!@storybook/**"]
 		},
 		// Must be placed AFTER `all-non-major` so the groupName override wins.
 		// Ref: https://docs.renovatebot.com/configuration-options/#packagerules
