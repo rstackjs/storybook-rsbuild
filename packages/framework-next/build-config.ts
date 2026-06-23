@@ -5,6 +5,10 @@ const config: BuildEntries = {
   // build and must resolve `next` from the user's project, not ours.
   extraOutputs: {
     './empty-module': './loaders/empty-module.cjs',
+    './image-context': {
+      types: './loaders/image-context.d.cts',
+      default: './loaders/image-context.cjs',
+    },
     './next-image-mock': './loaders/next-image-mock.js',
     './storybook-nextjs-font-loader':
       './loaders/storybook-nextjs-font-loader.cjs',

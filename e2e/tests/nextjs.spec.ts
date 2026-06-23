@@ -77,6 +77,19 @@ test.describe(sandbox.name, () => {
     await expect(img).toHaveCSS('position', 'absolute')
   })
 
+  test('next/image reads per-story parameters.nextjs.image via the shared context', async ({
+    page,
+  }) => {
+    // ImageDecorator provides `parameters.nextjs.image` to a context the mock
+    // consumes; `loading: 'eager'` should reach the rendered <img>. A broken
+    // provider/consumer identity (two separate contexts) would leave the
+    // default `loading="lazy"`.
+    const frame = await openStory(page, 'stories-image--with-story-params')
+    const img = frame.getByRole('img', { name: 'Vercel Logo' })
+    await expect(img).toBeVisible()
+    await expect(img).toHaveAttribute('loading', 'eager')
+  })
+
   test('next/font applies a Google font className', async ({ page }) => {
     const frame = await openStory(page, 'stories-font--inter-font')
     const heading = frame.getByRole('heading', { name: 'Inter (Google Font)' })
