@@ -176,6 +176,10 @@ TypeScript settings (including `typescript.reactDocgen`) type-check on `main.ts`
 
 If your project customizes webpack in `next.config.ts`, the bridge forwards your **rules, aliases, fallbacks, externals, and experiments** automatically — they're treated as Next.js-owned config and reused as-is.
 
+:::info Additions are forwarded; removals are not
+The bridge captures what your `webpack()` hook **adds**. Modifying an existing rule **in place** (e.g. `imageRule.exclude = /\.svg$/`) is respected, but **deleting or replacing** an existing rule/plugin (e.g. `config.module.rules = []`) is silently ignored — Storybook keeps its own rule set. Fields outside the five above (`optimization`, `cache`, `output`, `devtool`, `resolve.modules`/`extensions`, …) are not bridged either. To change rules on the Storybook side, use `rsbuildFinal` / `webpackFinal` in `.storybook/main.ts`, which run against the live config.
+:::
+
 **Plugins are the exception.** They're gated behind the `forwardNextConfigPlugins` option (default `false`), because most plugins people add target Next.js's production pipeline (build-manifest writers, source-map uploaders, stats emitters) and either no-op in Storybook or crash rspack's IPC channel (e.g. `copy-webpack-plugin`'s `processAssets` hook). When the gate is closed, dropped plugins are logged by name. Opt in only for a client-side plugin you've verified against `@rspack/core`:
 
 ```ts twoslash title=".storybook/main.ts"
