@@ -405,7 +405,22 @@ async function doExtract(
   for (const plugin of rspackConfig.plugins || []) {
     const name = plugin?.constructor?.name
     if (name === 'DefinePlugin' || name === 'RspackDefinePlugin') {
-      Object.assign(defines, readProvidedMap(plugin) ?? {})
+      const provided = readProvidedMap(plugin)
+      if (provided) {
+        Object.assign(defines, provided)
+      } else {
+        // `readProvidedMap` reads rspack's internal `._args[0]` (no public API
+        // for a plugin's definitions map). If a future rspack changes that
+        // wrapper shape, extraction would silently yield {} and every Next.js
+        // `__NEXT_*` define would go missing — surfacing only as a render-time
+        // ReferenceError far from the cause. Warn so the break is attributable.
+        logger.warn(
+          `Found a ${name} but could not read its definitions ` +
+            '(rspack plugin internal `_args[0]` shape may have changed). ' +
+            'Next.js defines will be missing — stories relying on them may ' +
+            'throw at render. See storybook-next-rsbuild Shim Catalogue.',
+        )
+      }
     }
   }
 
