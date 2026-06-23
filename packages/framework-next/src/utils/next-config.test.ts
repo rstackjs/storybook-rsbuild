@@ -214,7 +214,11 @@ describe('instrumentUserWebpack — community project patterns', () => {
 })
 
 describe('instrumentUserWebpack — append-only policy', () => {
-  it('warns and yields an empty rules delta when the hook deletes rules', () => {
+  // The delta model forwards ADDITIONS only — a hook that deletes/replaces
+  // existing rules or plugins produces an empty delta and that removal is
+  // silently ignored (no warning). To remove a rule on the Storybook side, use
+  // `.storybook/main.* webpackFinal`, which runs against the live rspack config.
+  it('yields an empty rules delta when the hook deletes rules (removal not forwarded)', () => {
     const { delta } = runHook((config: any) => {
       config.module.rules = []
       return config
@@ -222,7 +226,7 @@ describe('instrumentUserWebpack — append-only policy', () => {
     expect(delta.rules).toEqual([])
   })
 
-  it('warns and yields an empty plugins delta when the hook deletes plugins', () => {
+  it('yields an empty plugins delta when the hook deletes plugins (removal not forwarded)', () => {
     const { delta } = runHook((config: any) => {
       config.plugins = []
       return config
