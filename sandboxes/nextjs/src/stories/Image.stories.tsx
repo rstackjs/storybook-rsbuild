@@ -63,3 +63,16 @@ export const WithPriorityAndSizes: Story = {
     sizes: '(max-width: 768px) 100vw, 50vw',
   },
 }
+
+// `parameters.nextjs.image` is provided by ImageDecorator and read by the mock
+// as default props (explicit args still win). Guards the decorator↔mock shared
+// image-context wiring.
+export const WithStoryParams: Story = {
+  parameters: {
+    nextjs: {
+      image: {
+        loading: 'eager',
+      },
+    },
+  },
+}

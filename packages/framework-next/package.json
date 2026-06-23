@@ -39,6 +39,10 @@
       "types": "./dist/export-mocks/headers/index.d.ts",
       "default": "./dist/export-mocks/headers/index.js"
     },
+    "./image-context": {
+      "types": "./loaders/image-context.d.cts",
+      "default": "./loaders/image-context.cjs"
+    },
     "./navigation.mock": {
       "types": "./dist/export-mocks/navigation/index.d.ts",
       "default": "./dist/export-mocks/navigation/index.js"

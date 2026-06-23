@@ -1,8 +1,11 @@
 // Port: @storybook/nextjs-vite/src/images/decorator.tsx
-// Note: uses `ImageConfigContext` directly instead of the upstream `sb-original/image-context` proxy.
 import * as React from 'react'
 import type { Addon_StoryContext } from 'storybook/internal/types'
-import { ImageConfigContext } from '../next-internals'
+// Shared with the next/image mock via the package's own `./image-context`
+// export, so provider and consumer resolve to ONE context identity. The
+// specifier is externalized at build time (scripts/build entry-utils lists the
+// package name), so it is not inlined into a second copy here.
+import { ImageContext } from 'storybook-next-rsbuild/image-context'
 
 export const ImageDecorator = (
   Story: React.FC,
@@ -13,8 +16,8 @@ export const ImageDecorator = (
   }
 
   return (
-    <ImageConfigContext.Provider value={parameters.nextjs.image}>
+    <ImageContext.Provider value={parameters.nextjs.image}>
       <Story />
-    </ImageConfigContext.Provider>
+    </ImageContext.Provider>
   )
 }

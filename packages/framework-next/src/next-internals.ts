@@ -30,6 +30,5 @@ export {
   PathParamsContext,
   SearchParamsContext,
 } from 'next/dist/shared/lib/hooks-client-context.shared-runtime.js'
-export { ImageConfigContext } from 'next/dist/shared/lib/image-config-context.shared-runtime.js'
 export { RouterContext } from 'next/dist/shared/lib/router-context.shared-runtime.js'
 export { PAGE_SEGMENT_KEY } from 'next/dist/shared/lib/segment.js'
