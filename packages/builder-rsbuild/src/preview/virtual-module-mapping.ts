@@ -10,6 +10,30 @@ import type { Options, PreviewAnnotation } from 'storybook/internal/types'
 import { toImportFn } from '../../compiled/@storybook/core-webpack'
 import type { BuilderOptions } from '../types'
 
+/**
+ * Re-assert Storybook's intent to keep `node_modules` out of the stories
+ * `require.context`.
+ *
+ * Storybook core generates a `webpackInclude` with a `(?!.*node_modules)`
+ * guard, but the guard is unanchored (core strips the leading `^`) and so only
+ * works because webpack's `require.context` already drops `node_modules`
+ * candidates (its default `RequireContextPlugin` rewrites any path under
+ * `resolve.modules` to a bare specifier and hides the relative form). Rspack's
+ * `ContextModule` has no such rewrite, so it enumerates `node_modules` and the
+ * guard no-ops — a dependency that ships `.stories.*` files (e.g. under its own
+ * `src/`) then gets swept into the preview build and can break it.
+ *
+ * Adding an explicit `webpackExclude: /node_modules/` (honored by Rspack for
+ * webpack compatibility) makes Rspack match webpack's behavior. Only the
+ * guarded `webpackInclude`s are touched, so a glob that *intentionally* targets
+ * `node_modules` (no guard emitted by core) is left untouched.
+ */
+export const excludeNodeModulesFromStoryContext = (importFnSource: string) =>
+  importFnSource.replace(
+    /^([ \t]*)(\/\* webpackInclude:.*\(\?!\.\*node_modules\).*\*\/)[ \t]*$/gm,
+    '$1$2\n$1/* webpackExclude: /node_modules/ */',
+  )
+
 export const getVirtualModules = async (options: Options) => {
   const virtualModules: Record<string, string> = {}
   const builderOptions = await getBuilderOptions<BuilderOptions>(options)
@@ -48,9 +72,11 @@ export const getVirtualModules = async (options: Options) => {
 
   const needPipelinedImport =
     builderOptions.lazyCompilation !== false && !isProd
-  virtualModules[storiesPath] = toImportFn(stories, {
-    needPipelinedImport,
-  })
+  virtualModules[storiesPath] = excludeNodeModulesFromStoryContext(
+    toImportFn(stories, {
+      needPipelinedImport,
+    }),
+  )
   // If the entrypoint is changed, remember to sync the change to Chromatic https://github.com/chromaui/chromatic-cli/pull/1206/files.
   // Also ref https://github.com/rstackjs/storybook-rsbuild/issues/332.
   const configEntryPath = resolve(join(workingDir, 'storybook-config-entry.js'))
