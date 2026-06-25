@@ -27,12 +27,28 @@ import type { BuilderOptions } from '../types'
  * webpack compatibility) makes Rspack match webpack's behavior. Only the
  * guarded `webpackInclude`s are touched, so a glob that *intentionally* targets
  * `node_modules` (no guard emitted by core) is left untouched.
+ *
+ * Done with plain string scanning (not a regex) on purpose: the input is
+ * generated from user-controlled story globs, and a regex spanning the comment
+ * would risk polynomial backtracking (ReDoS).
  */
 export const excludeNodeModulesFromStoryContext = (importFnSource: string) =>
-  importFnSource.replace(
-    /^([ \t]*)(\/\* webpackInclude:.*\(\?!\.\*node_modules\).*\*\/)[ \t]*$/gm,
-    '$1$2\n$1/* webpackExclude: /node_modules/ */',
-  )
+  importFnSource
+    .split('\n')
+    .flatMap((line) => {
+      // The guarded `webpackInclude` comment is the only line carrying both
+      // tokens (core emits the `(?!.*node_modules)` guard only when the glob
+      // itself doesn't target node_modules).
+      if (
+        line.includes('webpackInclude:') &&
+        line.includes('(?!.*node_modules)')
+      ) {
+        const indent = line.slice(0, line.length - line.trimStart().length)
+        return [line, `${indent}/* webpackExclude: /node_modules/ */`]
+      }
+      return [line]
+    })
+    .join('\n')
 
 export const getVirtualModules = async (options: Options) => {
   const virtualModules: Record<string, string> = {}
