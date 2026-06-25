@@ -38,6 +38,11 @@ const getStoriesModule = async (options: Options) => {
   return virtualModules[storiesPath]
 }
 
+// The injected exclude is anchored to path separators rather than the bare
+// `node_modules` substring, so it can't prune first-party stories when the
+// project lives under a directory whose name merely contains the substring.
+const pathSegmentExclude = '/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */'
+
 describe('virtual-module-mapping: stories context excludes node_modules', () => {
   // Rspack's require.context (unlike webpack's) enumerates node_modules, so a
   // dependency that ships `.stories.*` files would be swept into the preview
@@ -46,7 +51,7 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
     const mod = await getStoriesModule(createOptions())
 
     expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).toMatch(/webpackExclude:\s*\/node_modules\//)
+    expect(mod).toContain(pathSegmentExclude)
   })
 
   // `storybook dev` uses the pipelined/lazy import form — the exclude must
@@ -56,7 +61,16 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
       createOptions(storiesConfig, 'DEVELOPMENT'),
     )
 
-    expect(mod).toMatch(/webpackExclude:\s*\/node_modules\//)
+    expect(mod).toContain(pathSegmentExclude)
+  })
+
+  // The exclude must be a path-segment regex, not a bare `/node_modules/`
+  // substring match — otherwise a checkout path like `/builds/node_modules-x/`
+  // would over-prune first-party stories into an empty context.
+  it('anchors the exclude to path separators, not the bare substring', async () => {
+    const mod = await getStoriesModule(createOptions())
+
+    expect(mod).not.toMatch(/webpackExclude:\s*\/node_modules\//)
   })
 
   // If a glob *intentionally* points into node_modules, Storybook core emits no
@@ -69,6 +83,6 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
     )
 
     expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).not.toMatch(/webpackExclude:\s*\/node_modules\//)
+    expect(mod).not.toContain(pathSegmentExclude)
   })
 })

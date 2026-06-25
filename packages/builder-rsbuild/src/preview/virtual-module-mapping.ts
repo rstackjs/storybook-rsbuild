@@ -23,10 +23,20 @@ import type { BuilderOptions } from '../types'
  * guard no-ops — a dependency that ships `.stories.*` files (e.g. under its own
  * `src/`) then gets swept into the preview build and can break it.
  *
- * Adding an explicit `webpackExclude: /node_modules/` (honored by Rspack for
- * webpack compatibility) makes Rspack match webpack's behavior. Only the
- * guarded `webpackInclude`s are touched, so a glob that *intentionally* targets
- * `node_modules` (no guard emitted by core) is left untouched.
+ * TODO: remove this workaround once the upstream Rspack fix ships in a released
+ * `@rspack/core` — https://github.com/web-infra-dev/rspack/pull/14576.
+ *
+ * Adding an explicit `webpackExclude: /[\\/]node_modules[\\/]/` (honored by
+ * Rspack for webpack compatibility) makes Rspack match webpack's behavior. Only
+ * the guarded `webpackInclude`s are touched, so a glob that *intentionally*
+ * targets `node_modules` (no guard emitted by core) is left untouched.
+ *
+ * The exclude is anchored to path separators (`[\\/]node_modules[\\/]`) rather
+ * than the bare substring `node_modules`: Rspack tests `webpackExclude` against
+ * each candidate's absolute path, so a bare `/node_modules/` would also prune
+ * first-party stories when the project is checked out under a directory whose
+ * name merely contains the substring (e.g. `/builds/node_modules-cache/app/`),
+ * yielding an empty stories module.
  *
  * Done with plain string scanning (not a regex) on purpose: the input is
  * generated from user-controlled story globs, and a regex spanning the comment
@@ -44,7 +54,10 @@ export const excludeNodeModulesFromStoryContext = (importFnSource: string) =>
         line.includes('(?!.*node_modules)')
       ) {
         const indent = line.slice(0, line.length - line.trimStart().length)
-        return [line, `${indent}/* webpackExclude: /node_modules/ */`]
+        return [
+          line,
+          `${indent}/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */`,
+        ]
       }
       return [line]
     })
