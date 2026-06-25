@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { describe, expect, it, rs } from '@rstest/core'
+import type { Options } from 'storybook/internal/types'
 import { getVirtualModules } from '../../src/preview/virtual-module-mapping'
 
 const fixtureDir = resolve(__dirname, '../fixtures')
@@ -28,10 +29,10 @@ const createOptions = (
     configType,
     presets: { apply },
     configDir: fixtureDir,
-  } as never
+  } as unknown as Options
 }
 
-const getStoriesModule = async (options: never) => {
+const getStoriesModule = async (options: Options) => {
   const { virtualModules } = await getVirtualModules(options)
   const storiesPath = resolve(process.cwd(), 'storybook-stories.js')
   return virtualModules[storiesPath]
