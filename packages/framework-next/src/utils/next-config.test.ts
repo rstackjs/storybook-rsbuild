@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@rstest/core'
 import {
+  DUMMY_NEXT_ARGS,
   instrumentUserWebpack,
   isStorybookClaimedRule,
   ruleTestMatchesAny,
@@ -427,5 +428,47 @@ describe('instrumentUserWebpack — integration with claimed-extension drop', ()
     // mdx rule got dropped, frag rule passes through.
     expect(delta.rules).toHaveLength(1)
     expect(delta.rules[0]).toBe(otherRule)
+  })
+})
+
+describe('DUMMY_NEXT_ARGS.entrypoints — PWA entry-patch compatibility', () => {
+  const mainApp = DUMMY_NEXT_ARGS.entrypoints['main-app']
+
+  // In production, `getBaseWebpackConfig` eagerly evaluates the entry chain, so
+  // the dummy `main-app` entry reaches any next.config plugin that patches the
+  // client entry. Next's own `clientEntries` builds `main-app` as an array; the
+  // stub must match that shape, not the `{ import: [...] }` descriptor.
+  it('is an array (matches Next clientEntries shape), not an object descriptor', () => {
+    expect(Array.isArray(mainApp)).toBe(true)
+    expect(mainApp).toContain('next/dist/client/next-dev.js')
+  })
+
+  // Reproduces @serwist/next (and next-pwa) entry injection verbatim: it reads
+  // `entries['main-app'].includes(...)` then `.unshift(...)`. Against the old
+  // object descriptor this threw `entries.main-app.includes is not a function`,
+  // aborting the bridge into a silent React-only fallback.
+  it('survives a serwist/next-pwa-style .includes/.unshift entry patch', () => {
+    const swEntry = 'private-next-pwa-sw-register'
+    // What Next produces after merging clientEntries with our dummy entrypoints:
+    // `{ ...clientEntries, ...DUMMY_NEXT_ARGS.entrypoints }` — our stub overrides
+    // `main-app`, so the patcher sees exactly the stub's shape here.
+    const entries: Record<string, unknown> = {
+      'main.js': [],
+      // Copy — the patch mutates in place; don't pollute the shared dummy.
+      'main-app': [...mainApp],
+    }
+
+    const patch = () => {
+      for (const key of ['main.js', 'main-app']) {
+        const entry = entries[key] as string[] | string | undefined
+        if (entry && !(entry as string[]).includes(swEntry)) {
+          if (Array.isArray(entry)) entry.unshift(swEntry)
+          else if (typeof entry === 'string') entries[key] = [swEntry, entry]
+        }
+      }
+    }
+
+    expect(patch).not.toThrow()
+    expect(entries['main-app']).toContain(swEntry)
   })
 })
