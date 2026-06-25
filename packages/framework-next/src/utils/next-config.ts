@@ -89,14 +89,23 @@ const PREVIEW_KEYS = {
  * Keyed separately from version-dependent params (see `buildWebpackConfigParams`).
  * See AGENTS.md § Shim Catalogue.
  */
-const DUMMY_NEXT_ARGS = {
+export const DUMMY_NEXT_ARGS = {
   buildId: 'storybook-dev',
   encryptionKey: 'storybook-encryption-key-1234567890ab',
   rewrites: { beforeFiles: [], afterFiles: [], fallback: [] },
   originalRewrites: undefined,
   originalRedirects: undefined,
   entrypoints: {
-    'main-app': { import: ['next/dist/client/next-dev.js'] },
+    // Use the bare **array** entry shape, not the `{ import: [...] }` descriptor.
+    // Next's own `clientEntries` builds `main-app` as an array, and plugins that
+    // patch the client entry — PWA / service-worker plugins like `@serwist/next`
+    // and `next-pwa` — call array methods on it (`entries['main-app'].includes(x)`,
+    // `.unshift(x)`). In production, `getBaseWebpackConfig` eagerly evaluates the
+    // entry chain, so this dummy reaches those plugins; the object form has no
+    // `.includes` and throws `entries.main-app.includes is not a function`, which
+    // aborts the whole bridge. The array form matches Next and survives the patch.
+    // (The entry portion of the output is discarded anyway — see AGENTS.md.)
+    'main-app': ['next/dist/client/next-dev.js'],
   },
 }
 
@@ -325,15 +334,27 @@ export async function extractNextRspackConfig(
     return await doExtract(projectDir, nextVersion, dev)
   } catch (err) {
     const versionLabel = nextVersion ? nextVersion.join('.') : 'unknown'
-    const installHint = isMissingNextRspackError(err)
+    // The fallback to React-only is the intended recovery for the *expected*
+    // failure — `next-rspack` not installed. For any other error (most often a
+    // plugin or `webpack()` hook in the user's next.config throwing while we
+    // extract the config), the same silent degrade hides the real cause and
+    // surfaces later as an unrelated build error. So we attribute the likely
+    // source and print the stack, instead of just the message.
+    const hint = isMissingNextRspackError(err)
       ? ' Install next-rspack in your Next.js project and keep it aligned with your next version.'
-      : ''
+      : ' This usually means a plugin or `webpack()` hook in your next.config threw' +
+        ' while Storybook extracted the build config. The original error and stack' +
+        ' follow.'
     logger.error(
       `Failed to bridge Next.js config (next@${versionLabel}). ` +
         'Storybook will boot with React support only — ' +
-        'Next.js features (CSS, fonts, images, navigation mocks) will not work. ' +
-        `Error: ${err instanceof Error ? err.message : String(err)}.` +
-        installHint,
+        'Next.js features (CSS, fonts, images, navigation mocks) will not work.' +
+        hint,
+    )
+    // Preserve the full original error (stack included) — the message alone is
+    // rarely enough to locate a failure originating inside next.config.
+    logger.error(
+      err instanceof Error ? (err.stack ?? err.message) : String(err),
     )
     return EMPTY_EXTRACTION
   }
