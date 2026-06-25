@@ -27,9 +27,18 @@ import type { BuilderOptions } from '../types'
  * `@rspack/core` — https://github.com/web-infra-dev/rspack/pull/14576.
  *
  * Adding an explicit `webpackExclude: /[\\/]node_modules[\\/]/` (honored by
- * Rspack for webpack compatibility) makes Rspack match webpack's behavior. Only
- * the guarded `webpackInclude`s are touched, so a glob that *intentionally*
- * targets `node_modules` (no guard emitted by core) is left untouched.
+ * Rspack for webpack compatibility) makes Rspack match webpack's behavior. The
+ * exclude is added to every generated `webpackInclude` except one that already
+ * targets a real `node_modules` path segment (an intentional dependency glob),
+ * which is left untouched.
+ *
+ * We gate that "leave it alone" decision on a real `[\\/]node_modules[\\/]`
+ * segment in the include rather than on core's `(?!.*node_modules)` guard: core
+ * suppresses that guard for ANY glob whose *string* merely contains the
+ * `node_modules` substring (e.g. a project globbing `@(src|node_modules-cache)`),
+ * even though such a glob is not targeting dependencies — its unanchored
+ * `webpackInclude` would still sweep real `node_modules/<pkg>/**` stories, so it
+ * must keep the exclude.
  *
  * The exclude is anchored to path separators (`[\\/]node_modules[\\/]`) rather
  * than the bare substring `node_modules`: Rspack tests `webpackExclude` against
@@ -38,20 +47,22 @@ import type { BuilderOptions } from '../types'
  * name merely contains the substring (e.g. `/builds/node_modules-cache/app/`),
  * yielding an empty stories module.
  *
- * Done with plain string scanning (not a regex) on purpose: the input is
- * generated from user-controlled story globs, and a regex spanning the comment
- * would risk polynomial backtracking (ReDoS).
+ * Scanned line by line; the only regex used is the bounded, anchorless
+ * `[\\/]node_modules[\\/]` segment test, which has no adjacent unbounded
+ * quantifiers and so runs in linear time. A regex spanning the whole
+ * user-controlled comment (with `.*` spans) is deliberately avoided to rule out
+ * polynomial backtracking (ReDoS).
  */
 export const excludeNodeModulesFromStoryContext = (importFnSource: string) =>
   importFnSource
     .split('\n')
     .flatMap((line) => {
-      // The guarded `webpackInclude` comment is the only line carrying both
-      // tokens (core emits the `(?!.*node_modules)` guard only when the glob
-      // itself doesn't target node_modules).
+      // Touch every generated `webpackInclude` except one that already targets a
+      // real `node_modules` path segment (an intentional dependency glob) — that
+      // context is meant to enumerate node_modules, so leave it alone.
       if (
         line.includes('webpackInclude:') &&
-        line.includes('(?!.*node_modules)')
+        !/[\\/]node_modules[\\/]/.test(line)
       ) {
         const indent = line.slice(0, line.length - line.trimStart().length)
         return [

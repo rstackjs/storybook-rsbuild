@@ -73,6 +73,22 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
     expect(mod).not.toMatch(/webpackExclude:\s*\/node_modules\//)
   })
 
+  // A glob whose *string* merely contains the `node_modules` substring outside a
+  // real path segment (e.g. `node_modules-cache`) is NOT intentionally targeting
+  // dependencies. Storybook core still suppresses its `(?!.*node_modules)` guard
+  // for it, so keying off that guard would skip the exclude and let the
+  // unanchored `webpackInclude` sweep real `node_modules/<pkg>/**` stories.
+  it('still excludes node_modules when a glob merely contains the substring', async () => {
+    const mod = await getStoriesModule(
+      createOptions([
+        { directory: './@(src|node_modules-cache)', files: '**/*.stories.tsx' },
+      ]),
+    )
+
+    expect(mod).toMatch(/webpackInclude:/)
+    expect(mod).toContain(pathSegmentExclude)
+  })
+
   // If a glob *intentionally* points into node_modules, Storybook core emits no
   // `(?!.*node_modules)` guard — we must not override that intent.
   it('leaves a glob that intentionally targets node_modules untouched', async () => {
