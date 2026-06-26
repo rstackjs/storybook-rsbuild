@@ -101,4 +101,21 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
     expect(mod).toMatch(/webpackInclude:/)
     expect(mod).not.toContain(pathSegmentExclude)
   })
+
+  // A brace/extglob alternation branch that is *exactly* `node_modules`
+  // (`./@(src|node_modules)`) also intentionally targets dependency stories —
+  // core suppresses its guard and the webpack builder surfaces them. The
+  // decision keys on the structured glob, not the emitted regex (where the
+  // branch hides `node_modules` behind `|`/`)` rather than path separators), so
+  // the exclude must be left off here too.
+  it('leaves a glob targeting node_modules as an alternation branch untouched', async () => {
+    const mod = await getStoriesModule(
+      createOptions([
+        { directory: './@(src|node_modules)', files: '**/*.stories.tsx' },
+      ]),
+    )
+
+    expect(mod).toMatch(/webpackInclude:/)
+    expect(mod).not.toContain(pathSegmentExclude)
+  })
 })

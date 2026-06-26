@@ -6,73 +6,81 @@ import {
   normalizeStories,
   readTemplate,
 } from 'storybook/internal/common'
-import type { Options, PreviewAnnotation } from 'storybook/internal/types'
+import type {
+  NormalizedStoriesSpecifier,
+  Options,
+  PreviewAnnotation,
+} from 'storybook/internal/types'
 import { toImportFn } from '../../compiled/@storybook/core-webpack'
 import type { BuilderOptions } from '../types'
 
 /**
- * Re-assert Storybook's intent to keep `node_modules` out of the stories
- * `require.context`.
- *
- * Storybook core generates a `webpackInclude` with a `(?!.*node_modules)`
- * guard, but the guard is unanchored (core strips the leading `^`) and so only
- * works because webpack's `require.context` already drops `node_modules`
- * candidates (its default `RequireContextPlugin` rewrites any path under
- * `resolve.modules` to a bare specifier and hides the relative form). Rspack's
- * `ContextModule` has no such rewrite, so it enumerates `node_modules` and the
- * guard no-ops — a dependency that ships `.stories.*` files (e.g. under its own
- * `src/`) then gets swept into the preview build and can break it.
- *
- * TODO: remove this workaround once the upstream Rspack fix ships in a released
- * `@rspack/core` — https://github.com/web-infra-dev/rspack/pull/14576.
- *
- * Adding an explicit `webpackExclude: /[\\/]node_modules[\\/]/` (honored by
- * Rspack for webpack compatibility) makes Rspack match webpack's behavior. The
- * exclude is added to every generated `webpackInclude` except one that already
- * targets a real `node_modules` path segment (an intentional dependency glob),
- * which is left untouched.
- *
- * We gate that "leave it alone" decision on a real `[\\/]node_modules[\\/]`
- * segment in the include rather than on core's `(?!.*node_modules)` guard: core
- * suppresses that guard for ANY glob whose *string* merely contains the
- * `node_modules` substring (e.g. a project globbing `@(src|node_modules-cache)`),
- * even though such a glob is not targeting dependencies — its unanchored
- * `webpackInclude` would still sweep real `node_modules/<pkg>/**` stories, so it
- * must keep the exclude.
- *
- * The exclude is anchored to path separators (`[\\/]node_modules[\\/]`) rather
- * than the bare substring `node_modules`: Rspack tests `webpackExclude` against
- * each candidate's absolute path, so a bare `/node_modules/` would also prune
- * first-party stories when the project is checked out under a directory whose
- * name merely contains the substring (e.g. `/builds/node_modules-cache/app/`),
- * yielding an empty stories module.
- *
- * Scanned line by line; the only regex used is the bounded, anchorless
- * `[\\/]node_modules[\\/]` segment test, which has no adjacent unbounded
- * quantifiers and so runs in linear time. A regex spanning the whole
- * user-controlled comment (with `.*` spans) is deliberately avoided to rule out
- * polynomial backtracking (ReDoS).
+ * Matches `node_modules` only as a complete path segment OR a complete
+ * brace/extglob alternation branch — bounded on both sides by a path separator,
+ * an alternation delimiter (`( | , {` / `) | , }`), or the string end. A fixed
+ * literal between bounded single-char classes, so it stays linear-time (no ReDoS).
  */
-export const excludeNodeModulesFromStoryContext = (importFnSource: string) =>
-  importFnSource
+const NODE_MODULES_GLOB_TOKEN = /(?:^|[\\/(|,{])node_modules(?:$|[\\/)|,}])/
+
+/**
+ * Rebuild core-webpack's `webpackIncludeGlob` (see `webpackIncludeRegexp`) from
+ * a normalized specifier, so the "intentional" check keys on the SAME structured
+ * glob core uses — not the emitted regex, where an alternation branch hides
+ * `node_modules` behind `|`/`)` instead of path separators.
+ */
+const toWebpackIncludeGlob = ({
+  directory,
+  files,
+}: NormalizedStoriesSpecifier) =>
+  ['.', '..'].includes(directory)
+    ? files
+    : `${directory.replace(/^(\.+\/)+/, '/')}/${files}`
+
+/**
+ * A specifier intentionally targets dependency stories when its glob can expand
+ * to a real `node_modules` segment — a literal path segment (`./node_modules/pkg`)
+ * or an exact alternation branch (`./@(src|node_modules)`). Substring look-alikes
+ * (`node_modules-cache`, `my-node_modules`, `modules`) do NOT count.
+ */
+const targetsNodeModules = (specifier: NormalizedStoriesSpecifier) =>
+  NODE_MODULES_GLOB_TOKEN.test(toWebpackIncludeGlob(specifier))
+
+/**
+ * Re-assert Storybook core's intent to keep `node_modules` out of the stories
+ * context. Core's `(?!.*node_modules)` guard relies on webpack's context
+ * dropping `node_modules`; Rspack's `ContextModule` enumerates it, so a
+ * dependency shipping `.stories.*` gets swept in. We append a separator-anchored
+ * `webpackExclude` to every generated `webpackInclude`, except specifiers that
+ * intentionally glob into `node_modules` (real segment or alternation branch) —
+ * matching the webpack builder, which surfaces those.
+ *
+ * TODO: remove once the upstream Rspack fix ships in a released `@rspack/core`
+ * — https://github.com/web-infra-dev/rspack/pull/14576.
+ */
+export const excludeNodeModulesFromStoryContext = (
+  importFnSource: string,
+  stories: NormalizedStoriesSpecifier[],
+) => {
+  // Core emits exactly one `webpackInclude` per specifier, in `stories` order.
+  let specifierIndex = 0
+  return importFnSource
     .split('\n')
     .flatMap((line) => {
-      // Touch every generated `webpackInclude` except one that already targets a
-      // real `node_modules` path segment (an intentional dependency glob) — that
-      // context is meant to enumerate node_modules, so leave it alone.
-      if (
-        line.includes('webpackInclude:') &&
-        !/[\\/]node_modules[\\/]/.test(line)
-      ) {
-        const indent = line.slice(0, line.length - line.trimStart().length)
-        return [
-          line,
-          `${indent}/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */`,
-        ]
+      if (!line.includes('webpackInclude:')) {
+        return [line]
       }
-      return [line]
+      const specifier = stories[specifierIndex++]
+      if (specifier && targetsNodeModules(specifier)) {
+        return [line]
+      }
+      const indent = line.slice(0, line.length - line.trimStart().length)
+      return [
+        line,
+        `${indent}/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */`,
+      ]
     })
     .join('\n')
+}
 
 export const getVirtualModules = async (options: Options) => {
   const virtualModules: Record<string, string> = {}
@@ -116,6 +124,7 @@ export const getVirtualModules = async (options: Options) => {
     toImportFn(stories, {
       needPipelinedImport,
     }),
+    stories,
   )
   // If the entrypoint is changed, remember to sync the change to Chromatic https://github.com/chromaui/chromatic-cli/pull/1206/files.
   // Also ref https://github.com/rstackjs/storybook-rsbuild/issues/332.
