@@ -12,7 +12,12 @@ const getAbsolutePath = (value: string): any => {
 }
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  // Brace-rooted glob whose `modules` alternative matches `node_modules` —
+  // regression for the dependency-story sweep fixed in #506.
+  stories: [
+    '../@(modules|src)/**/*.mdx',
+    '../@(modules|src)/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+  ],
   addons: [
     '@storybook/addon-onboarding',
     '@storybook/addon-docs',
