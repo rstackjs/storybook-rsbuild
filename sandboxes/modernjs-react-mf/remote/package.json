@@ -12,14 +12,14 @@
     "upgrade": "modern upgrade"
   },
   "dependencies": {
-    "@modern-js/runtime": "3.4.0",
-    "@module-federation/modern-js-v3": "2.5.1",
+    "@modern-js/runtime": "3.5.0",
+    "@module-federation/modern-js-v3": "2.6.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@modern-js/app-tools": "^3.4.0",
-    "@modern-js/tsconfig": "3.4.0",
+    "@modern-js/app-tools": "^3.5.0",
+    "@modern-js/tsconfig": "3.5.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
