@@ -14,7 +14,7 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
-    "playwright": "^1.61.0",
+    "playwright": "^1.61.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
