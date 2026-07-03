@@ -5,9 +5,37 @@ import { readProvidedMap, walkRules } from './preset-helpers'
 // Must be set before any Next.js internal imports so that
 // getBaseWebpackConfig() emits rspack-compatible config.
 process.env.NEXT_RSPACK = 'true'
-process.env.RSPACK_CONFIG_VALIDATE = 'loose-silent'
-// Prevents Next.js from erroring about missing render worker context
+// This var is process-wide and is ALSO read by @rspack/core when Rsbuild calls
+// `rspack(finalConfig)` at compile time, so it governs validation of the whole
+// final Storybook build — including the user's own webpackFinal/tools.rspack
+// mutations. Next.js emits webpack-only keys that @rspack/core 1.5.0's schema
+// rejects, so 'strict' can't be used; but 'loose-silent' would suppress a typo
+// in the user's config too. Default to the loosest NON-silent mode ('loose':
+// prints validation issues as warnings, never throws) so config typos still
+// surface. Only default when unset so a user can override (e.g.
+// RSPACK_CONFIG_VALIDATE=strict to debug, or 'loose-silent' to restore the old
+// behavior). Read only by @rspack/core <= 1.5.x (Next 15 rows); rspack 1.6.0
+// removed JS-side validation, so it is vestigial on Next 16 rows.
+process.env.RSPACK_CONFIG_VALIDATE = resolveRspackValidateMode(
+  process.env.RSPACK_CONFIG_VALIDATE,
+)
+// Setting this var makes Next.js's loadConfig() SKIP loadWebpackHook(), which
+// would otherwise install ~40 process-wide require-hook aliases remapping
+// 'webpack', 'webpack-sources', '@babel/runtime', etc. to next/dist/compiled/*
+// for the entire Storybook process (hijacking those requires in user
+// webpackFinal / webpackAddons code that does `require('webpack')`). (It only
+// *throws* in standalone/untraced installs, not a normal one.)
 process.env.__NEXT_PRIVATE_RENDER_WORKER = 'defined'
+
+/**
+ * The RSPACK_CONFIG_VALIDATE mode to use: a user-supplied value always wins;
+ * otherwise the non-silent 'loose' default (see the assignment above). Extracted
+ * so the "respect override, default when unset" contract is unit-testable
+ * without wrestling the module-load side effect.
+ */
+export function resolveRspackValidateMode(current: string | undefined): string {
+  return current ?? 'loose'
+}
 
 export interface NextRspackExtraction {
   /** resolve.alias from getBaseWebpackConfig (absolute paths) */
@@ -55,6 +83,22 @@ const EMPTY_USER_DELTA: UserWebpackDelta = {
   fallback: {},
   experiments: {},
   externals: [],
+}
+
+/**
+ * The Next.js config-loading phase that matches the Storybook build mode:
+ * dev → PHASE_DEVELOPMENT_SERVER, production → PHASE_PRODUCTION_BUILD. Governs
+ * which `.env.*` files `@next/env` loads and which branch a phase-conditional
+ * `next.config` function takes. Pure/exported for unit testing.
+ */
+export function configLoadPhase(
+  dev: boolean,
+  phases: {
+    PHASE_DEVELOPMENT_SERVER: string
+    PHASE_PRODUCTION_BUILD: string
+  },
+): string {
+  return dev ? phases.PHASE_DEVELOPMENT_SERVER : phases.PHASE_PRODUCTION_BUILD
 }
 
 const req = createRequire(import.meta.url)
@@ -382,7 +426,8 @@ async function doExtract(
       import('next/dist/lib/find-pages-dir.js').catch(() => null),
     ])
 
-  const { PHASE_DEVELOPMENT_SERVER, COMPILER_NAMES } = constantsMod
+  const { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, COMPILER_NAMES } =
+    constantsMod
   const { Span } = traceMod
   // ESM import of CJS module can create double-wrapped default; `as any`
   // because TS types the single-unwrapped `.default` as the function directly
@@ -392,7 +437,18 @@ async function doExtract(
     (webpackConfigMod as any).default?.default || webpackConfigMod.default
   const { loadProjectInfo } = webpackConfigMod
 
-  const nextConfig = await loadConfig(PHASE_DEVELOPMENT_SERVER, projectDir)
+  // Load the config in the phase that MATCHES the build: `storybook dev` →
+  // PHASE_DEVELOPMENT_SERVER (loads .env.development[.local]), `storybook build`
+  // → PHASE_PRODUCTION_BUILD (loads .env.production[.local]). This makes
+  // phase-conditional next.config functions and `@next/env` resolve the same
+  // mode `getBaseWebpackConfig({ dev })` extracts, so a production Storybook no
+  // longer inlines development env values. (This deliberately diverges from
+  // upstream @storybook/nextjs, which always uses PHASE_DEVELOPMENT_SERVER.)
+  const phase = configLoadPhase(dev, {
+    PHASE_DEVELOPMENT_SERVER,
+    PHASE_PRODUCTION_BUILD,
+  })
+  const nextConfig = await loadConfig(phase, projectDir)
   // Instrument the user's `webpack(config, opts)` hook (no-op if absent) so we
   // can extract its delta in a single getBaseWebpackConfig() call. Must happen
   // BEFORE loadProjectInfo / getBaseWebpackConfig so the wrapper is the
@@ -420,7 +476,24 @@ async function doExtract(
     supportedBrowsers: projectInfo.supportedBrowsers,
   })
 
-  const rspackConfig = await getBaseWebpackConfig(projectDir, params)
+  // Force Next.js's JS `next-swc-loader` branch by scrubbing BUILTIN_SWC_LOADER
+  // for the extraction. When set (a next-rspack perf knob), Next emits
+  // `builtin:next-swc-loader`, which standard @rspack/core panics on and which
+  // our loader-chain builder cannot shim — so the bridge would silently degrade
+  // to Rsbuild's built-in SWC. Save/restore so we don't leak the change.
+  // See AGENTS.md § Shim Catalogue.
+  const savedBuiltinSwcLoader = process.env.BUILTIN_SWC_LOADER
+  delete process.env.BUILTIN_SWC_LOADER
+  let rspackConfig: any
+  try {
+    rspackConfig = await getBaseWebpackConfig(projectDir, params)
+  } finally {
+    if (savedBuiltinSwcLoader === undefined) {
+      delete process.env.BUILTIN_SWC_LOADER
+    } else {
+      process.env.BUILTIN_SWC_LOADER = savedBuiltinSwcLoader
+    }
+  }
 
   const defines: Record<string, any> = {}
   for (const plugin of rspackConfig.plugins || []) {

@@ -1,9 +1,13 @@
 import { describe, expect, it } from '@rstest/core'
 import {
+  analyzeNextLoaderChain,
+  buildAliasLayers,
   buildNextLoaderChain,
   dedupProvidePluginKeys,
   filterNextAliases,
   filterNextPlugins,
+  isNextSwcLoaderName,
+  isProtectedFrameworkAliasKey,
   isRuntimeCssUrl,
   makeBarrelRule,
   makeFontRule,
@@ -12,6 +16,8 @@ import {
   readProvidedMap,
   replaceSwcRules,
   resolveNodeProtocolRequest,
+  rulesCongruentForDedup,
+  rulesHandleSass,
   ruleTestSignature,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
@@ -46,6 +52,117 @@ describe('filterNextAliases', () => {
       'next/link': ['/a', '/b'],
     }
     expect(filterNextAliases(input)).toEqual(input)
+  })
+
+  it('drops webpack exact-match ($) react keys (preact/compat aliasing)', () => {
+    const input = {
+      react$: '/preact/compat',
+      'react-dom$': '/preact/compat',
+      'react/jsx-runtime$': '/preact/jsx-runtime',
+      'react-dom/client$': '/preact/compat/client',
+      'next/head': '/keep',
+    }
+    expect(filterNextAliases(input)).toEqual({ 'next/head': '/keep' })
+  })
+
+  it('keeps $-suffixed keys that merely contain react (preact$, reactish$)', () => {
+    const input = {
+      preact$: '/preact',
+      reactish$: '/reactish',
+      'my-react$': '/mine',
+    }
+    expect(filterNextAliases(input)).toEqual(input)
+  })
+
+  it('strips only one trailing $ (react$$ is not a blocked react key)', () => {
+    const input = { react$$: '/weird' }
+    expect(filterNextAliases(input)).toEqual(input)
+  })
+})
+
+describe('isProtectedFrameworkAliasKey', () => {
+  it('protects next/image and styled-jsx keys (plain and $-exact, subpaths)', () => {
+    for (const k of [
+      'next/image',
+      'next/image$',
+      'styled-jsx',
+      'styled-jsx$',
+      'styled-jsx/style',
+      'styled-jsx/style.js',
+      'styled-jsx/css$',
+    ]) {
+      expect(isProtectedFrameworkAliasKey(k)).toBe(true)
+    }
+  })
+
+  it('does not protect unrelated or near-miss keys', () => {
+    for (const k of [
+      'next/imagex',
+      'next/image-loader',
+      'styled-jsxx',
+      'next/link',
+      'react',
+    ]) {
+      expect(isProtectedFrameworkAliasKey(k)).toBe(false)
+    }
+  })
+})
+
+describe('buildAliasLayers', () => {
+  const OVERRIDES = {
+    'next/image$': '/mock/next-image',
+    'styled-jsx': '/resolved/styled-jsx',
+  }
+
+  it('layers overrides → base → user delta with user winning ordinary keys', () => {
+    const { alias } = buildAliasLayers(
+      { 'next/head': '/base/head', 'next/link': '/base/link' },
+      { 'next/link': '/user/link' },
+      OVERRIDES,
+    )
+    expect(alias).toEqual({
+      'next/image$': '/mock/next-image',
+      'styled-jsx': '/resolved/styled-jsx',
+      'next/head': '/base/head',
+      'next/link': '/user/link',
+    })
+  })
+
+  it('spreads overrides FIRST so insertion order keeps the mock/singleton ahead', () => {
+    const { alias } = buildAliasLayers({}, {}, OVERRIDES)
+    expect(Object.keys(alias)).toEqual(['next/image$', 'styled-jsx'])
+  })
+
+  it('strips react/RSC from both base and user delta, reporting dropped user keys', () => {
+    const { alias, droppedReactKeys } = buildAliasLayers(
+      { react: '/base/react', 'next/head': '/base/head' },
+      { react: '/user/react', 'react-dom$': '/user/react-dom' },
+      OVERRIDES,
+    )
+    expect(alias.react).toBeUndefined()
+    expect(alias['next/head']).toBe('/base/head')
+    expect(droppedReactKeys.sort()).toEqual(['react', 'react-dom$'])
+  })
+
+  it('strips protected keys from the user delta (reported) and silently from base', () => {
+    const { alias, droppedProtectedKeys } = buildAliasLayers(
+      { 'styled-jsx$': '/base/styled-jsx', 'next/head': '/base/head' },
+      { 'next/image$': '/user/image', 'next/link': '/user/link' },
+      OVERRIDES,
+    )
+    // Override wins for the protected key; user's attempt is dropped + reported.
+    expect(alias['next/image$']).toBe('/mock/next-image')
+    expect(alias['styled-jsx$']).toBeUndefined()
+    expect(alias['next/link']).toBe('/user/link')
+    expect(droppedProtectedKeys).toEqual(['next/image$'])
+  })
+
+  it('does not mutate its inputs', () => {
+    const base = { react: '/base/react', 'next/head': '/base/head' }
+    const userDelta = { 'next/image$': '/user/image' }
+    buildAliasLayers(base, userDelta, OVERRIDES)
+    expect(base).toEqual({ react: '/base/react', 'next/head': '/base/head' })
+    expect(userDelta).toEqual({ 'next/image$': '/user/image' })
   })
 })
 
@@ -124,6 +241,61 @@ describe('dedupProvidePluginKeys (proposalsapp / safe-wallet pattern)', () => {
     const next = [new RspackProvidePlugin({ Buffer: ['buffer', 'Buffer'] })]
     const out = dedupProvidePluginKeys(undefined, next) as RspackProvidePlugin[]
     expect(out[0].definitions).toEqual({ Buffer: ['buffer', 'Buffer'] })
+  })
+})
+
+describe('dedupProvidePluginKeys (F14 unreadable-shape hardening)', () => {
+  // Named ProvidePlugin but with neither `.definitions` nor `_args` → the
+  // internal-shape read fails, mirroring a future rspack wrapper change.
+  class ProvidePlugin {}
+  // rspack-style wrapper that stashes ALL ctor args (not just the first).
+  class RspackProvidePlugin {
+    public _args: any[]
+    constructor(...args: any[]) {
+      this._args = args
+    }
+  }
+
+  it('fires onUnreadable("rsbuild") and skips dedup when rsbuild plugin is unreadable', () => {
+    const calls: Array<{ side: string }> = []
+    const nextPlugin = new RspackProvidePlugin({ Buffer: ['buffer', 'Buffer'] })
+    const out = dedupProvidePluginKeys(
+      [new ProvidePlugin()],
+      [nextPlugin],
+      (_p, side) => calls.push({ side }),
+    )
+    expect(calls).toEqual([{ side: 'rsbuild' }])
+    // Dedup skipped → next plugin forwarded intact.
+    expect(out).toEqual([nextPlugin])
+  })
+
+  it('fires onUnreadable("next") and forwards the plugin when next plugin is unreadable', () => {
+    const calls: Array<{ side: string }> = []
+    const nextPlugin = new ProvidePlugin()
+    const out = dedupProvidePluginKeys(
+      [new RspackProvidePlugin({ process: '/abs/process' })],
+      [nextPlugin],
+      (_p, side) => calls.push({ side }),
+    )
+    expect(calls).toEqual([{ side: 'next' }])
+    expect(out).toEqual([nextPlugin])
+  })
+
+  it('preserves trailing constructor args when reconstructing', () => {
+    const rsbuild = [new RspackProvidePlugin({ process: '/abs/process' })]
+    const next = [
+      new RspackProvidePlugin(
+        { process: ['process'], Buffer: ['buffer', 'Buffer'] },
+        'trailing-arg',
+      ),
+    ]
+    const out = dedupProvidePluginKeys(rsbuild, next) as RspackProvidePlugin[]
+    expect(out).toHaveLength(1)
+    // process dropped (rsbuild provides it), Buffer kept, trailing arg carried.
+    expect(out[0]._args).toEqual([
+      { Buffer: ['buffer', 'Buffer'] },
+      'trailing-arg',
+    ])
   })
 })
 
@@ -361,6 +533,120 @@ describe('buildNextLoaderChain', () => {
   })
 })
 
+describe('isNextSwcLoaderName (separator-agnostic matcher)', () => {
+  it('matches bare and both-separator paths', () => {
+    expect(isNextSwcLoaderName('next-swc-loader')).toBe(true)
+    expect(isNextSwcLoaderName('/abs/loaders/next-swc-loader')).toBe(true)
+    expect(isNextSwcLoaderName('C:\\abs\\loaders\\next-swc-loader')).toBe(true)
+  })
+
+  it('does NOT match builtin:next-swc-loader or unrelated names', () => {
+    // The builtin variant has a different options schema and panics on standard
+    // @rspack/core — it must be detected separately, not shimmed as a match.
+    expect(isNextSwcLoaderName('builtin:next-swc-loader')).toBe(false)
+    expect(isNextSwcLoaderName('next-swc-loader-extra')).toBe(false)
+    expect(isNextSwcLoaderName('my-next-swc-loader-x')).toBe(false)
+    expect(isNextSwcLoaderName(null)).toBe(false)
+    expect(isNextSwcLoaderName(undefined)).toBe(false)
+  })
+})
+
+describe('buildNextLoaderChain (F3 hardening)', () => {
+  const SHIM = '/shim/swc-loader-shim.cjs'
+
+  it('builds the chain from a backslash (Windows) next-swc-loader path', () => {
+    const swcOpts = { isServer: false }
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'C:\\proj\\loaders\\next-swc-loader', options: swcOpts },
+        ],
+      },
+    ]
+    expect(buildNextLoaderChain(rules, SHIM)).toEqual([
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: SHIM, options: swcOpts },
+    ])
+  })
+
+  it('returns null when only builtin:next-swc-loader is present (unshimmable)', () => {
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [{ loader: 'builtin:next-swc-loader', options: {} }],
+      },
+    ]
+    expect(buildNextLoaderChain(rules, SHIM)).toBeNull()
+  })
+})
+
+describe('analyzeNextLoaderChain (tier + builtin diagnostics)', () => {
+  it('reports the refresh tier for a refresh-paired dev rule', () => {
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh-loader' },
+          { loader: 'next-swc-loader', options: {} },
+        ],
+      },
+    ]
+    expect(analyzeNextLoaderChain(rules)).toEqual({
+      tier: 'refresh',
+      sawBuiltinSwcLoader: false,
+    })
+  })
+
+  it('reports the plain tier when the refresh loader is renamed away', () => {
+    // Simulates Next.js renaming 'builtin:react-refresh-loader' → the chain
+    // still builds (plain rule) but Fast Refresh would degrade; preset.ts warns.
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'builtin:react-refresh' },
+          { loader: 'next-swc-loader', options: {} },
+        ],
+      },
+    ]
+    expect(analyzeNextLoaderChain(rules)).toEqual({
+      tier: 'plain',
+      sawBuiltinSwcLoader: false,
+    })
+  })
+
+  it('reports null tier + sawBuiltinSwcLoader for a builtin-only ruleset', () => {
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [{ loader: 'builtin:next-swc-loader' }],
+      },
+    ]
+    expect(analyzeNextLoaderChain(rules)).toEqual({
+      tier: null,
+      sawBuiltinSwcLoader: true,
+    })
+  })
+
+  it('reports the any tier for a flight-only rule (prod-ish extraction)', () => {
+    const rules = [
+      {
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'next-flight-loader' },
+          { loader: 'next-swc-loader', options: {} },
+        ],
+      },
+    ]
+    expect(analyzeNextLoaderChain(rules)).toEqual({
+      tier: 'any',
+      sawBuiltinSwcLoader: false,
+    })
+  })
+})
+
 describe('replaceSwcRules', () => {
   it('replaces every builtin:swc-loader occurrence with the Next.js chain', () => {
     const chain = [{ loader: '/shim.cjs', options: { a: 1 } }]
@@ -396,6 +682,37 @@ describe('replaceSwcRules', () => {
       { use: [{ loader: 'asset/resource' }] },
     ]
     expect(replaceSwcRules(rules, [{ loader: '/shim.cjs' }])).toBe(false)
+  })
+
+  // streamshub/console (Next 15) regression: Rsbuild's `mimetype` rule for
+  // inline text/javascript also matches html-rspack-plugin's synthetic
+  // `data:…__webpack_public_path__…` child-compiler entry, which is evaluated
+  // in a Node `vm`. Keeping `builtin:react-refresh-loader` there crashes
+  // `storybook dev` (no `__webpack_require__.c` in that runtime). Mimetype rules
+  // must get a refresh-less chain; real file `test` rules keep the footer.
+  it('strips react-refresh-loader from mimetype (inline/data:) rules only', () => {
+    const chain = [
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: '/shim.cjs', options: { a: 1 } },
+    ]
+    const rules = [
+      {
+        test: /\.(?:js|jsx|ts|tsx)$/,
+        use: [{ loader: 'builtin:swc-loader' }],
+      },
+      {
+        mimetype: { or: ['text/javascript', 'application/javascript'] },
+        use: [{ loader: 'builtin:swc-loader' }],
+      },
+    ]
+
+    const replaced = replaceSwcRules(rules, chain)
+
+    expect(replaced).toBe(true)
+    // File `test` rule keeps the Fast Refresh footer.
+    expect(rules[0].use).toEqual(chain)
+    // Mimetype rule drops only the refresh loader, keeps the swc shim.
+    expect(rules[1].use).toEqual([{ loader: '/shim.cjs', options: { a: 1 } }])
   })
 })
 
@@ -458,9 +775,34 @@ describe('TARGET_CSS_RE (next/font synthetic module)', () => {
     ).toBe(true)
   })
 
+  it('matches the @next/font variant and pnpm store paths', () => {
+    expect(
+      TARGET_CSS_RE.test('node_modules/@next/font/google/target.css'),
+    ).toBe(true)
+    expect(
+      TARGET_CSS_RE.test(
+        'node_modules/.pnpm/next@16.2.9_react@19.0.0/node_modules/next/font/local/target.css',
+      ),
+    ).toBe(true)
+  })
+
   it('does not match ordinary css', () => {
     expect(TARGET_CSS_RE.test('src/app/globals.css')).toBe(false)
     expect(TARGET_CSS_RE.test('src/Other.module.css')).toBe(false)
+  })
+
+  it('does not false-positive on user target.css under a dir named next (F12)', () => {
+    // A project rooted at /…/next/ or a src/mynext/ folder previously matched
+    // the looser upstream regex and got wrongly routed to the font loader.
+    expect(TARGET_CSS_RE.test('src/mynext/theme/target.css')).toBe(false)
+    expect(
+      TARGET_CSS_RE.test('/Users/x/projects/next/src/styles/target.css'),
+    ).toBe(false)
+    expect(TARGET_CSS_RE.test('src/target.css')).toBe(false)
+    // `next/fonts` (plural) is not the synthetic `next/font` segment.
+    expect(TARGET_CSS_RE.test('node_modules/next/fonts/x/target.css')).toBe(
+      false,
+    )
   })
 })
 
@@ -592,5 +934,129 @@ describe('ruleTestSignature (svgr dedup — safe-wallet / oak)', () => {
     expect(ruleTestSignature({ test: /\.svg$/ })).not.toBe(
       ruleTestSignature({ test: /\.css$/ }),
     )
+  })
+})
+
+describe('rulesCongruentForDedup (condition-aware dedup — F2)', () => {
+  it('dedups bare-test vs bare-test with the same RegExp', () => {
+    expect(rulesCongruentForDedup({ test: /\.svg$/ }, { test: /\.svg$/ })).toBe(
+      true,
+    )
+  })
+
+  it('keeps rules when one narrows via include and the other does not', () => {
+    // Icons-scoped SVGR rule vs an unrelated raw-SVG rule must coexist.
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, include: /src\/icons/ },
+        { test: /\.svg$/ },
+      ),
+    ).toBe(false)
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, resourceQuery: /raw/ },
+        { test: /\.svg$/ },
+      ),
+    ).toBe(false)
+  })
+
+  it('dedups when both carry the identical narrowing condition', () => {
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, include: /src\/icons/ },
+        { test: /\.svg$/, include: /src\/icons/ },
+      ),
+    ).toBe(true)
+  })
+
+  it('compares array conditions element-wise', () => {
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, exclude: [/a/, 'b'] },
+        { test: /\.svg$/, exclude: [/a/, 'b'] },
+      ),
+    ).toBe(true)
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, exclude: [/a/, 'b'] },
+        { test: /\.svg$/, exclude: [/a/, 'c'] },
+      ),
+    ).toBe(false)
+  })
+
+  it('never dedups non-comparable conditions (functions / object matchers)', () => {
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, issuer: () => true },
+        { test: /\.svg$/, issuer: () => true },
+      ),
+    ).toBe(false)
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, include: { and: [/a/] } },
+        { test: /\.svg$/, include: { and: [/a/] } },
+      ),
+    ).toBe(false)
+  })
+
+  it('never dedups non-RegExp tests', () => {
+    expect(rulesCongruentForDedup({ test: 'x' }, { test: 'x' })).toBe(false)
+    expect(
+      rulesCongruentForDedup({ test: { or: [/a/] } }, { test: { or: [/a/] } }),
+    ).toBe(false)
+  })
+})
+
+describe('rulesHandleSass (structural Sass probe — F7)', () => {
+  it('detects a rule whose test matches .scss', () => {
+    expect(rulesHandleSass([{ test: /\.s[ac]ss$/, use: [] }])).toBe(true)
+  })
+
+  it('detects sass-loader in string / object / array use forms', () => {
+    expect(rulesHandleSass([{ test: /x/, use: 'sass-loader' }])).toBe(true)
+    expect(
+      rulesHandleSass([
+        { test: /x/, use: { loader: '/p/sass-loader/index.js' } },
+      ]),
+    ).toBe(true)
+    expect(
+      rulesHandleSass([
+        {
+          test: /x/,
+          use: [{ loader: 'css-loader' }, { loader: 'sass-loader' }],
+        },
+      ]),
+    ).toBe(true)
+    expect(rulesHandleSass([{ loader: 'sass-loader' }])).toBe(true)
+  })
+
+  it('recurses into oneOf and nested rules', () => {
+    expect(
+      rulesHandleSass([{ oneOf: [{ test: /y/, use: 'sass-loader' }] }]),
+    ).toBe(true)
+    expect(rulesHandleSass([{ rules: [{ test: /\.scss$/, use: [] }] }])).toBe(
+      true,
+    )
+  })
+
+  it('does NOT throw or match on a function-shaped use (F7 crash guard)', () => {
+    // JSON.stringify(fn) is undefined → `.includes` used to throw. A function
+    // use whose test does not match .scss must be treated as "not sass".
+    const rules = [{ test: /\.svg$/, use: () => [{ loader: 'x' }] }]
+    expect(() => rulesHandleSass(rules)).not.toThrow()
+    expect(rulesHandleSass(rules)).toBe(false)
+  })
+
+  it('does NOT throw on circular loader options', () => {
+    const circular: any = { loader: 'some-loader', options: {} }
+    circular.options.self = circular.options
+    expect(() =>
+      rulesHandleSass([{ test: /\.js$/, use: [circular] }]),
+    ).not.toThrow()
+  })
+
+  it('returns false for a non-array input', () => {
+    expect(rulesHandleSass(undefined)).toBe(false)
+    expect(rulesHandleSass(null)).toBe(false)
   })
 })

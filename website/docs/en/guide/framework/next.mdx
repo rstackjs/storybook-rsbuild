@@ -36,9 +36,9 @@ Pick the row that matches your `next` version and install the listed `@rsbuild/c
 
 | `next` | `next-rspack` | `@rspack/core` (transitive) | `@rsbuild/core` |
 | :--- | :--- | :--- | :--- |
-| `15.3.x` | same as `next` | `1.3.4` | `1.3.6` |
-| `15.4.x` | same as `next` | `1.4.5` | `1.4.5` |
-| `15.5.x` | same as `next` | `1.4.5` | `1.4.5` |
+| `15.3.x` | same as `next` | `1.5.0` † | `1.5.0` † |
+| `15.4.x` | same as `next` | `1.5.0` † | `1.5.0` † |
+| `15.5.x` | same as `next` | `1.5.0` † | `1.5.0` † |
 | `16.0.x` | same as `next` | `1.6.0` | `1.6.0` or `1.6.1` |
 | `16.1.x` | same as `next` | `1.6.7` | `1.6.14` |
 | `16.2.x` | same as `next` | `1.6.7` | `1.6.14` |
@@ -47,11 +47,14 @@ Pick the row that matches your `next` version and install the listed `@rsbuild/c
 
 Notes:
 
+- **† Next 15 needs an `@rspack/core` override.** The Storybook builder requires `rspack.experiments.VirtualModulesPlugin`, which only exists in `@rspack/core ≥ 1.5.0` (the builder's `@rsbuild/core` peer floor is `^1.5.0`). But `next-rspack@15.x` natively pins `@rspack/core` `1.3.4`/`1.4.5`, which lack it — so the framework would throw at startup. Install `@rsbuild/core@1.5.0` **and** force a single `@rspack/core@1.5.0` across the tree with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions); `next-rspack@15.x` runs correctly against `@rspack/core 1.5.0`. The Next 16 rows need no override — their `@rspack/core` is already ≥ 1.5.0.
 - `next-rspack` must be installed at the exact same version as `next` (single release train, no cross-version compatibility).
 - `@rsbuild/core` pins `@rspack/core` to an exact version (not a range), so only the specific `@rsbuild/core` versions listed above resolve to the target `@rspack/core`. Installing a newer `@rsbuild/core` within the same minor generally shifts the `@rspack/core` pin and breaks the invariant.
 - The resolution chain depends on the Next major: **Next 16+** goes `next-rspack → @next/rspack-core → @rspack/core`; **Next 15** has `next-rspack` depending on `@rspack/core` directly.
-- If the framework aborts with an `@rspack/core` mismatch error, compare the two paths it prints — they should resolve to the same file. The supported fix is to realign via this table, or force `@rspack/core` to the target version with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions).
-- A separate, **non-fatal** alignment warning may log during extraction if the two version *strings* differ but still resolve compatibly — it's advisory and does not block startup.
+- If the framework aborts with an `@rspack/core` mismatch error, compare the two paths it prints. The check is **strictly fatal** — any difference in version string **or** resolved file path aborts startup; there is no warning-only mode.
+  - If the two **versions differ**, realign via this table, or force `@rspack/core` to the target version with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions).
+  - If the two versions are **identical but the paths differ**, the error reads _"duplicate physical copies"_: the tree has two copies of the same version from a peer-dependency split (yarn Berry is the known offender, via `@rspack/core`'s optional `@swc/helpers` peer). Pin the **splitting peer** (e.g. add `@swc/helpers` to `resolutions`/`overrides`) or run `yarn dedupe` / `pnpm dedupe` — changing the `@rspack/core` version won't help, because it already matches.
+- On the **Next 15 rows** (`@rspack/core 1.5.0`), rspack config validation runs in a lenient mode, so a mistake in your `webpackFinal` / `tools.rspack` config prints as a warning instead of failing the build. Set `RSPACK_CONFIG_VALIDATE=strict` to make such mistakes throw while debugging. (Next 16 rows removed rspack's JS-side config validation entirely, so the setting has no effect there.)
 
 ## Getting started
 
@@ -142,6 +145,10 @@ Both hooks extend the Storybook preview build, but they are **not interchangeabl
 - **`rsbuildFinal`** is the preferred, high-level surface. Reach for it first: add Rsbuild plugins (`pluginSass()`), `source.define` entries, or a stories-only `resolve.alias`. It's the surface the framework's own types advertise.
 - **`webpackFinal`** is the low-level escape hatch. Use it only to **introspect or mutate an existing rspack rule** — e.g. taking `.svg` away from Rsbuild's default asset rule for [SVGR](#advanced-custom-loaders-that-span-both-layers-eg-svgr). Unlike the stock builder, here `webpackFinal` runs **late, against the fully-assembled rspack config**, so the rules you want to read already exist.
 
+:::info Addon `webpackFinal` runs once here — `webpackAddons` is unnecessary
+Under this framework, the `webpackFinal` of any addon registered in **`addons`** already runs against the fully-assembled rspack config, so you do **not** need to also list that addon under `webpackAddons` (the builder mechanism other Rsbuild frameworks use). If you list the same addon in **both** `addons` and `webpackAddons`, the framework runs its `webpackFinal` exactly once (via the main chain) and logs which duplicate it skipped — remove the `webpackAddons` entry to clear the warning.
+:::
+
 ### Same as `@storybook/nextjs-vite`, vs. different here
 
 The runtime behavior — decorators, mocks, and story-authoring APIs — is ported from [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite). So for everything in the left column, **follow the official Storybook docs**; this page only links to them. The right column is where this framework genuinely differs — that content is written out below.
@@ -176,8 +183,12 @@ TypeScript settings (including `typescript.reactDocgen`) type-check on `main.ts`
 
 If your project customizes webpack in `next.config.ts`, the bridge forwards your **rules, aliases, fallbacks, externals, and experiments** automatically — they're treated as Next.js-owned config and reused as-is.
 
-:::info Additions are forwarded; removals are not
-The bridge captures what your `webpack()` hook **adds**. Modifying an existing rule **in place** (e.g. `imageRule.exclude = /\.svg$/`) is respected, but **deleting or replacing** an existing rule/plugin (e.g. `config.module.rules = []`) is silently ignored — Storybook keeps its own rule set. Fields outside the five above (`optimization`, `cache`, `output`, `devtool`, `resolve.modules`/`extensions`, …) are not bridged either. To change rules on the Storybook side, use `rsbuildFinal` / `webpackFinal` in `.storybook/main.ts`, which run against the live config.
+:::info What crosses the bridge, per field
+The bridge captures what your `webpack()` hook produces, but the contract differs by field:
+
+- **`module.rules`** — only whole-rule **additions** are forwarded. Editing a Next.js built-in rule **in place** (e.g. `fileLoaderRule.exclude = /\.svg$/`, the canonical SVGR recipe) does **not** reach Storybook, because the bridge never imports Next.js's base rules. _(The one exception: options you set on the `next-swc-loader` `use` entry are carried into Storybook's loader chain.)_ To take `.svg` away from Rsbuild's asset rule, do it on the Storybook side with `webpackFinal` — see [SVGR](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
+- **`resolve.alias` / `resolve.fallback` / `experiments`** — both **added keys and changed values** are forwarded.
+- **Deletions / replacements** (e.g. `config.module.rules = []`) are ignored — Storybook keeps its own rule set. Fields outside the ones above (`optimization`, `cache`, `output`, `devtool`, `resolve.modules`/`extensions`, …) are not bridged either.
 :::
 
 **Plugins are the exception.** They're gated behind the `forwardNextConfigPlugins` option (default `false`), because most plugins people add target Next.js's production pipeline (build-manifest writers, source-map uploaders, stats emitters) and either no-op in Storybook or crash rspack's IPC channel (e.g. `copy-webpack-plugin`'s `processAssets` hook). When the gate is closed, dropped plugins are logged by name. Opt in only for a client-side plugin you've verified against `@rspack/core`:
@@ -202,7 +213,7 @@ export default config
 
 **Two narrow exceptions beyond plugins** are filtered on purpose:
 
-- **`react` / `react-dom` / `react-server-dom-webpack` aliases** set in `next.config.webpack()` are dropped (with a warning). Storybook owns the React singleton — a second copy breaks hooks and context — so there is intentionally no escape hatch for repointing React.
+- **Framework-reserved aliases** — `react` / `react-dom` / `react-server-dom-webpack` (the React singleton), plus `next/image` (the client-side image mock) and `styled-jsx` (the styled-jsx singleton) — set in `next.config.webpack()` are dropped (with a warning), whether spelled plainly or with a trailing `$`. Storybook owns the React singleton (a second copy breaks hooks and context), and the framework owns the `next/image` mock and the styled-jsx identity, so there is intentionally no escape hatch for repointing them.
 - **`.mdx` rules** (e.g. from `@next/mdx`) are dropped (with an info log): in Storybook, `.mdx` is owned by `@storybook/addon-docs`. Your page-MDX loader still applies to real Next.js pages, just not to Storybook docs.
 
 ## Supported Next.js features
@@ -384,6 +395,29 @@ export const Default: StoryObj<typeof Component> = {}
 
 Usage matches upstream — **see [CSS Modules](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#csssassscss-modules), [Tailwind](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#tailwind) / [PostCSS](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#postcss), and [Styled JSX](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#styled-jsx)**. The only thing to know is *who* owns it: because Rsbuild runs the pipeline (not Next.js), custom PostCSS/Tailwind config is picked up by Rsbuild's auto-detection, and preprocessors are opt-in — see next.
 
+:::info Write `postcss.config` plugins in object form, not the array-of-strings shorthand
+Because **Rsbuild** loads your `postcss.config.{js,mjs,ts}` (via `postcss-load-config`) instead of Next.js, the bare **array-of-strings** plugin shorthand is not resolved:
+
+```js
+// ❌ Rejected here — `Invalid PostCSS Plugin found at: plugins[0]`
+export default { plugins: ['@tailwindcss/postcss', 'cssnano'] }
+```
+
+That shorthand is a Next.js-specific extension (Next requires the strings itself); `postcss-load-config` — used by Rsbuild, plain webpack's `postcss-loader`, Vite, etc. — only resolves plugin **name strings** in the **object** form. Use that instead (it's valid in Next.js too, so the same file keeps working for `next dev`/`next build`):
+
+```js
+// ✅ Works in both Next.js and Storybook
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    ...(process.env.NODE_ENV === 'production' ? { cssnano: {} } : {}),
+  },
+}
+```
+
+An array of already-instantiated plugins (`plugins: [tailwindcss(), cssnano()]`) works as well.
+:::
+
 ### Sass / Less
 
 This is the one styling behavior that **differs from official Next.js Storybook**. Upstream inherits Next.js's built-in Sass support with zero config; here, because Rsbuild owns the CSS pipeline, Sass and Less are **opt-in through an Rsbuild plugin** and `next.config` Sass options do **not** flow through. If you import a `.scss`/`.sass` file without a Sass loader configured, the framework emits a one-time warning pointing back here.
@@ -450,7 +484,7 @@ Root-relative absolute imports, module aliases (`@/...`), Node-standard subpath 
 
 ### Environment variables
 
-`NEXT_PUBLIC_*` variables and `next.config.ts`'s `env` key reach your stories automatically: Next.js compiles them into `process.env.*` through its `DefinePlugin`, and the bridge forwards those defines to Rsbuild as-is. Values from `.env`, `.env.local`, and `.env.development` are picked up too, because the framework loads your config through Next.js's own loader (which runs `@next/env`). There's nothing to redefine via `rsbuildFinal`'s `source.define`.
+`NEXT_PUBLIC_*` variables and `next.config.ts`'s `env` key reach your stories automatically: Next.js compiles them into `process.env.*` through its `DefinePlugin`, and the bridge forwards those defines to Rsbuild as-is. `.env*` files are picked up too, because the framework loads your config through Next.js's own loader (which runs `@next/env`) **in the matching build mode**: `storybook dev` loads `.env.development[.local]`, and `storybook build` loads `.env.production[.local]` (both also load the base `.env` / `.env.local`) — exactly as `next dev` and `next build` do. There's nothing to redefine via `rsbuildFinal`'s `source.define`.
 
 One limit mirrors a real build: **server-only** env vars — those *without* the `NEXT_PUBLIC_` prefix — are not inlined into the client bundle, so they read as `undefined` in stories, exactly as they would in a client component under `next build`.
 
@@ -460,7 +494,7 @@ Importing Node builtins in browser-bound code won't crash the Storybook build. B
 
 ### Advanced: custom loaders that span both layers (e.g. SVGR)
 
-A few setups need to touch **both** config layers because Next.js's webpack config and Storybook's preview config don't see each other. SVGR is the canonical case: you add the loader rule the Next.js way (so it's bridged), but you also have to take `.svg` away from Rsbuild's default asset rule — a preview-side concern — via `webpackFinal`. The framework runs your `webpackFinal` **late, against the fully assembled rspack config**, so introspecting and mutating existing rules works. (If your `webpackFinal` adds a rule whose `test` matches a `next.config`-added rule, the framework drops the duplicate to avoid a double pass.)
+A few setups need to touch **both** config layers because Next.js's webpack config and Storybook's preview config don't see each other. SVGR is the canonical case: you add the loader rule the Next.js way (so it's bridged), but you also have to take `.svg` away from Rsbuild's default asset rule — a preview-side concern — via `webpackFinal`. The framework runs your `webpackFinal` **late, against the fully assembled rspack config**, so introspecting and mutating existing rules works. (If your `webpackFinal` adds a rule with the **same `test` and no differing narrowing conditions** as a `next.config`-added rule, the framework drops the `next.config` duplicate to avoid a double pass. A rule scoped differently — via `include`/`exclude`/`resourceQuery`/`issuer` — targets a disjoint set of modules, so both are kept.)
 
 ```ts twoslash title="next.config.ts"
 // @noErrors
@@ -487,13 +521,22 @@ const config: StorybookConfig = {
   // next.config.webpack() is the one that processes them.
   webpackFinal: async (config) => {
     for (const rule of config.module?.rules ?? []) {
+      // Match ONLY Rsbuild's default asset rule — it carries a `oneOf`. The bridged
+      // @svgr/webpack rule also has `test: /\.svg$/i` but no `oneOf`; excluding .svg
+      // from it too would disable SVGR and every `*.svg` would be parsed as raw JS.
       if (
         rule &&
         typeof rule === 'object' &&
         rule.test instanceof RegExp &&
-        rule.test.test('probe.svg')
+        rule.test.test('probe.svg') &&
+        Array.isArray(rule.oneOf)
       ) {
-        ;(rule as any).exclude = /\.svg$/
+        const prev = (rule as any).exclude
+        ;(rule as any).exclude = Array.isArray(prev)
+          ? [...prev, /\.svg$/]
+          : prev
+            ? [prev, /\.svg$/]
+            : /\.svg$/
       }
     }
     return config

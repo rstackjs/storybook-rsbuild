@@ -3,14 +3,16 @@ import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import { logger } from 'storybook/internal/node-logger'
 import type { PresetProperty } from 'storybook/internal/types'
+import { applyWebpackAddonsWebpackFinal } from 'storybook-builder-rsbuild'
 import type { FrameworkOptions, StorybookConfig } from './types'
 import { checkRspackInvariant } from './utils/check-rspack-invariant'
 import { extractNextRspackConfig, getNextVersion } from './utils/next-config'
 import {
+  analyzeNextLoaderChain,
+  buildAliasLayers,
   buildNextLoaderChain,
   dedupProvidePluginKeys,
   type FallbackMap,
-  filterNextAliases,
   filterNextPlugins,
   makeBarrelRule,
   makeFontRule,
@@ -18,6 +20,8 @@ import {
   NODE_BUILTINS_FALLBACK,
   replaceSwcRules,
   resolveNodeProtocolRequest,
+  rulesCongruentForDedup,
+  rulesHandleSass,
   ruleTestSignature,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
@@ -50,6 +54,12 @@ export const core: PresetProperty<'core'> = async (config, options) => {
     renderer: RENDERER_PATH,
   }
 }
+
+// Declare to `storybook-builder-rsbuild` that this framework runs the
+// `webpackFinal` chain itself (in `rsbuildFinal`'s `tools.rspack`, against the
+// fully-assembled rspack config). The builder then skips its own dummy-config
+// `webpackAddons` pass, so an addon's `webpackFinal` runs exactly once. See F6.
+export const webpackFinalOwnership = true
 
 export const previewAnnotations: PresetProperty<'previewAnnotations'> = (
   entry = [],
@@ -150,17 +160,6 @@ class StripNodeProtocolPlugin {
 
 const SASS_RE = /\.s[ac]ss(\?|$)/
 
-/** Walk a (possibly nested) rspack `rules` array for a Sass-capable rule. */
-const rulesHandleSass = (rules: unknown): boolean =>
-  Array.isArray(rules) &&
-  rules.some((rule: any) => {
-    if (!rule || typeof rule !== 'object') return false
-    if (rule.test instanceof RegExp && rule.test.test('a.scss')) return true
-    const use = JSON.stringify(rule.use ?? rule.loader ?? '')
-    if (use.includes('sass-loader')) return true
-    return rulesHandleSass(rule.oneOf) || rulesHandleSass(rule.rules)
-  })
-
 /**
  * Preflight hint for the most common "works in `next dev`, not in Storybook"
  * surprise. Rsbuild owns the CSS pipeline here, so Sass is opt-in via
@@ -180,14 +179,21 @@ class SassPreflightPlugin {
           // Scanned lazily so the rules array is fully assembled (plugin-sass
           // registers its rule via Rsbuild's chain, before this fires).
           checked = true
-          if (rulesHandleSass(compiler.options?.module?.rules)) return
-          logger.warn(
-            `Found a Sass import ("${data.request}") but no Sass loader is ` +
-              'configured. storybook-next-rsbuild delegates the CSS pipeline to ' +
-              'Rsbuild, so Sass is opt-in: install `@rsbuild/plugin-sass` and add ' +
-              '`pluginSass()` via `rsbuildFinal` in .storybook/main.ts. See ' +
-              'https://storybook.rsbuild.rs/guide/framework/next#sass--less',
-          )
+          // This is a diagnostics helper: a failure of the probe must NEVER
+          // affect module resolution. Swallow any throw (a pathological rule
+          // shape, etc.) so the tap only ever returns undefined.
+          try {
+            if (rulesHandleSass(compiler.options?.module?.rules)) return
+            logger.warn(
+              `Found a Sass import ("${data.request}") but no Sass loader is ` +
+                'configured. storybook-next-rsbuild delegates the CSS pipeline to ' +
+                'Rsbuild, so Sass is opt-in: install `@rsbuild/plugin-sass` and add ' +
+                '`pluginSass()` via `rsbuildFinal` in .storybook/main.ts. See ' +
+                'https://storybook.rsbuild.rs/guide/framework/next#sass--less',
+            )
+          } catch {
+            // Probe failed — stay silent rather than break the build.
+          }
         })
       },
     )
@@ -243,30 +249,68 @@ export const rsbuildFinal: NonNullable<
     { dev: isDev },
   )
 
-  // Layering: Next.js base aliases (filtered) → Storybook overrides
-  // (next/image, styled-jsx) → user delta. User aliases win over Next.js,
-  // but `filterNextAliases` runs on the BASE only, so the React/RSC singletons
-  // we strip there cannot be re-introduced via the user delta path either.
-  // If user delta carries `react`/`react-dom` we drop them with a warn so the
-  // React identity invariant (AGENTS.md) stays intact.
-  const userAliasDelta = filterNextAliases(extraction.userDelta.alias)
-  for (const k of Object.keys(extraction.userDelta.alias)) {
-    if (!(k in userAliasDelta)) {
-      logger.warn(
-        `next.config.webpack() set resolve.alias["${k}"]; ignoring to preserve ` +
-          'Storybook React singleton.',
-      )
-    }
+  // Layering: Storybook overrides (next/image mock, styled-jsx singleton) →
+  // Next.js base aliases (filtered) → user delta. `buildAliasLayers` owns the
+  // full policy (strip react/RSC from both; strip next/image + styled-jsx from
+  // the user delta and silently from the base; spread overrides FIRST so
+  // insertion order can't let a surviving key shadow the mock/singleton) and
+  // returns the dropped user-delta keys to warn about.
+  const {
+    alias: allAliases,
+    droppedReactKeys,
+    droppedProtectedKeys,
+  } = buildAliasLayers(
+    extraction.alias,
+    extraction.userDelta.alias,
+    STORYBOOK_OVERRIDE_ALIASES,
+  )
+  for (const k of droppedReactKeys) {
+    logger.warn(
+      `next.config.webpack() set resolve.alias["${k}"]; ignoring to preserve ` +
+        'Storybook React singleton.',
+    )
   }
-  const allAliases: Record<string, string | string[] | false> = {
-    ...filterNextAliases(extraction.alias),
-    ...STORYBOOK_OVERRIDE_ALIASES,
-    ...userAliasDelta,
+  for (const k of droppedProtectedKeys) {
+    logger.warn(
+      `next.config.webpack() set resolve.alias["${k}"]; ignoring to preserve ` +
+        "Storybook's next/image mock / styled-jsx singleton.",
+    )
   }
 
   const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM)
+  const { tier: swcRuleTier, sawBuiltinSwcLoader } = analyzeNextLoaderChain(
+    extraction.rawRules,
+  )
   if (nextLoaderChain) {
     logger.info('Using Next.js SWC loader for JS/TS compilation')
+    // Fast Refresh needs the per-module `module.hot.accept` footer, which only
+    // the react-refresh-paired rule carries. In dev, a non-`refresh` tier means
+    // Next.js emitted rules but none paired a refresh loader — edits will remount
+    // and lose React state. `extractNextRspackConfig` already logs the null-chain
+    // case; this covers "chain built, but from a degraded rule".
+    if (isDev && swcRuleTier !== 'refresh') {
+      logger.warn(
+        'No next-swc-loader rule paired with a react-refresh loader was found in ' +
+          "Next.js's dev config; Fast Refresh will degrade to remount-on-edit " +
+          '(React state is lost on save). The likely cause is Next.js renaming ' +
+          "'builtin:react-refresh-loader' — see buildNextLoaderChain's loader-name " +
+          'match in preset-helpers.ts.',
+      )
+    }
+  } else if (extraction.rawRules.length > 0) {
+    // Extraction succeeded but no shimmable next-swc-loader rule was found, so
+    // Rsbuild's built-in SWC silently takes over. Name the exact break point;
+    // stay silent when rawRules is empty (extractNextRspackConfig already logged
+    // the loud failure for that case — double-logging would misattribute).
+    logger.warn(
+      "No next-swc-loader rule found in Next.js's emitted rules; falling back to " +
+        "Rsbuild's built-in SWC — next/font, transpilePackages, " +
+        "optimizePackageImports and 'use client' semantics will not work." +
+        (sawBuiltinSwcLoader
+          ? ' A `builtin:next-swc-loader` rule was seen: unset the ' +
+            '`BUILTIN_SWC_LOADER` env var so Next.js emits its JS next-swc-loader.'
+          : ''),
+    )
   }
 
   const nextPlugins = filterNextPlugins(extraction.rawPlugins)
@@ -402,9 +446,24 @@ export const rsbuildFinal: NonNullable<
         // ProvidePlugin already covers `process`; we strip overlapping keys
         // from Next.js's instance so only the additive entries (notably
         // `Buffer`, which `next-auth` / `openid-client` rely on) remain.
+        let providePluginUnreadableWarned = false
         const dedupedNextPlugins = dedupProvidePluginKeys(
           rspackConfig.plugins,
           nextPlugins,
+          (plugin, side) => {
+            // Warn once per boot (not per plugin) so the internal-shape break is
+            // attributable — mirrors the DefinePlugin extraction warn.
+            if (providePluginUnreadableWarned) return
+            providePluginUnreadableWarned = true
+            logger.warn(
+              `Found a ${plugin?.constructor?.name} (${side} side) but could not ` +
+                'read its provide map (rspack plugin internal `_args[0]` shape may ' +
+                'have changed). ProvidePlugin dedup was skipped, so rspack may ' +
+                "report duplicate provide keys and Next.js's `process` entry may " +
+                "shadow Rsbuild's resolved path. See storybook-next-rsbuild Shim " +
+                'Catalogue.',
+            )
+          },
         )
         rspackConfig.plugins.push(
           new NoopTraceSpanPlugin(),
@@ -473,73 +532,123 @@ export const rsbuildFinal: NonNullable<
           }
         }
 
-        // Invoke user `.storybook/main.*` `webpackFinal` against the assembled
-        // rspack config. `storybook-builder-rsbuild` only chains `webpackFinal`
-        // from presets registered under `webpackAddons`; top-level main-config
-        // hooks would otherwise silently disappear. We run it here, AFTER the
-        // Next.js delta has been applied, so user code that introspects/mutates
-        // existing rules (e.g. `imageRule.exclude = /\.svg$/` to take SVGs
-        // away from the asset-image loader before adding @svgr/webpack) sees
-        // the same rule set that will actually ship — empty-config probing
-        // would render those mutations no-ops.
+        // Run every addon/user `webpackFinal` hook against the assembled rspack
+        // config, exactly once. Because we set `webpackFinalOwnership`, the
+        // builder skips its own dummy-config `webpackAddons` pass, so we own the
+        // whole chain here — AFTER the Next.js delta has been applied, so user
+        // code that introspects/mutates existing rules (e.g. `imageRule.exclude =
+        // /\.svg$/` to take SVGs away from the asset-image loader before adding
+        // @svgr/webpack) sees the same rule set that will actually ship.
+        //
+        // Snapshot BEFORE any apply so addon-added rules also count as
+        // storybook-side additions for the dedup below.
         const rulesSnapshotBeforeUserFinal = new Set(rspackConfig.module.rules)
+
+        // Field-merge a possibly-fresh webpackFinal result back into
+        // `rspackConfig` (a blanket `Object.assign` would replace
+        // `rspackConfig.module` and lose the Next.js CSS rules we unshifted).
+        // Most hooks mutate-and-return; this protects the few that build a new
+        // config from scratch. Applied to BOTH the webpackAddons and main-chain
+        // results.
+        const mergeWebpackFinalResult = (result: any) => {
+          if (!result || result === rspackConfig) return
+          for (const key of Object.keys(result)) {
+            if (key === 'module') {
+              rspackConfig.module = {
+                ...rspackConfig.module,
+                ...result.module,
+                rules: result.module?.rules ?? rspackConfig.module.rules,
+              }
+            } else if (key === 'plugins' && Array.isArray(result.plugins)) {
+              rspackConfig.plugins = result.plugins
+            } else {
+              ;(rspackConfig as any)[key] = result[key]
+            }
+          }
+        }
+
+        // 1. `webpackAddons`-registered presets, against the REAL config (the
+        //    builder used to run these against a dummy empty base). Presets also
+        //    present in the main chain (below) are skipped there to avoid a
+        //    double run; `options.presetsList` enumerates the main chain when
+        //    Storybook invokes this preset as a function (undefined defensively
+        //    → no dedup, i.e. no worse than the historical double run).
+        //    `presetsList` is an internal Storybook runtime field absent from the
+        //    public `Options` type, hence the `as any` read.
+        const mainChainPresetNames = new Set<string>(
+          ((options as any).presetsList ?? [])
+            .map((p: any) => p?.name)
+            .filter((n: unknown): n is string => typeof n === 'string'),
+        )
+        const { config: afterAddons, skipped: skippedAddonPresets } =
+          await applyWebpackAddonsWebpackFinal(
+            options,
+            rspackConfig,
+            mainChainPresetNames,
+          )
+        mergeWebpackFinalResult(afterAddons)
+        if (skippedAddonPresets.length > 0) {
+          logger.warn(
+            `Addon(s) listed in both \`addons\` and \`webpackAddons\` — their ` +
+              `webpackFinal runs once via the main chain under this framework; ` +
+              `\`webpackAddons\` is unnecessary here. Skipped duplicate ` +
+              `webpackAddons run for: ${skippedAddonPresets.join(', ')}.`,
+          )
+        }
+
+        // 2. Main preset chain: `addons`-registered presets' webpackFinal plus
+        //    the user's `.storybook/main.*` hook (which runs LAST and can
+        //    introspect addon-added rules).
         const userWebpackResult: any = await options.presets.apply(
           'webpackFinal',
           rspackConfig,
           options,
         )
-        if (userWebpackResult && userWebpackResult !== rspackConfig) {
-          // User returned a fresh object. Field-merge instead of wholesale
-          // `Object.assign`: a blanket overwrite would replace
-          // `rspackConfig.module` and lose the Next.js CSS rules we unshifted
-          // above. Most main-config webpackFinal hooks mutate-and-return; the
-          // fresh-object path here protects the few that build a new config
-          // from scratch.
-          for (const key of Object.keys(userWebpackResult)) {
-            if (key === 'module') {
-              rspackConfig.module = {
-                ...rspackConfig.module,
-                ...userWebpackResult.module,
-                rules:
-                  userWebpackResult.module?.rules ?? rspackConfig.module.rules,
-              }
-            } else if (
-              key === 'plugins' &&
-              Array.isArray(userWebpackResult.plugins)
-            ) {
-              rspackConfig.plugins = userWebpackResult.plugins
-            } else {
-              ;(rspackConfig as any)[key] = userWebpackResult[key]
-            }
-          }
-        }
+        mergeWebpackFinalResult(userWebpackResult)
 
-        // Narrow dedup: when the user's `.storybook/main.* webpackFinal` adds
-        // a rule whose `test` matches one that came in via the
-        // `next.config.webpack` delta, drop the next.config one. Without
-        // this, two passes of @svgr against the same .svg produce a
-        // SvgoParserError. Dedup only spans (next.config delta) ↔ (storybook
-        // webpackFinal additions); Next.js/Rsbuild CSS rules that
-        // legitimately share `/\.css$/` (e.g. via `oneOf` branches) stay
-        // untouched. `ruleTestSignature` returns `null` for non-RegExp tests
-        // so `{ and: [...] }` / `{ or: [...] }` shapes never cross-match.
-        const userFinalAddedTests = new Set<string>()
-        for (const r of rspackConfig.module.rules as any[]) {
-          if (rulesSnapshotBeforeUserFinal.has(r)) continue
-          const sig = ruleTestSignature(r)
-          if (sig) userFinalAddedTests.add(sig)
-        }
-        if (userFinalAddedTests.size > 0 && nextConfigDeltaRules.size > 0) {
+        // Narrow, condition-aware dedup: when the user's `.storybook/main.*
+        // webpackFinal` adds a rule that would genuinely double-process the same
+        // modules as a `next.config.webpack` delta rule — same `test` AND
+        // identical narrowing conditions (`rulesCongruentForDedup`) — drop the
+        // next.config one. Without this, two passes of @svgr against the same
+        // .svg produce a SvgoParserError. But a scoped webpackFinal rule (e.g.
+        // `test:/\.svg$/, resourceQuery:/raw/`) must NOT kill a differently-
+        // scoped next.config rule (`test:/\.svg$/, include:/icons/`): they never
+        // overlap, so we keep both and warn. Dedup only spans (next.config delta)
+        // ↔ (storybook webpackFinal additions); Next.js/Rsbuild CSS `oneOf`
+        // chains that share `/\.css$/` stay untouched via the identity guard.
+        const userFinalAddedRules = (rspackConfig.module.rules as any[]).filter(
+          (r) => !rulesSnapshotBeforeUserFinal.has(r),
+        )
+        if (userFinalAddedRules.length > 0 && nextConfigDeltaRules.size > 0) {
           rspackConfig.module.rules = (
             rspackConfig.module.rules as any[]
           ).filter((r: any) => {
             if (!nextConfigDeltaRules.has(r)) return true
             const sig = ruleTestSignature(r)
-            if (sig && userFinalAddedTests.has(sig)) {
+            // Only user rules with the SAME `test` can double-process r's
+            // modules; everything else is trivially disjoint.
+            const sameTest = sig
+              ? userFinalAddedRules.filter((u) => ruleTestSignature(u) === sig)
+              : []
+            if (sameTest.some((u) => rulesCongruentForDedup(r, u))) {
               logger.info(
-                `Dropping next.config.webpack rule for ${sig} — superseded by .storybook/main webpackFinal rule.`,
+                `Dropping next.config.webpack rule for ${sig} — superseded by a ` +
+                  'congruent .storybook/main webpackFinal rule.',
               )
               return false
+            }
+            // Same `test` but non-congruent conditions → the two rules target
+            // disjoint module sets; keep both. Warn since they *could* overlap
+            // at runtime in ways that are statically undecidable.
+            if (sameTest.length > 0) {
+              logger.warn(
+                `next.config.webpack rule for ${sig} and a .storybook/main ` +
+                  'webpackFinal rule share the same test but differ in narrowing ' +
+                  'conditions (include/exclude/issuer/resourceQuery/…); keeping ' +
+                  'both. They may double-process modules if their conditions ' +
+                  'overlap at runtime.',
+              )
             }
             return true
           })
