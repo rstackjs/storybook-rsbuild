@@ -23,10 +23,10 @@
     "@rsbuild/core": "^2.1.1",
     "@rsbuild/plugin-react": "^2.1.0",
     "@storybook/addon-coverage": "3.0.1",
-    "@storybook/addon-docs": "10.3.5",
-    "@storybook/addon-onboarding": "10.3.5",
-    "@storybook/react": "10.3.5",
-    "@storybook/test-runner": "0.24.3",
+    "@storybook/addon-docs": "10.4.6",
+    "@storybook/addon-onboarding": "10.4.6",
+    "@storybook/react": "10.4.6",
+    "@storybook/test-runner": "0.24.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -39,7 +39,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "storybook": "10.3.5",
+    "storybook": "10.4.6",
     "storybook-react-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
   }
