@@ -1,8 +1,10 @@
 import { describe, expect, it } from '@rstest/core'
 import {
+  configLoadPhase,
   DUMMY_NEXT_ARGS,
   instrumentUserWebpack,
   isStorybookClaimedRule,
+  resolveRspackValidateMode,
   ruleTestMatchesAny,
 } from './next-config'
 
@@ -470,5 +472,33 @@ describe('DUMMY_NEXT_ARGS.entrypoints — PWA entry-patch compatibility', () => 
 
     expect(patch).not.toThrow()
     expect(entries['main-app']).toContain(swEntry)
+  })
+})
+
+describe('configLoadPhase (F1 — extract in the matching mode)', () => {
+  const PHASES = {
+    PHASE_DEVELOPMENT_SERVER: 'phase-development-server',
+    PHASE_PRODUCTION_BUILD: 'phase-production-build',
+  }
+
+  it('uses the development-server phase for `storybook dev` (dev:true)', () => {
+    expect(configLoadPhase(true, PHASES)).toBe('phase-development-server')
+  })
+
+  it('uses the production-build phase for `storybook build` (dev:false)', () => {
+    // The previously-hardcoded dev phase inlined .env.development values into a
+    // production Storybook bundle — this locks the mode to match the build.
+    expect(configLoadPhase(false, PHASES)).toBe('phase-production-build')
+  })
+})
+
+describe('resolveRspackValidateMode (F13 — non-silent default, respect override)', () => {
+  it('defaults to the non-silent "loose" mode when unset', () => {
+    expect(resolveRspackValidateMode(undefined)).toBe('loose')
+  })
+
+  it('respects a user-supplied value (e.g. strict to debug)', () => {
+    expect(resolveRspackValidateMode('strict')).toBe('strict')
+    expect(resolveRspackValidateMode('loose-silent')).toBe('loose-silent')
   })
 })

@@ -24,25 +24,36 @@ describe('describeRspackMismatch', () => {
     expect(describeRspackMismatch(a, b)).toBeNull()
   })
 
-  it('flags a mismatch when versions differ', () => {
+  it('flags a version mismatch when versions differ (realign via matrix)', () => {
     const a = makeSide({ version: '1.6.7' })
     const b = makeSide({ source: 'next-rspack', version: '1.4.5' })
     const out = describeRspackMismatch(a, b)
     expect(out).toContain('1.6.7')
     expect(out).toContain('1.4.5')
     expect(out).toContain('@rspack/core version mismatch')
+    // The version-mismatch branch does NOT claim duplicate copies.
+    expect(out).not.toContain('duplicate physical copies')
   })
 
-  it('flags a mismatch when paths differ even with matching versions', () => {
-    // Two installed copies of the same version are still a doppelganger.
-    const a = makeSide({ pkgPath: '/repo/a/@rspack/core/package.json' })
+  it('reports duplicate physical copies (not a version mismatch) when only paths differ', () => {
+    // Same version, different files: yarn Berry peer-split doppelganger. The
+    // message must NOT say "version mismatch" (versions are equal) and must
+    // point at pinning the splitting peer / deduping, not the @rspack/core pin.
+    const a = makeSide({
+      version: '1.5.0',
+      pkgPath: '/repo/.yarn/__virtual__/A/@rspack/core/package.json',
+    })
     const b = makeSide({
       source: 'next-rspack',
-      pkgPath: '/repo/b/@rspack/core/package.json',
+      version: '1.5.0',
+      pkgPath: '/repo/.yarn/__virtual__/B/@rspack/core/package.json',
     })
     const out = describeRspackMismatch(a, b)
-    expect(out).toContain('mismatch detected')
-    expect(out).toContain('/repo/a/')
-    expect(out).toContain('/repo/b/')
+    expect(out).toContain('duplicate physical copies of @rspack/core@1.5.0')
+    expect(out).not.toContain('version mismatch')
+    expect(out).toContain('@swc/helpers')
+    expect(out).toContain('dedupe')
+    expect(out).toContain('/__virtual__/A/')
+    expect(out).toContain('/__virtual__/B/')
   })
 })

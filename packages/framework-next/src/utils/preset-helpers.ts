@@ -30,16 +30,97 @@ export function walkRules(
   }
 }
 
+/**
+ * Strip at most one trailing `$` (webpack/rspack exact-match marker) so a key's
+ * base name can be compared against a block/allow list. `react$` → `react`,
+ * `styled-jsx/style$` → `styled-jsx/style`, `react$$` → `react$` (only one `$`
+ * removed, so a pathological double-marker is not accidentally matched).
+ */
+function stripExactMatchMarker(key: string): string {
+  return key.endsWith('$') ? key.slice(0, -1) : key
+}
+
 export function filterNextAliases(
   alias: Record<string, string | string[] | false>,
 ): Record<string, string | string[] | false> {
   const blocked = ['react', 'react-dom', 'react-server-dom-webpack']
   const filtered: Record<string, string | string[] | false> = {}
   for (const [key, value] of Object.entries(alias)) {
-    if (blocked.some((b) => key === b || key.startsWith(`${b}/`))) continue
+    // Compare against the base name so webpack's exact-match spelling
+    // (`react$`, `react-dom$`, `react/jsx-runtime$`) is dropped too — a user
+    // `next.config.webpack()` alias like `react$: 'preact/compat'` would
+    // otherwise slip past and split the React identity.
+    const bare = stripExactMatchMarker(key)
+    if (blocked.some((b) => bare === b || bare.startsWith(`${b}/`))) continue
     filtered[key] = value
   }
   return filtered
+}
+
+/**
+ * Framework-reserved alias keys whose resolution the framework must own: the
+ * `next/image` mock and the `styled-jsx` singleton (`styled-jsx`,
+ * `styled-jsx/style`, …). A user `next.config.webpack()` alias delta spelled
+ * with the same key — plain or `$`-exact — would otherwise silently override the
+ * mock (broken `/_next/image` requests) or split the styled-jsx identity. Base
+ * name is compared so both `next/image` and `next/image$` are caught.
+ */
+export function isProtectedFrameworkAliasKey(key: string): boolean {
+  const bare = stripExactMatchMarker(key)
+  return (
+    bare === 'next/image' ||
+    bare === 'styled-jsx' ||
+    bare.startsWith('styled-jsx/')
+  )
+}
+
+type AliasMap = Record<string, string | string[] | false>
+
+export interface AliasLayers {
+  /** Final alias map. */
+  alias: AliasMap
+  /** User-delta keys dropped to preserve the React singleton (warn per key). */
+  droppedReactKeys: string[]
+  /** User-delta keys dropped to preserve the next/image mock / styled-jsx (warn). */
+  droppedProtectedKeys: string[]
+}
+
+/**
+ * Assemble `resolve.alias` in precedence order, keeping framework-critical
+ * aliases from being shadowed. `overrides` (STORYBOOK_OVERRIDE_ALIASES) is spread
+ * FIRST because rspack matches aliases in strict insertion order, so a surviving
+ * base/user key can't intercept an exact request the mock/singleton must own.
+ * React/RSC keys are stripped from both `base` and `userDelta`
+ * (`filterNextAliases`); next/image + styled-jsx keys are stripped from
+ * `userDelta` (reported) and silently from `base` (Next.js's own entries, not
+ * user additions). Returns the dropped user-delta keys so the caller can warn —
+ * keeping this layering a pure, testable seam.
+ */
+export function buildAliasLayers(
+  base: AliasMap,
+  userDelta: AliasMap,
+  overrides: AliasMap,
+): AliasLayers {
+  const filteredUser = filterNextAliases(userDelta)
+  const droppedReactKeys = Object.keys(userDelta).filter(
+    (k) => !(k in filteredUser),
+  )
+  const droppedProtectedKeys: string[] = []
+  for (const k of Object.keys(filteredUser)) {
+    if (isProtectedFrameworkAliasKey(k)) {
+      delete filteredUser[k]
+      droppedProtectedKeys.push(k)
+    }
+  }
+  const filteredBase = filterNextAliases(base)
+  for (const k of Object.keys(filteredBase)) {
+    if (isProtectedFrameworkAliasKey(k)) delete filteredBase[k]
+  }
+  return {
+    alias: { ...overrides, ...filteredBase, ...filteredUser },
+    droppedReactKeys,
+    droppedProtectedKeys,
+  }
 }
 
 /**
@@ -68,18 +149,51 @@ export function filterNextAliases(
  * `react-refresh-entry.cjs`, nothing self-accepts, and edits remount the
  * component — losing React state (plain HMR, not Fast Refresh).
  */
-export function buildNextLoaderChain(
-  rawRules: any[],
-  shimPath: string,
-): any[] | null {
+/**
+ * Whether a loader name refers to Next.js's JS `next-swc-loader`, tolerant of
+ * both POSIX and Windows separators (`.../loaders/next-swc-loader`,
+ * `...\\loaders\\next-swc-loader`). Mirrors `TARGET_CSS_RE`'s both-separators
+ * standard. Deliberately does NOT match `builtin:next-swc-loader` — that variant
+ * (emitted when `BUILTIN_SWC_LOADER` is set) has a different options schema and
+ * panics on standard `@rspack/core`; it is detected separately and warned about.
+ */
+const NEXT_SWC_LOADER_RE = /(^|[\\/])next-swc-loader$/
+export function isNextSwcLoaderName(name: string | null | undefined): boolean {
+  return !!name && NEXT_SWC_LOADER_RE.test(name)
+}
+
+export type SwcRuleTier = 'refresh' | 'plain' | 'any'
+
+export interface SwcRuleSelection {
+  /** The chosen client `next-swc-loader` rule, or `null` if none exists. */
+  clientRule: any | null
+  /** Which selection tier the chosen rule came from (`null` when none). */
+  tier: SwcRuleTier | null
+  /**
+   * Whether a `builtin:next-swc-loader` rule was seen. Emitted by Next.js when
+   * `BUILTIN_SWC_LOADER` is set; we can't shim it, so its presence explains a
+   * `null` chain and drives an actionable warning in `preset.ts`.
+   */
+  sawBuiltinSwcLoader: boolean
+}
+
+/**
+ * Single source of truth for picking the client `next-swc-loader` rule out of
+ * Next.js's emitted rules. Shared by `buildNextLoaderChain` (returns the chain)
+ * and `analyzeNextLoaderChain` (returns diagnostics) so the two can't drift.
+ * See `buildNextLoaderChain`'s doc for why the refresh-paired rule is preferred.
+ */
+function selectClientSwcRule(rawRules: any[]): SwcRuleSelection {
   let refreshSwcRule: any = null
   let plainSwcRule: any = null
   let anySwcRule: any = null
+  let sawBuiltinSwcLoader = false
   walkRules(rawRules, (rule) => {
     const names = asUseArray(rule.use).map(loaderNameOf)
-    const hasSwc = names.some(
-      (n) => n === 'next-swc-loader' || n?.endsWith('/next-swc-loader'),
-    )
+    if (names.some((n) => n === 'builtin:next-swc-loader')) {
+      sawBuiltinSwcLoader = true
+    }
+    const hasSwc = names.some(isNextSwcLoaderName)
     if (!hasSwc) return
     anySwcRule ??= rule
     if (names.some((n) => n?.includes('next-flight'))) return
@@ -89,12 +203,31 @@ export function buildNextLoaderChain(
       plainSwcRule ??= rule
     }
   })
-  const clientRule = refreshSwcRule ?? plainSwcRule ?? anySwcRule
+  // Single precedence source: refresh-paired rule wins, then a plain SWC rule,
+  // then any SWC rule at all. `clientRule` and `tier` must never disagree.
+  const tiers: Array<[SwcRuleTier, any]> = [
+    ['refresh', refreshSwcRule],
+    ['plain', plainSwcRule],
+    ['any', anySwcRule],
+  ]
+  const selected = tiers.find(([, rule]) => rule)
+  return {
+    clientRule: selected?.[1] ?? null,
+    tier: selected?.[0] ?? null,
+    sawBuiltinSwcLoader,
+  }
+}
+
+export function buildNextLoaderChain(
+  rawRules: any[],
+  shimPath: string,
+): any[] | null {
+  const { clientRule } = selectClientSwcRule(rawRules)
   if (!clientRule) return null
 
   return asUseArray(clientRule.use).flatMap((use) => {
     const name = loaderNameOf(use)
-    if (name === 'next-swc-loader' || name?.endsWith('/next-swc-loader')) {
+    if (isNextSwcLoaderName(name)) {
       // Preserve Next.js's computed options verbatim — they already match the
       // build mode (dev extraction → refresh on; prod extraction → refresh off).
       return [{ loader: shimPath, options: use.options || {} }]
@@ -104,15 +237,50 @@ export function buildNextLoaderChain(
   })
 }
 
+/**
+ * Pure diagnostics companion to `buildNextLoaderChain`, reusing the same
+ * selector. `tier` tells the caller whether the chosen rule carries the Fast
+ * Refresh footer (`'refresh'`) or a degraded fallback (`'plain'`/`'any'`);
+ * `sawBuiltinSwcLoader` explains a `null` chain. `preset.ts` gates warnings on
+ * these without duplicating the rule walk.
+ */
+export function analyzeNextLoaderChain(rawRules: any[]): {
+  tier: SwcRuleTier | null
+  sawBuiltinSwcLoader: boolean
+} {
+  const { tier, sawBuiltinSwcLoader } = selectClientSwcRule(rawRules)
+  return { tier, sawBuiltinSwcLoader }
+}
+
+/**
+ * Drop `builtin:react-refresh-loader` from a loader chain. Used for rules that
+ * match by `mimetype` (inline / `data:` JS) — see `replaceSwcRules`.
+ */
+function stripReactRefreshLoader(chain: any[]): any[] {
+  return chain.filter(
+    (use) => !loaderNameOf(use)?.includes('react-refresh-loader'),
+  )
+}
+
 export function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
   let replaced = false
   walkRules(rules, (rule) => {
     if (!rule.use) return
+    // A `mimetype` rule (no file `test`) matches inline modules — `data:` URIs and
+    // virtual JS. Rsbuild's `text/javascript` mimetype rule also catches
+    // html-rspack-plugin's synthetic `data:text/javascript,__webpack_public_path__…`
+    // entry, which its child compiler evaluates in a Node `vm`. A Fast Refresh
+    // footer there dereferences `__webpack_require__.c` (absent in that bare
+    // runtime) and crashes `storybook dev` outright (no module cache → TypeError).
+    // Inline `data:` JS never needs Fast Refresh, so swap in a refresh-less chain
+    // for mimetype rules; real source (file `test` rules) keeps the footer.
+    const chain =
+      rule.mimetype != null ? stripReactRefreshLoader(nextChain) : nextChain
     let mutated = false
     const next = asUseArray(rule.use).flatMap((use) => {
       if (loaderNameOf(use) !== 'builtin:swc-loader') return [use]
       mutated = true
-      return nextChain
+      return chain
     })
     if (mutated) {
       rule.use = next
@@ -174,9 +342,25 @@ export function readProvidedMap(plugin: any): Record<string, unknown> | null {
  * Next.js's additive entries (notably `Buffer`, which `next-auth` /
  * `openid-client` rely on at story render time).
  */
+/**
+ * Rebuild a ProvidePlugin with a filtered definitions map, carrying any trailing
+ * constructor args through unchanged. When the map was read from rspack's
+ * internal `_args`, `_args.slice(1)` preserves extra ctor args; the public
+ * `.definitions` (webpack) shape has no `_args`, so it degrades to a single-arg
+ * reconstruction.
+ */
+function reconstructProvidePlugin(
+  plugin: any,
+  filtered: Record<string, unknown>,
+): any {
+  const trailing = Array.isArray(plugin?._args) ? plugin._args.slice(1) : []
+  return new plugin.constructor(filtered, ...trailing)
+}
+
 export function dedupProvidePluginKeys(
   rsbuildPlugins: readonly any[] | undefined,
   nextPlugins: readonly any[],
+  onUnreadable?: (plugin: any, side: 'rsbuild' | 'next') => void,
 ): any[] {
   const rsbuildKeys = new Set<string>()
   for (const plugin of rsbuildPlugins ?? []) {
@@ -184,6 +368,11 @@ export function dedupProvidePluginKeys(
     const provided = readProvidedMap(plugin)
     if (provided) {
       for (const k of Object.keys(provided)) rsbuildKeys.add(k)
+    } else {
+      // Same fragile `_args[0]` read the DefinePlugin extraction warns about;
+      // surface it here too so a future rspack wrapper-shape change is
+      // attributable instead of silently disabling dedup.
+      onUnreadable?.(plugin, 'rsbuild')
     }
   }
   const out: any[] = []
@@ -194,6 +383,7 @@ export function dedupProvidePluginKeys(
     }
     const provided = readProvidedMap(plugin)
     if (!provided) {
+      onUnreadable?.(plugin, 'next')
       out.push(plugin)
       continue
     }
@@ -206,7 +396,7 @@ export function dedupProvidePluginKeys(
     if (dropped === 0) {
       out.push(plugin)
     } else if (Object.keys(filtered).length > 0) {
-      out.push(new plugin.constructor(filtered))
+      out.push(reconstructProvidePlugin(plugin, filtered))
     }
   }
   return out
@@ -224,13 +414,20 @@ export function filterNextPlugins(rawPlugins: any[]): any[] {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Matches the synthetic `…/next/font/{google,local}/target.css` module that
- * `next-swc` emits for every `next/font` call. Mirrors `@storybook/nextjs`'s
- * regex so the same paths route to our font loader (and are excluded from
- * Rsbuild's CSS pipeline). The character classes cover both POSIX and Windows
- * separators.
+ * Matches the synthetic `…/(next|@next)/font/**\/target.css` module that
+ * `next-swc` emits for every `next/font` call. Deliberately *tighter* than
+ * `@storybook/nextjs`'s upstream regex (which only requires `next<sep>…<sep>
+ * target.css`): without a left boundary and a `font` segment, upstream also
+ * matches a user stylesheet named `target.css` under any dir named `next`
+ * (e.g. a project rooted at `~/projects/next/` or a `src/mynext/` folder),
+ * which would wrongly route it to the font loader and crash with an
+ * unattributable JSON error. We anchor on the real module shape: a path
+ * separator (or string start), then `next`/`@next`, then `font`, then any
+ * subdir, ending in `target.css`. The separator class covers POSIX `/`,
+ * Windows `\`, and double-escaped `\\`.
  */
-export const TARGET_CSS_RE = /next(\\|\/|\\\\).*(\\|\/|\\\\)target\.css$/
+export const TARGET_CSS_RE =
+  /(^|\\|\/|\\\\)@?next(\\|\/|\\\\)font(\\|\/|\\\\).*target\.css$/
 
 /**
  * Root-absolute (`/fonts/x.css`, `/images/y.png`) and scheme-absolute
@@ -368,4 +565,93 @@ export function mergeFallback(
  */
 export function ruleTestSignature(rule: any): string | null {
   return rule?.test instanceof RegExp ? rule.test.toString() : null
+}
+
+/**
+ * Narrowing condition keys that scope a rule to a subset of modules. Two rules
+ * with the same `test` but different values here target disjoint module sets and
+ * must NOT be deduped against each other.
+ */
+const NARROWING_CONDITION_KEYS = [
+  'include',
+  'exclude',
+  'issuer',
+  'issuerLayer',
+  'resourceQuery',
+  'resourceFragment',
+  'resource',
+  'type',
+] as const
+
+/**
+ * Stable signature for a single condition value, or `null` when the value is not
+ * safely comparable (a function or a plain-object matcher). RegExps compare by
+ * source, strings verbatim, arrays element-wise. A `null` result forces callers
+ * to treat the pair as non-congruent (i.e. do not dedup).
+ */
+function conditionSignature(value: unknown): string | null {
+  if (value == null) return '∅'
+  if (value instanceof RegExp) return `re:${value.toString()}`
+  if (typeof value === 'string') return `s:${value}`
+  if (Array.isArray(value)) {
+    const parts = value.map(conditionSignature)
+    if (parts.some((p) => p === null)) return null
+    return `[${parts.join(',')}]`
+  }
+  return null
+}
+
+/**
+ * Whether two rules would genuinely double-process the same modules — i.e. they
+ * share the same RegExp `test` AND carry identical (or identically-absent)
+ * narrowing conditions. Only then is dropping one a correct dedup; a rule that
+ * scopes itself via `include`/`resourceQuery`/`issuer`/… coexists with a
+ * bare-`test` rule because rspack fuses loader chains only when the FULL
+ * condition set matches the same request. Non-comparable conditions (functions,
+ * object matchers) yield `false` — keep both.
+ */
+export function rulesCongruentForDedup(a: any, b: any): boolean {
+  const sigA = ruleTestSignature(a)
+  const sigB = ruleTestSignature(b)
+  if (!sigA || !sigB || sigA !== sigB) return false
+  for (const key of NARROWING_CONDITION_KEYS) {
+    const aHas = a?.[key] !== undefined
+    const bHas = b?.[key] !== undefined
+    if (!aHas && !bHas) continue
+    if (aHas !== bHas) return false
+    const csa = conditionSignature(a[key])
+    const csb = conditionSignature(b[key])
+    if (csa === null || csb === null || csa !== csb) return false
+  }
+  return true
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sass preflight probe                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Whether a `rules` array (recursing into `oneOf`/`rules`) already handles Sass,
+ * either by a `test` RegExp that matches `.scss` or by a rule whose loader chain
+ * references `sass-loader`. Loader names are read structurally (string / object
+ * `.loader` / array of those) — never via `JSON.stringify`, which returns
+ * `undefined` for a function-shaped `use` (legal rspack config) and makes
+ * `.includes` throw, and which throws outright on circular loader options. A
+ * function-shaped `use` is treated as opaque (not Sass) rather than crashing the
+ * build this preflight only exists to *explain*.
+ */
+export function rulesHandleSass(rules: unknown): boolean {
+  if (!Array.isArray(rules)) return false
+  return rules.some((rule: any) => {
+    if (!rule || typeof rule !== 'object') return false
+    if (rule.test instanceof RegExp && rule.test.test('a.scss')) return true
+    const names = [
+      ...asUseArray(rule.use).map(loaderNameOf),
+      loaderNameOf(rule.loader),
+    ]
+    if (names.some((n) => typeof n === 'string' && n.includes('sass-loader'))) {
+      return true
+    }
+    return rulesHandleSass(rule.oneOf) || rulesHandleSass(rule.rules)
+  })
 }

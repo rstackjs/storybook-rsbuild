@@ -39,16 +39,42 @@ export function describeRspackMismatch(
   ) {
     return null
   }
+
+  // Two distinct failure shapes with different fixes. When the version strings
+  // differ, the pins are wrong → realign via the matrix. When they're EQUAL but
+  // the physical files differ, the pin is already correct and the tree just has
+  // duplicate copies (a package manager materialized one per peer-resolution
+  // set — yarn Berry does this via virtual packages over @rspack/core's optional
+  // @swc/helpers peer). "Force @rspack/core to X" is a no-op there; you must pin
+  // the splitting peer or dedupe. Reporting "version mismatch" for equal
+  // versions is both wrong and a dead-end for triage.
+  const sameVersion = rsbuildSide.version === nextSide.version
+  const header = sameVersion
+    ? `duplicate physical copies of @rspack/core@${rsbuildSide.version} detected.`
+    : '@rspack/core version mismatch detected.'
+  const remediation = sameVersion
+    ? [
+        'Both sides resolve the same version but to different physical files.',
+        'The @rspack/core pin is already correct — the duplication comes from the',
+        'package manager materializing one copy per peer-resolution set (yarn Berry',
+        "does this via virtual packages over @rspack/core's optional @swc/helpers",
+        'peer). Pin the splitting peer to a single version (e.g. add @swc/helpers to',
+        'pnpm `overrides` / yarn `resolutions`) or run `yarn dedupe` / `pnpm dedupe`',
+        `so both sides collapse to one copy. See ${MATRIX_URL}`,
+      ]
+    : [
+        'Both sides must resolve to the same @rspack/core for the Next.js bridge',
+        `to work. Pick compatible versions from the matrix: ${MATRIX_URL}`,
+      ]
   return [
-    '[storybook-next-rsbuild] @rspack/core version mismatch detected.',
+    `[storybook-next-rsbuild] ${header}`,
     '',
     `  via ${rsbuildSide.source}:`,
     `    ${rsbuildSide.version}  (${rsbuildSide.pkgPath})`,
     `  via ${nextSide.source}:`,
     `    ${nextSide.version}  (${nextSide.pkgPath})`,
     '',
-    'Both sides must resolve to the same @rspack/core for the Next.js bridge',
-    `to work. Pick compatible versions from the matrix: ${MATRIX_URL}`,
+    ...remediation,
   ].join('\n')
 }
 
