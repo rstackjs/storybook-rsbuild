@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+import nextjsPng from './assets/nextjs.png'
 
 const meta = {
   component: Image,
@@ -74,5 +75,26 @@ export const WithStoryParams: Story = {
         loading: 'eager',
       },
     },
+  },
+}
+
+// Static import resolves to StaticImageData; intrinsic width/height (96x64)
+// reach the <img> when args don't override them.
+export const StaticImport: Story = {
+  args: {
+    src: nextjsPng,
+    alt: 'Static Import',
+    width: undefined,
+    height: undefined,
+  },
+}
+
+export const StaticBlurPlaceholder: Story = {
+  args: {
+    src: nextjsPng,
+    alt: 'Static Blur',
+    placeholder: 'blur',
+    width: undefined,
+    height: undefined,
   },
 }

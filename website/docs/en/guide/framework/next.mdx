@@ -229,11 +229,12 @@ export default config
 
 `next/image` renders inside stories. The framework swaps Next.js's default image loader for a client-side mock, so stories don't depend on a `/_next/image` optimization endpoint — both local and remote `src` values render directly, and no `sharp` install is needed.
 
-The usage and local-vs-remote behavior follow upstream — **see [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**. Three notes specific to this framework:
+The usage, local-vs-remote behavior, and the "image imports return an object" rule are identical to upstream — **see [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**. A few notes specific to this framework:
 
 - Local `src` like `/vercel.svg` resolves from Next.js's `public/` dir only if you add it to `staticDirs` (see the [main.ts example](#configure-storybookmaints)).
 - Per-story `next/image` config is applied via `parameters.nextjs.image` (an `ImageConfigContext` value), only when set.
-- **Static image imports currently resolve to URL strings**, not the `StaticImageData` object (`{ src, width, height, blurDataURL }`) that upstream and `next build` produce. `<Image src={importedPng} />` receives the plain URL string, and because no `blurDataURL` is generated, `placeholder="blur"` is **not supported**. See [Known limitations](#known-limitations).
+- **Static image imports resolve to `StaticImageData`.** `import img from './x.png'` yields the `{ src, width, height, blurDataURL }` object — matching upstream and `next build` — so `<Image src={img} />` gets intrinsic dimensions and `placeholder="blur"` works. (`.svg` imports are left to your SVGR setup and are not rewritten to `StaticImageData`.)
+- **`next/legacy/image` is mocked too.** It goes through the same client-side loader as `next/image`, so legacy stories render without a `/_next/image` endpoint.
 
 ```tsx twoslash title="Image.stories.tsx"
 // @noErrors
@@ -607,9 +608,7 @@ One delta: the legacy `next/config` support is **version-gated**. Next.js 16 rem
 
 - **No Server Components runtime.** Components marked `'use client'` render; pure Server Components are not executed. Note this framework does **not** expose the `experimentalRSC` Suspense-wrapper path that [`@storybook/nextjs-vite` documents](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc) — only client components render.
 - **No API routes, middleware, or server actions.** Storybook doesn't run a Next.js server — `route.ts`, `middleware.ts`, and `'use server'` entry points don't execute. (Same as `@storybook/nextjs-vite`.)
-- **No `/_next/image` optimization.** `next/image` uses a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
-- **Static image imports resolve to URL strings, not `StaticImageData`.** Importing an image gives you the plain URL string rather than the `{ src, width, height, blurDataURL }` object, so `<Image src={importedPng} />` still works but `placeholder="blur"` is **not supported** (no `blurDataURL` is generated). See [`next/image`](#nextimage).
-- **`next/legacy/image` is not mocked.** Only the modern `next/image` is swapped for the client-side mock; `next/legacy/image` renders the real component, whose default loader targets the absent `/_next/image` endpoint. Migrate stories to `next/image`.
+- **No `/_next/image` optimization.** `next/image` (and `next/legacy/image`) use a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
 - **`turbopack.*` config keys are not bridged.** The bridge reads Next.js's webpack config only, so `turbopack.rules` / `resolveAlias` / `resolveExtensions` (and the legacy `experimental.turbo`) are ignored. Mirror Turbopack loader rules the Storybook way via the [`webpack()` snippet](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
 - **Sass/Less need an Rsbuild plugin.** Preprocessor support is opt-in via `rsbuildFinal` rather than inherited from Next.js (see [Sass / Less](#sass--less)).
 - **Runtime config is dropped on Next 16+** (see [Runtime config](#runtime-config)).

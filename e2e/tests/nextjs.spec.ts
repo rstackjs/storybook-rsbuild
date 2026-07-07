@@ -90,6 +90,32 @@ test.describe(sandbox.name, () => {
     await expect(img).toHaveAttribute('loading', 'eager')
   })
 
+  test('static image import resolves to StaticImageData with real dimensions', async ({
+    page,
+  }) => {
+    // next-image-loader-stub emits the file and probes its dimensions, so the
+    // 96x64 intrinsic size of the imported PNG reaches the <img>. A plain URL
+    // string import (the pre-WI-5 behavior) would carry no intrinsic size.
+    const frame = await openStory(page, 'stories-image--static-import')
+    const img = frame.getByRole('img', { name: 'Static Import' })
+    await expect(img).toBeVisible()
+    await expect(img).toHaveAttribute('width', '96')
+    await expect(img).toHaveAttribute('height', '64')
+  })
+
+  test('next/legacy/image renders via the mock without a /_next/image request', async ({
+    page,
+  }) => {
+    // next-legacy-image-mock injects the direct-serving loader, so the src is
+    // the emitted asset path, never Next's /_next/image optimizer endpoint.
+    const frame = await openStory(page, 'stories-imagelegacy--default')
+    const img = frame.getByRole('img', { name: 'Legacy Static' })
+    await expect(img).toBeVisible()
+    const src = await img.getAttribute('src')
+    expect(src).not.toContain('/_next/image')
+    expect(src).toMatch(/\?w=\d+&q=\d+/)
+  })
+
   test('next/font applies a Google font className', async ({ page }) => {
     const frame = await openStory(page, 'stories-font--inter-font')
     const heading = frame.getByRole('heading', { name: 'Inter (Google Font)' })
