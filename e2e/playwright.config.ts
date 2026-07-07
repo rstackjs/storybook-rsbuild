@@ -11,6 +11,8 @@ const expectTimeout = isCI ? (isWindows ? 120_000 : 60_000) : 20_000
 
 export default defineConfig({
   testDir: './tests',
+  // Fail fast if framework-next's pnpm-injected builder artifact is stale.
+  globalSetup: '../scripts/check-injected-artifact.ts',
   forbidOnly: isCI,
   workers,
   retries: isCI ? 3 : 0,
