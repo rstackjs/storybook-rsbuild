@@ -474,6 +474,55 @@ function isMissingPagesOrAppDirError(err: unknown): boolean {
   return err.message.includes("Couldn't find any `pages` or `app` directory")
 }
 
+/**
+ * Detects `turbopack` loader/resolve config the webpack-config bridge cannot
+ * honor. Turbopack is Next 16's default bundler, and `turbopack.rules` /
+ * `resolveAlias` / `resolveExtensions` is exactly where a default Next 16
+ * project wires SVGR-style loaders — yet `getBaseWebpackConfig` never reads the
+ * `turbopack` key, making it the only dropped-config surface with no signal.
+ * Also inspects the legacy pre-16 spelling `experimental.turbo` (same shape).
+ *
+ * Returns a single warning message naming which keys were found (and whether
+ * they came from the legacy location), or `null` when nothing relevant is
+ * present. Pure/exported so the key detection is unit-testable. We deliberately
+ * do NOT translate turbopack rules into rspack rules — that is simulation,
+ * which this package rejects; the fix is to mirror them via `webpack()`.
+ */
+export function describeUnbridgedTurbopackConfig(
+  nextConfig: any,
+): string | null {
+  const TURBO_KEYS = ['rules', 'resolveAlias', 'resolveExtensions'] as const
+  const hasEntries = (v: unknown): boolean => {
+    if (Array.isArray(v)) return v.length > 0
+    if (v && typeof v === 'object') return Object.keys(v).length > 0
+    return false
+  }
+  const collect = (cfg: any, location: string): string[] =>
+    cfg && typeof cfg === 'object'
+      ? TURBO_KEYS.filter((k) => hasEntries(cfg[k])).map(
+          (k) => `${location}.${k}`,
+        )
+      : []
+
+  const found = [
+    ...collect(nextConfig?.turbopack, 'turbopack'),
+    ...collect(nextConfig?.experimental?.turbo, 'experimental.turbo'),
+  ]
+  if (found.length === 0) return null
+
+  const usesLegacy = found.some((f) => f.startsWith('experimental.turbo.'))
+  return (
+    `Detected Turbopack config (${found.join(', ')}) that is not bridged. ` +
+    'The Next.js → Storybook bridge reads only the webpack config, so ' +
+    'these Turbopack loader/resolve settings (SVGR etc.) are ignored' +
+    (usesLegacy
+      ? ' (`experimental.turbo` is the pre-16 spelling of `turbopack`).'
+      : '.') +
+    ' Mirror them the Storybook way via the `webpack()` snippet in the docs ' +
+    '(Advanced: custom loaders that span both layers, e.g. SVGR).'
+  )
+}
+
 async function doExtract(
   projectDir: string,
   nextVersion: [number, number] | null,
@@ -511,6 +560,10 @@ async function doExtract(
     PHASE_PRODUCTION_BUILD,
   })
   const nextConfig = await loadConfig(phase, projectDir)
+  // Turbopack (Next 16's default bundler) config is not bridged — warn ONCE
+  // naming the keys so a dropped SVGR-style loader setup is attributable.
+  const turbopackWarning = describeUnbridgedTurbopackConfig(nextConfig)
+  if (turbopackWarning) logger.warn(turbopackWarning)
   // Instrument the user's `webpack(config, opts)` hook (no-op if absent) so we
   // can extract its delta in a single getBaseWebpackConfig() call. Must happen
   // BEFORE loadProjectInfo / getBaseWebpackConfig so the wrapper is the

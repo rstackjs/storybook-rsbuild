@@ -10,6 +10,7 @@ import { logger } from 'storybook/internal/node-logger'
 import {
   configLoadPhase,
   DUMMY_NEXT_ARGS,
+  describeUnbridgedTurbopackConfig,
   instrumentUserWebpack,
   isStorybookClaimedRule,
   resolveBridgeFailure,
@@ -510,6 +511,58 @@ describe('resolveRspackValidateMode (F13 — non-silent default, respect overrid
   it('respects a user-supplied value (e.g. strict to debug)', () => {
     expect(resolveRspackValidateMode('strict')).toBe('strict')
     expect(resolveRspackValidateMode('loose-silent')).toBe('loose-silent')
+  })
+})
+
+describe('describeUnbridgedTurbopackConfig (F6 — turbopack is not bridged)', () => {
+  it('returns null when there is no turbopack config', () => {
+    expect(describeUnbridgedTurbopackConfig({})).toBeNull()
+    expect(describeUnbridgedTurbopackConfig(undefined)).toBeNull()
+    expect(
+      describeUnbridgedTurbopackConfig({ turbopack: {}, experimental: {} }),
+    ).toBeNull()
+    // Present keys but empty → still nothing to warn about.
+    expect(
+      describeUnbridgedTurbopackConfig({
+        turbopack: { rules: {}, resolveExtensions: [] },
+      }),
+    ).toBeNull()
+  })
+
+  it('names `turbopack.rules` when a modern SVGR-style loader rule is set', () => {
+    const msg = describeUnbridgedTurbopackConfig({
+      turbopack: { rules: { '*.svg': { loaders: ['@svgr/webpack'] } } },
+    })
+    expect(msg).not.toBeNull()
+    expect(msg).toContain('turbopack.rules')
+    expect(msg).toContain('not bridged')
+    // Modern spelling → does not mention the legacy location.
+    expect(msg).not.toContain('experimental.turbo')
+    // Points at the docs SVGR webpack()-mirror section.
+    expect(msg).toContain('SVGR')
+  })
+
+  it('names the legacy `experimental.turbo.resolveAlias` and its location', () => {
+    const msg = describeUnbridgedTurbopackConfig({
+      experimental: { turbo: { resolveAlias: { underscore: 'lodash' } } },
+    })
+    expect(msg).not.toBeNull()
+    expect(msg).toContain('experimental.turbo.resolveAlias')
+    expect(msg).toContain('pre-16 spelling')
+  })
+
+  it('lists all populated keys in a single message', () => {
+    const msg = describeUnbridgedTurbopackConfig({
+      turbopack: {
+        rules: { '*.svg': ['@svgr/webpack'] },
+        resolveAlias: { underscore: 'lodash' },
+        resolveExtensions: ['.mdx', '.tsx'],
+      },
+    })
+    expect(msg).not.toBeNull()
+    expect(msg).toContain('turbopack.rules')
+    expect(msg).toContain('turbopack.resolveAlias')
+    expect(msg).toContain('turbopack.resolveExtensions')
   })
 })
 
