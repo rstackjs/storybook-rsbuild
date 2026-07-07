@@ -40,6 +40,30 @@ export function describeRspackMismatch(
     return null
   }
 
+  // Third failure shape, checked first: the two @rspack/core majors differ. This
+  // is the next 16.3+ wall — next-rspack@16.3 moved to @rspack/core 2.x while
+  // @rsbuild/core still ships 1.x. No @rsbuild/core release pairs with it, so
+  // realigning versions from the matrix can't help; the only fixes are to pin
+  // back to a supported release or wait for rspack-2 support. Reporting this as a
+  // plain "version mismatch" would send triage down the dead-end of matrix-hunting
+  // for a row that doesn't exist.
+  if (parseInt(rsbuildSide.version, 10) !== parseInt(nextSide.version, 10)) {
+    return [
+      '[storybook-next-rsbuild] no compatible @rspack/core pairing exists for this next / next-rspack release.',
+      '',
+      `  via ${rsbuildSide.source}:`,
+      `    ${rsbuildSide.version}  (${rsbuildSide.pkgPath})`,
+      `  via ${nextSide.source}:`,
+      `    ${nextSide.version}  (${nextSide.pkgPath})`,
+      '',
+      'The two sides resolve @rspack/core copies with different majors, which',
+      'cannot interoperate. This happens on next 16.3+, where next-rspack moved to',
+      '@rspack/core 2.x while storybook-next-rsbuild is still on @rspack/core 1.x.',
+      'Pin `next` and `next-rspack` to <=16.2.x (see the version matrix:',
+      `${MATRIX_URL}), or wait for @rspack/core 2 support in storybook-next-rsbuild.`,
+    ].join('\n')
+  }
+
   // Two distinct failure shapes with different fixes. When the version strings
   // differ, the pins are wrong → realign via the matrix. When they're EQUAL but
   // the physical files differ, the pin is already correct and the tree just has

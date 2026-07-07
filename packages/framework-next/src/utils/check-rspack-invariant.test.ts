@@ -35,6 +35,25 @@ describe('describeRspackMismatch', () => {
     expect(out).not.toContain('duplicate physical copies')
   })
 
+  it('flags no compatible pairing when the @rspack/core majors differ (next 16.3+ wall)', () => {
+    // next-rspack@16.3 moved to @rspack/core 2.x while @rsbuild/core is still on
+    // 1.x — no matrix row pairs them. The message must point at pinning to 16.2.x
+    // and must NOT reuse the same-major shapes' wording.
+    const a = makeSide({ version: '1.6.7' })
+    const b = makeSide({
+      source: 'next-rspack → @next/rspack-core',
+      version: '2.0.4',
+    })
+    const out = describeRspackMismatch(a, b)
+    expect(out).toContain('no compatible')
+    expect(out).toContain('pairing')
+    expect(out).toContain('16.2')
+    expect(out).toContain('1.6.7')
+    expect(out).toContain('2.0.4')
+    expect(out).not.toContain('version mismatch')
+    expect(out).not.toContain('duplicate physical copies')
+  })
+
   it('reports duplicate physical copies (not a version mismatch) when only paths differ', () => {
     // Same version, different files: yarn Berry peer-split doppelganger. The
     // message must NOT say "version mismatch" (versions are equal) and must
