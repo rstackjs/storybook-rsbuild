@@ -556,6 +556,7 @@ describe('resolveBridgeFailure (F9 — dev degrades, prod fails)', () => {
     resolveLoader: {},
     rawRules: [],
     rawPlugins: [],
+    imagesDisableStaticImports: false,
     userDelta: {
       rules: [],
       plugins: [],

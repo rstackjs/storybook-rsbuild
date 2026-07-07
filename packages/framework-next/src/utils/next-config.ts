@@ -51,6 +51,12 @@ export interface NextRspackExtraction {
   /** Raw plugin instances from getBaseWebpackConfig (client; mode matches build). */
   rawPlugins: any[]
   /**
+   * `nextConfig.images.disableStaticImages` (default false). When true, static
+   * image imports resolve to a bare URL string instead of `StaticImageData`,
+   * matching Next.js. Threaded into the static-image stub loader in preset.ts.
+   */
+  imagesDisableStaticImports: boolean
+  /**
    * Delta added by the user's `next.config.webpack(config, opts)` hook,
    * captured by wrapping the hook before `getBaseWebpackConfig()` invokes it.
    * Append-only for arrays; key-diff for objects. Empty when the user did not
@@ -186,6 +192,7 @@ const EMPTY_EXTRACTION: NextRspackExtraction = {
   resolveLoader: {},
   rawRules: [],
   rawPlugins: [],
+  imagesDisableStaticImports: false,
   userDelta: EMPTY_USER_DELTA,
 }
 
@@ -628,6 +635,7 @@ async function doExtract(
     resolveLoader: rspackConfig.resolveLoader || {},
     rawRules,
     rawPlugins,
+    imagesDisableStaticImports: nextConfig.images?.disableStaticImages ?? false,
     userDelta,
   }
 }

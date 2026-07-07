@@ -47,6 +47,9 @@ const RENDERER_PATH = resolve('@storybook/react/preset')
 const PREVIEW_PATH = resolve('storybook-next-rsbuild/preview')
 const LEGACY_PREVIEW_PATH = resolve('storybook-next-rsbuild/config/preview')
 const NEXT_IMAGE_MOCK = resolve('storybook-next-rsbuild/next-image-mock')
+const NEXT_IMAGE_LOADER_STUB = resolve(
+  'storybook-next-rsbuild/next-image-loader-stub',
+)
 const SWC_SHIM = resolve('storybook-next-rsbuild/swc-loader-shim')
 const REFRESH_ENTRY = resolve('storybook-next-rsbuild/react-refresh-entry')
 const FONT_LOADER = resolve(
@@ -172,6 +175,17 @@ class StripNodeProtocolPlugin {
 }
 
 const SASS_RE = /\.s[ac]ss(\?|$)/
+
+// Static image extensions routed to the next-image-loader stub so `import img
+// from './x.png'` yields `StaticImageData` (`{ src, height, width, blurDataURL
+// }`), matching upstream `@storybook/nextjs`. Deliberately EXCLUDES `.svg`:
+// user SVGR delta rules share the rules array, and claiming `.svg` here would
+// break the documented SVGR flow. Mirrors upstream's two-rule (JS-issuer /
+// CSS-issuer) shape (`@storybook/nextjs/src/images/webpack.ts`).
+const STATIC_IMAGE_RE = /\.(png|jpe?g|gif|webp|avif|ico|bmp)$/i
+const CSS_ISSUER_RE = /\.(css|scss|sass)$/
+// Upstream's default when the asset rule's generator filename can't be read.
+const STATIC_IMAGE_FILENAME = 'static/media/[path][name][ext]'
 
 /**
  * Preflight hint for the most common "works in `next dev`, not in Storybook"
@@ -403,6 +417,12 @@ export const rsbuildFinal: NonNullable<
         if (chain.module.rules.has(CHAIN_ID.RULE.CSS)) {
           chain.module.rule(CHAIN_ID.RULE.CSS).exclude.add(TARGET_CSS_RE)
         }
+        // Take the static-image extensions away from Rsbuild's default asset
+        // rule (which yields bare URL strings) so the next-image-loader stub
+        // rules added in `tools.rspack` own them and produce `StaticImageData`.
+        if (chain.module.rules.has(CHAIN_ID.RULE.IMAGE)) {
+          chain.module.rule(CHAIN_ID.RULE.IMAGE).exclude.add(STATIC_IMAGE_RE)
+        }
       },
       rspack: async (rspackConfig) => {
         rspackConfig.resolve ??= {}
@@ -479,6 +499,34 @@ export const rsbuildFinal: NonNullable<
         if (nextBarrelRule) {
           rspackConfig.module.rules.unshift(nextBarrelRule)
         }
+
+        // Static image imports → `StaticImageData`. Two rules mirroring upstream
+        // `@storybook/nextjs`: a JS-issuer rule runs the stub loader (emits the
+        // file + returns `{ src, height, width, blurDataURL }`), while a
+        // CSS-issuer rule keeps `url()` references resolving to plain asset URLs.
+        // These extensions are excluded from Rsbuild's default asset rule in
+        // `tools.bundlerChain` above so the stub owns them.
+        rspackConfig.module.rules.push(
+          {
+            test: STATIC_IMAGE_RE,
+            issuer: { not: CSS_ISSUER_RE },
+            use: [
+              {
+                loader: NEXT_IMAGE_LOADER_STUB,
+                options: {
+                  filename: STATIC_IMAGE_FILENAME,
+                  disableStaticImages: extraction.imagesDisableStaticImports,
+                },
+              },
+            ],
+          },
+          {
+            test: STATIC_IMAGE_RE,
+            issuer: CSS_ISSUER_RE,
+            type: 'asset/resource',
+            generator: { filename: STATIC_IMAGE_FILENAME },
+          },
+        )
 
         // See `dedupProvidePluginKeys` doc — Rsbuild's pre-registered
         // ProvidePlugin already covers `process`; we strip overlapping keys
