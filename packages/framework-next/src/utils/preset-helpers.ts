@@ -633,9 +633,13 @@ export function ruleTestSignature(rule: any): string | null {
 }
 
 /**
- * Narrowing condition keys that scope a rule to a subset of modules. Two rules
- * with the same `test` but different values here target disjoint module sets and
- * must NOT be deduped against each other.
+ * Keys that make two same-`test` rules non-congruent. Most scope a rule to a
+ * subset of modules (`include`/`issuer`/`resourceQuery`/…): rules with different
+ * values here target disjoint module sets. `enforce` is different — it doesn't
+ * narrow modules but pins the loader phase (`pre`/`post`); an `enforce: 'pre'`
+ * webpackFinal rule and a bare (normal-phase) next.config rule with the same
+ * `test` run in different phases, so dropping either is wrong. Two rules must NOT
+ * be deduped against each other when any of these differ.
  */
 const NARROWING_CONDITION_KEYS = [
   'include',
@@ -646,6 +650,7 @@ const NARROWING_CONDITION_KEYS = [
   'resourceFragment',
   'resource',
   'type',
+  'enforce',
 ] as const
 
 /**
@@ -689,6 +694,29 @@ export function rulesCongruentForDedup(a: any, b: any): boolean {
     if (csa === null || csb === null || csa !== csb) return false
   }
   return true
+}
+
+/**
+ * Human-readable summary of a rule's loader chain for log messages — the
+ * `use`-chain loader names joined by `→`, or `(no loaders)` when the rule
+ * carries none. Absolute filesystem paths (shim paths like
+ * `/…/loaders/next-swc-loader`) are shortened to their basename so they don't
+ * bury the message; package specifiers (`@svgr/webpack`, `builtin:next-swc-…`)
+ * are kept verbatim. Never throws on function-shaped `use` (returns `<fn>`).
+ */
+export function ruleLoaderNames(rule: any): string {
+  const names = asUseArray(rule?.use).map((use) => {
+    if (typeof use === 'function') return '<fn>'
+    const name = loaderNameOf(use)
+    if (!name) return '<unknown>'
+    // Only shorten absolute paths (POSIX `/…`, Windows `C:\…` or `\…`); leave
+    // bare/scoped package specifiers intact.
+    if (/^([\\/]|[a-zA-Z]:[\\/])/.test(name)) {
+      return name.split(/[\\/]/).pop() || name
+    }
+    return name
+  })
+  return names.length > 0 ? names.join(' → ') : '(no loaders)'
 }
 
 /* -------------------------------------------------------------------------- */
