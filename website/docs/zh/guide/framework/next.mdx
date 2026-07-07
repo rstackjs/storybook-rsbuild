@@ -135,7 +135,7 @@ export default config
 
 ### 一项设置该写在哪里 {#deciding-where-a-setting-goes}
 
-1. **为了让 `next dev` / `next build` 跑通,你会把它写进 `next.config.ts` 吗?** 那就留在那里 —— 它会被自动桥接。不要再复制一份到 `.storybook`。
+1. **为了让 `next dev` / `next build` 跑通,你会把它写进 `next.config.ts` 吗?** 那就留在那里 —— 它会被自动桥接。不要再复制一份到 `.storybook`。**唯一的例外:** `turbopack` 键**不会**被桥接(bridge 只读取 Next.js 的 webpack 配置),所以 Turbopack 的 loader 规则(SVGR 等)必须按 Storybook 的方式,通过 [`webpack()` 片段](#advanced-custom-loaders-that-span-both-layers-eg-svgr)镜像一份。
 2. **它是一个需要插件支持的 CSS 预处理器(Sass、Less、Stylus)吗?** 通过 `rsbuildFinal` 添加对应的 Rsbuild 插件。在 Storybook 中跑 CSS 管线的是 Rsbuild 而非 Next.js,所以你要按 Rsbuild 的方式来扩展。(CSS Modules、纯 CSS,以及 PostCSS/Tailwind 无需任何配置。)
 3. **它是只有 Storybook preview 才需要的微调吗**(只给 stories 用的 alias、某条规则的改写)? 加 alias 或 Rsbuild 插件用 `rsbuildFinal`;只有要改写一条已存在的 rspack 规则时才用 `webpackFinal` —— 见 [`rsbuildFinal` vs `webpackFinal`](#rsbuildfinal-vs-webpackfinal)。
 
@@ -202,7 +202,7 @@ const config: StorybookConfig = {
   framework: {
     name: 'storybook-next-rsbuild',
     options: {
-      // Forward DefinePlugin / client-side plugins from next.config.webpack().
+      // Forward client-side plugin instances (DefinePlugin values are always bridged).
       forwardNextConfigPlugins: true,
     },
   },
@@ -223,10 +223,11 @@ export default config
 
 `next/image` 可以在 stories 中渲染。framework 把 Next.js 默认的图片 loader 换成了一个 client-side mock,因此 stories 不依赖 `/_next/image` 优化端点 —— 本地与远程的 `src` 都能直接渲染,也无需安装 `sharp`。
 
-用法、本地/远程的行为差异,以及「图片导入返回的是一个对象」这一规则,都与上游完全一致 —— **见 [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**。本 framework 特有的两点:
+用法与本地/远程的行为差异都跟随上游 —— **见 [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**。本 framework 特有的三点:
 
 - 像 `/vercel.svg` 这样的本地 `src` 只有在你把 Next.js 的 `public/` 目录加入 `staticDirs` 时才能解析(见 [main.ts 示例](#configure-storybookmaints))。
 - 单条 story 的 `next/image` 配置通过 `parameters.nextjs.image`(一个 `ImageConfigContext` 值)应用,且仅在设置时生效。
+- **静态图片导入当前解析为 URL 字符串**,而非上游与 `next build` 产出的 `StaticImageData` 对象(`{ src, width, height, blurDataURL }`)。`<Image src={importedPng} />` 收到的是纯 URL 字符串,并且由于不会生成 `blurDataURL`,`placeholder="blur"` **不受支持**。见[已知限制](#known-limitations)。
 
 ```tsx twoslash title="Image.stories.tsx"
 // @noErrors
@@ -384,6 +385,7 @@ export const Default: StoryObj<typeof Component> = {}
 | :--- | :--- | :--- | :--- |
 | `nextjs.navigation` | App Router(`next/navigation`) | `{ pathname?, query?, segments? }` | 导出的类型是 `Partial<NextRouter>`,但运行时该对象同样接受 `segments`(路由参数/segment 的驱动)。 |
 | `nextjs.router` | Pages Router(`next/router`) | `Partial<NextRouter>` | 给 stub 的 Pages Router 注入初始值。 |
+| `nextjs.image` | `next/image` mock | `Partial<ImageProps>` | 单条 story 的默认 `ImageProps`,由 `next/image` mock 消费(如 `priority`、`quality`、`loader`)。 |
 | `nextjs.appDirectory` | — | — | **接受但忽略。** 两个 router 始终都挂载;保留它只是为了与 `nextjs-vite` 的源码兼容。 |
 
 </div>
@@ -600,9 +602,12 @@ export const Default: StoryObj = {
 - **无 Server Components 运行时。** 标记了 `'use client'` 的组件会渲染;纯 Server Components 不会执行。注意本 framework **不**提供 [`@storybook/nextjs-vite` 所记录](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc)的 `experimentalRSC` Suspense 包裹路径 —— 只有 client 组件会渲染。
 - **无 API routes、middleware 或 server actions。** Storybook 不运行 Next.js 服务器 —— `route.ts`、`middleware.ts` 和 `'use server'` 入口都不会执行。(与 `@storybook/nextjs-vite` 相同。)
 - **无 `/_next/image` 优化。** `next/image` 使用 client-side 的 mock loader;运行时行为与生产环境(图片即时优化)不同。
+- **静态图片导入解析为 URL 字符串,而非 `StaticImageData`。** 导入一张图片得到的是纯 URL 字符串,而非 `{ src, width, height, blurDataURL }` 对象,因此 `<Image src={importedPng} />` 仍能工作,但 `placeholder="blur"` **不受支持**(不会生成 `blurDataURL`)。见 [`next/image`](#nextimage)。
+- **`next/legacy/image` 未被 mock。** 只有现代的 `next/image` 被替换为 client-side mock;`next/legacy/image` 会渲染真实组件,其默认 loader 指向不存在的 `/_next/image` 端点。请把 stories 迁移到 `next/image`。
+- **`turbopack.*` 配置键不会被桥接。** bridge 只读取 Next.js 的 webpack 配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及旧式的 `experimental.turbo`)都会被忽略。请按 Storybook 的方式,通过 [`webpack()` 片段](#advanced-custom-loaders-that-span-both-layers-eg-svgr)镜像 Turbopack 的 loader 规则。
 - **Sass/Less 需要一个 Rsbuild 插件。** 预处理器支持需通过 `rsbuildFinal` 手动开启,而非从 Next.js 继承(见 [Sass / Less](#sass--less))。
 - **Next 16+ 不再支持 runtime config**(见 [Runtime config](#runtime-config))。
-- **部署/输出类配置不生效。** `output`(`export`/`standalone`)、`basePath`、`assetPrefix`、`trailingSlash` 以及 `rewrites`/`redirects`/`headers` 在 Storybook 中无任何作用 —— preview 在根路径下提供服务,所以 story 的资源路径(`staticDirs`、`next/image` 的 `src`)**无需**加 `basePath` 前缀。
+- **部署/输出类配置大多不影响服务。** `output`(`export`/`standalone`)、`assetPrefix`、`trailingSlash` 以及 `rewrites`/`redirects`/`headers` 在 Storybook 中无任何作用 —— preview 在根路径下提供服务,所以 story 的资源路径(`staticDirs`、`next/image` 的 `src`)**无需**加 `basePath` 前缀。**`basePath` 是例外:** 它的值仍会通过 Next.js 的 defines 流经,因此 `next/link` 与 router 的 href 在运行时*确实*会带上 `basePath` 前缀 —— 与 `@storybook/nextjs-vite` 下完全一致。
 - **版本耦合。** bridge 依赖 Next.js 内部模块。任何 `next` 的 patch 或 minor 发布都可能破坏兼容性 —— 请让 `storybook-next-rsbuild` 与 `next` 一起升级。
 
 ## 后续步骤 {#next-steps}

@@ -135,7 +135,7 @@ The split follows the bridge's design — each tool keeps what it does best: **N
 
 ### Deciding where a setting goes
 
-1. **Would you put it in `next.config.ts` to make `next dev` / `next build` work?** Leave it there — it's bridged automatically. Don't duplicate it into `.storybook`.
+1. **Would you put it in `next.config.ts` to make `next dev` / `next build` work?** Leave it there — it's bridged automatically. Don't duplicate it into `.storybook`. **One exception:** the `turbopack` key is **not** bridged (the bridge reads Next.js's webpack config only), so Turbopack loader rules (SVGR etc.) must be mirrored the Storybook way via the [`webpack()` snippet](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
 2. **Is it a CSS preprocessor that needs a plugin (Sass, Less, Stylus)?** Add the matching Rsbuild plugin via `rsbuildFinal`. Rsbuild — not Next.js — runs the CSS pipeline in Storybook, so you extend it the Rsbuild way. (CSS Modules, plain CSS, and PostCSS/Tailwind need nothing.)
 3. **Is it a tweak only the Storybook preview needs** (an alias just for stories, a rule mutation)? Use `rsbuildFinal` for an alias or an Rsbuild plugin; use `webpackFinal` only to mutate an existing rspack rule — see [`rsbuildFinal` vs `webpackFinal`](#rsbuildfinal-vs-webpackfinal).
 
@@ -202,7 +202,7 @@ const config: StorybookConfig = {
   framework: {
     name: 'storybook-next-rsbuild',
     options: {
-      // Forward DefinePlugin / client-side plugins from next.config.webpack().
+      // Forward client-side plugin instances (DefinePlugin values are always bridged).
       forwardNextConfigPlugins: true,
     },
   },
@@ -223,10 +223,11 @@ export default config
 
 `next/image` renders inside stories. The framework swaps Next.js's default image loader for a client-side mock, so stories don't depend on a `/_next/image` optimization endpoint — both local and remote `src` values render directly, and no `sharp` install is needed.
 
-The usage, local-vs-remote behavior, and the "image imports return an object" rule are identical to upstream — **see [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**. Two notes specific to this framework:
+The usage and local-vs-remote behavior follow upstream — **see [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**. Three notes specific to this framework:
 
 - Local `src` like `/vercel.svg` resolves from Next.js's `public/` dir only if you add it to `staticDirs` (see the [main.ts example](#configure-storybookmaints)).
 - Per-story `next/image` config is applied via `parameters.nextjs.image` (an `ImageConfigContext` value), only when set.
+- **Static image imports currently resolve to URL strings**, not the `StaticImageData` object (`{ src, width, height, blurDataURL }`) that upstream and `next build` produce. `<Image src={importedPng} />` receives the plain URL string, and because no `blurDataURL` is generated, `placeholder="blur"` is **not supported**. See [Known limitations](#known-limitations).
 
 ```tsx twoslash title="Image.stories.tsx"
 // @noErrors
@@ -384,6 +385,7 @@ export const Default: StoryObj<typeof Component> = {}
 | :--- | :--- | :--- | :--- |
 | `nextjs.navigation` | App Router (`next/navigation`) | `{ pathname?, query?, segments? }` | The exported type is `Partial<NextRouter>`, but at runtime the object also accepts `segments` (the route-param/segment driver). |
 | `nextjs.router` | Pages Router (`next/router`) | `Partial<NextRouter>` | Seeds the stubbed Pages Router. |
+| `nextjs.image` | `next/image` mock | `Partial<ImageProps>` | Per-story default `ImageProps` consumed by the `next/image` mock (e.g. `priority`, `quality`, `loader`). |
 | `nextjs.appDirectory` | — | — | **Accepted but ignored.** Both routers always mount; kept only for `nextjs-vite` source compatibility. |
 
 </div>
@@ -600,9 +602,12 @@ One delta: the legacy `next/config` support is **version-gated**. Next.js 16 rem
 - **No Server Components runtime.** Components marked `'use client'` render; pure Server Components are not executed. Note this framework does **not** expose the `experimentalRSC` Suspense-wrapper path that [`@storybook/nextjs-vite` documents](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc) — only client components render.
 - **No API routes, middleware, or server actions.** Storybook doesn't run a Next.js server — `route.ts`, `middleware.ts`, and `'use server'` entry points don't execute. (Same as `@storybook/nextjs-vite`.)
 - **No `/_next/image` optimization.** `next/image` uses a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
+- **Static image imports resolve to URL strings, not `StaticImageData`.** Importing an image gives you the plain URL string rather than the `{ src, width, height, blurDataURL }` object, so `<Image src={importedPng} />` still works but `placeholder="blur"` is **not supported** (no `blurDataURL` is generated). See [`next/image`](#nextimage).
+- **`next/legacy/image` is not mocked.** Only the modern `next/image` is swapped for the client-side mock; `next/legacy/image` renders the real component, whose default loader targets the absent `/_next/image` endpoint. Migrate stories to `next/image`.
+- **`turbopack.*` config keys are not bridged.** The bridge reads Next.js's webpack config only, so `turbopack.rules` / `resolveAlias` / `resolveExtensions` (and the legacy `experimental.turbo`) are ignored. Mirror Turbopack loader rules the Storybook way via the [`webpack()` snippet](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
 - **Sass/Less need an Rsbuild plugin.** Preprocessor support is opt-in via `rsbuildFinal` rather than inherited from Next.js (see [Sass / Less](#sass--less)).
 - **Runtime config is dropped on Next 16+** (see [Runtime config](#runtime-config)).
-- **Deployment/output keys are inert.** `output` (`export`/`standalone`), `basePath`, `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix.
+- **Deployment/output keys mostly don't affect serving.** `output` (`export`/`standalone`), `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix. **`basePath` is the exception:** its value still flows through Next.js's defines, so `next/link` and router hrefs *are* `basePath`-prefixed at runtime — exactly as under `@storybook/nextjs-vite`.
 - **Version coupling.** The bridge depends on Next.js internal modules. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
 
 ## Next steps
