@@ -8,8 +8,8 @@
  */
 'use client'
 
-import * as _NextImage from 'next/dist/shared/lib/image-external'
 import * as React from 'react'
+import * as _NextImage from 'sb-original/next/image'
 // Per-story `parameters.nextjs.image`, provided by ImageDecorator. Same module
 // identity as the decorator's import (both go through the package's
 // `./image-context` export), so `useContext` actually reads the provided value.
