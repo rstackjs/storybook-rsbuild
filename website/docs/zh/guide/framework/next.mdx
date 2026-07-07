@@ -229,11 +229,12 @@ export default config
 
 `next/image` 可以在 stories 中渲染。framework 把 Next.js 默认的图片 loader 换成了一个 client-side mock,因此 stories 不依赖 `/_next/image` 优化端点 —— 本地与远程的 `src` 都能直接渲染,也无需安装 `sharp`。
 
-用法与本地/远程的行为差异都跟随上游 —— **见 [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**。本 framework 特有的三点:
+用法、本地/远程的行为差异,以及「图片导入返回一个对象」这条规则都与上游一致 —— **见 [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**。本 framework 特有的几点:
 
 - 像 `/vercel.svg` 这样的本地 `src` 只有在你把 Next.js 的 `public/` 目录加入 `staticDirs` 时才能解析(见 [main.ts 示例](#configure-storybookmaints))。
 - 单条 story 的 `next/image` 配置通过 `parameters.nextjs.image`(一个 `ImageConfigContext` 值)应用,且仅在设置时生效。
-- **静态图片导入当前解析为 URL 字符串**,而非上游与 `next build` 产出的 `StaticImageData` 对象(`{ src, width, height, blurDataURL }`)。`<Image src={importedPng} />` 收到的是纯 URL 字符串,并且由于不会生成 `blurDataURL`,`placeholder="blur"` **不受支持**。见[已知限制](#known-limitations)。
+- **静态图片导入解析为 `StaticImageData`。** `import img from './x.png'` 得到 `{ src, width, height, blurDataURL }` 对象 —— 与上游和 `next build` 一致 —— 因此 `<Image src={img} />` 会拿到固有尺寸,`placeholder="blur"` 也能工作。(`.svg` 导入交由你的 SVGR 配置处理,不会被改写为 `StaticImageData`。)
+- **`next/legacy/image` 同样被 mock。** 它走与 `next/image` 相同的 client-side loader,因此旧版 stories 无需 `/_next/image` 端点即可渲染。
 
 ```tsx twoslash title="Image.stories.tsx"
 // @noErrors
@@ -607,9 +608,7 @@ export const Default: StoryObj = {
 
 - **无 Server Components 运行时。** 标记了 `'use client'` 的组件会渲染;纯 Server Components 不会执行。注意本 framework **不**提供 [`@storybook/nextjs-vite` 所记录](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc)的 `experimentalRSC` Suspense 包裹路径 —— 只有 client 组件会渲染。
 - **无 API routes、middleware 或 server actions。** Storybook 不运行 Next.js 服务器 —— `route.ts`、`middleware.ts` 和 `'use server'` 入口都不会执行。(与 `@storybook/nextjs-vite` 相同。)
-- **无 `/_next/image` 优化。** `next/image` 使用 client-side 的 mock loader;运行时行为与生产环境(图片即时优化)不同。
-- **静态图片导入解析为 URL 字符串,而非 `StaticImageData`。** 导入一张图片得到的是纯 URL 字符串,而非 `{ src, width, height, blurDataURL }` 对象,因此 `<Image src={importedPng} />` 仍能工作,但 `placeholder="blur"` **不受支持**(不会生成 `blurDataURL`)。见 [`next/image`](#nextimage)。
-- **`next/legacy/image` 未被 mock。** 只有现代的 `next/image` 被替换为 client-side mock;`next/legacy/image` 会渲染真实组件,其默认 loader 指向不存在的 `/_next/image` 端点。请把 stories 迁移到 `next/image`。
+- **无 `/_next/image` 优化。** `next/image`(以及 `next/legacy/image`)使用 client-side 的 mock loader;运行时行为与生产环境(图片即时优化)不同。
 - **`turbopack.*` 配置键不会被桥接。** bridge 只读取 Next.js 的 webpack 配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及旧式的 `experimental.turbo`)都会被忽略。请按 Storybook 的方式,通过 [`webpack()` 片段](#advanced-custom-loaders-that-span-both-layers-eg-svgr)镜像 Turbopack 的 loader 规则。
 - **Sass/Less 需要一个 Rsbuild 插件。** 预处理器支持需通过 `rsbuildFinal` 手动开启,而非从 Next.js 继承(见 [Sass / Less](#sass--less))。
 - **Next 16+ 不再支持 runtime config**(见 [Runtime config](#runtime-config))。

@@ -49,6 +49,7 @@
     },
     "./next-image-loader-stub": "./loaders/next-image-loader-stub.cjs",
     "./next-image-mock": "./loaders/next-image-mock.js",
+    "./next-legacy-image-mock": "./loaders/next-legacy-image-mock.js",
     "./node": {
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
