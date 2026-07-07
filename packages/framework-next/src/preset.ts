@@ -686,10 +686,10 @@ export const rsbuildFinal: NonNullable<
         //    double run; `options.presetsList` enumerates the main chain when
         //    Storybook invokes this preset as a function (undefined defensively
         //    → no dedup, i.e. no worse than the historical double run).
-        //    `presetsList` is an internal Storybook runtime field absent from the
-        //    public `Options` type, hence the `as any` read.
+        //    `presetsList` is a public field on Storybook's `Options` type (via
+        //    `StorybookConfigOptions`), so no cast is needed to read it.
         const mainChainPresetNames = new Set<string>(
-          ((options as any).presetsList ?? [])
+          (options.presetsList ?? [])
             .map((p: any) => p?.name)
             .filter((n: unknown): n is string => typeof n === 'string'),
         )
