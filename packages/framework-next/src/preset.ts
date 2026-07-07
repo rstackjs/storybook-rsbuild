@@ -98,6 +98,11 @@ export const previewAnnotations: PresetProperty<'previewAnnotations'> = (
 const STORYBOOK_OVERRIDE_ALIASES = {
   'next/image$': NEXT_IMAGE_MOCK,
   'next/legacy/image$': NEXT_LEGACY_IMAGE_MOCK,
+  // Public-entry indirection (mirrors upstream @storybook/nextjs): the mock
+  // reaches the real component through `sb-original/next/image` so it never
+  // deep-imports `next/dist/*`. Not user-facing; excluded from
+  // isProtectedFrameworkAliasKey / filterNextAliases by construction.
+  'sb-original/next/image': resolve('next/image'),
   'styled-jsx': STYLED_JSX_DIR,
   'styled-jsx/style': join(STYLED_JSX_DIR, 'style'),
   'styled-jsx/style.js': join(STYLED_JSX_DIR, 'style'),
