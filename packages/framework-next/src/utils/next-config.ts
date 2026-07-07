@@ -369,7 +369,10 @@ export function isStorybookClaimedRule(rule: any): boolean {
  */
 export async function extractNextRspackConfig(
   dir?: string,
-  { dev = true }: { dev?: boolean } = {},
+  {
+    dev = true,
+    allowMissingNextBridge = false,
+  }: { dev?: boolean; allowMissingNextBridge?: boolean } = {},
 ): Promise<NextRspackExtraction> {
   const projectDir = dir || process.cwd()
   const nextVersion = getNextVersion()
@@ -377,31 +380,78 @@ export async function extractNextRspackConfig(
   try {
     return await doExtract(projectDir, nextVersion, dev)
   } catch (err) {
-    const versionLabel = nextVersion ? nextVersion.join('.') : 'unknown'
-    // The fallback to React-only is the intended recovery for the *expected*
-    // failure — `next-rspack` not installed. For any other error (most often a
-    // plugin or `webpack()` hook in the user's next.config throwing while we
-    // extract the config), the same silent degrade hides the real cause and
-    // surfaces later as an unrelated build error. So we attribute the likely
-    // source and print the stack, instead of just the message.
-    const hint = isMissingNextRspackError(err)
-      ? ' Install next-rspack in your Next.js project and keep it aligned with your next version.'
-      : ' This usually means a plugin or `webpack()` hook in your next.config threw' +
-        ' while Storybook extracted the build config. The original error and stack' +
-        ' follow.'
-    logger.error(
-      `Failed to bridge Next.js config (next@${versionLabel}). ` +
-        'Storybook will boot with React support only — ' +
-        'Next.js features (CSS, fonts, images, navigation mocks) will not work.' +
-        hint,
-    )
-    // Preserve the full original error (stack included) — the message alone is
-    // rarely enough to locate a failure originating inside next.config.
-    logger.error(
-      err instanceof Error ? (err.stack ?? err.message) : String(err),
-    )
-    return EMPTY_EXTRACTION
+    return resolveBridgeFailure(err, {
+      dev,
+      allowMissingNextBridge,
+      nextVersion,
+    })
   }
+}
+
+/**
+ * Attributed-log + failure policy for a bridge extraction error.
+ *
+ * Always logs the named error and the ORIGINAL stack. The React-only degrade is
+ * the intended recovery for `storybook dev` (best-effort boot), but a
+ * production `storybook build` HARD-FAILS by re-throwing the original error so
+ * CI catches a broken artifact instead of shipping one where every Next.js
+ * feature is silently dead. `allowMissingNextBridge` opts prod back into the
+ * degrade for intentional React-only static builds. Exported so the policy is
+ * unit-testable without wrestling `doExtract`'s dynamic imports.
+ */
+export function resolveBridgeFailure(
+  err: unknown,
+  {
+    dev,
+    allowMissingNextBridge,
+    nextVersion,
+  }: {
+    dev: boolean
+    allowMissingNextBridge: boolean
+    nextVersion: [number, number] | null
+  },
+): NextRspackExtraction {
+  const versionLabel = nextVersion ? nextVersion.join('.') : 'unknown'
+  logger.error(
+    `Failed to bridge Next.js config (next@${versionLabel}). ` +
+      'Storybook will boot with React support only — ' +
+      'Next.js features (CSS, fonts, images, navigation mocks) will not work.' +
+      selectBridgeFailureHint(err),
+  )
+  // Preserve the full original error (stack included) — the message alone is
+  // rarely enough to locate a failure originating inside next.config. The stack
+  // must survive in BOTH the log above AND the re-thrown error below.
+  logger.error(err instanceof Error ? (err.stack ?? err.message) : String(err))
+  // Dev degrades to React-only; prod hard-fails unless explicitly opted out.
+  if (!dev && !allowMissingNextBridge) throw err
+  return EMPTY_EXTRACTION
+}
+
+/**
+ * Pick the actionable remediation hint for a bridge extraction failure. The
+ * fallback to React-only is the intended recovery for the *expected* failure —
+ * `next-rspack` not installed — but for other errors the same degrade hides the
+ * real cause, so we attribute the likely source. Exported for direct unit test.
+ */
+export function selectBridgeFailureHint(err: unknown): string {
+  if (isMissingNextRspackError(err)) {
+    return ' Install next-rspack in your Next.js project and keep it aligned with your next version.'
+  }
+  if (isMissingPagesOrAppDirError(err)) {
+    // `findPagesDir` throws this when neither directory exists at the project
+    // root — almost always because the resolved root is wrong, not a bad hook.
+    return (
+      " Next.js couldn't find a `pages` or `app` directory at the project" +
+      ' root, which usually means the project root is wrong. Set' +
+      ' `framework.options.nextConfigPath` in .storybook/main.* so the directory' +
+      ' containing your next.config.* is used as the project root.'
+    )
+  }
+  return (
+    ' This usually means a plugin or `webpack()` hook in your next.config threw' +
+    ' while Storybook extracted the build config. The original error and stack' +
+    ' follow.'
+  )
 }
 
 function isMissingNextRspackError(err: unknown): boolean {
@@ -410,6 +460,11 @@ function isMissingNextRspackError(err: unknown): boolean {
     err.message.includes('next-rspack/rspack-core') ||
     err.message.includes('@rspack/core is not available')
   )
+}
+
+function isMissingPagesOrAppDirError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return err.message.includes("Couldn't find any `pages` or `app` directory")
 }
 
 async function doExtract(
@@ -546,8 +601,21 @@ async function doExtract(
       ? ` (user next.config.webpack: +${userDelta.rules.length} rules, +${userDelta.plugins.length} plugins, +${Object.keys(userDelta.alias).length} aliases, +${Object.keys(userDelta.fallback).length} fallbacks, +${Object.keys(userDelta.experiments).length} experiments, +${userDelta.externals.length} externals)`
       : ''
 
+  // Config provenance: `loadConfig` sets `configFile` to the absolute path of
+  // the resolved next.config.* (undefined when none was found and Next.js fell
+  // back to defaults). Surface it so a mis-rooted extraction is attributable.
+  if (!nextConfig.configFile) {
+    logger.warn(
+      'No next.config file was found, so Next.js defaults are in effect. If a ' +
+        'config was expected, set `framework.options.nextConfigPath` in ' +
+        '.storybook/main.* to point at it (its directory is used as the root).',
+    )
+  }
+  const provenance = nextConfig.configFile
+    ? ` from ${nextConfig.configFile}`
+    : ''
   logger.info(
-    `Extracted Next.js rspack config: ${Object.keys(alias).length} aliases, ` +
+    `Extracted Next.js rspack config${provenance}: ${Object.keys(alias).length} aliases, ` +
       `${Object.keys(defines).length} defines, ` +
       `${rawRules.length} rules, ${rawPlugins.length} plugins` +
       deltaSummary,

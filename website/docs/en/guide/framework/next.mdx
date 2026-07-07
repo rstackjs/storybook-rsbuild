@@ -67,7 +67,12 @@ Install `storybook-next-rsbuild` and `next-rspack` together. Next.js internally 
 
 Keep `next-rspack` on the same version as `next`.
 
-If the bridge can't load Next.js's config (for example `next-rspack` isn't installed), Storybook still **boots with React support only** and logs an install hint — but CSS, fonts, images, and the navigation mocks won't work until the bridge is fixed.
+If the bridge can't load Next.js's config (for example `next-rspack` isn't installed), the failure policy depends on the build mode:
+
+- **`storybook dev`** degrades to a best-effort boot with **React support only** and logs an install hint — CSS, fonts, images, and the navigation mocks won't work until the bridge is fixed.
+- **`storybook build`** **hard-fails** (non-zero exit) and re-throws the original error, so CI catches a broken artifact instead of shipping one where every Next.js feature is silently dead.
+
+Set the [`allowMissingNextBridge`](#framework-options) option to `true` to make a production build degrade to React-only too (for an intentional React-only static build that never relies on the bridge).
 
 ### Configure `.storybook/main.ts`
 
@@ -173,6 +178,7 @@ The runtime behavior — decorators, mocks, and story-authoring APIs — is port
 | :--- | :--- | :--- | :--- |
 | `nextConfigPath` | `string` | auto-detected | Path to a `next.config.{js,ts,mjs}` file. Absolute, or relative to `.storybook`. |
 | `forwardNextConfigPlugins` | `boolean` | `false` | Forward **plugins** added by `next.config.webpack()` into Storybook's bundler. Rules, aliases, fallbacks, and externals are *always* forwarded — only plugins are gated. See [below](#what-gets-bridged-from-nextconfigwebpack). |
+| `allowMissingNextBridge` | `boolean` | `false` | Let a production `storybook build` degrade to React-only support (instead of hard-failing) when the Next.js config bridge can't be extracted. `storybook dev` always degrades; only prod is gated. Enable for an intentional React-only static build. |
 | `image` | `object` | `{}` | Accepted for compatibility with `@storybook/nextjs`; the runtime `next/image` mock currently falls through to upstream defaults (not wired). Per-story image config is set via `parameters.nextjs.image`, not this option. |
 | `builder` | `BuilderOptions` | `{}` | Options forwarded to `storybook-builder-rsbuild`. See the [Configuration](/guide/configuration#builder-options) guide. |
 

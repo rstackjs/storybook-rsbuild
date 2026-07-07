@@ -1,11 +1,21 @@
-import { describe, expect, it } from '@rstest/core'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  rstest,
+} from '@rstest/core'
+import { logger } from 'storybook/internal/node-logger'
 import {
   configLoadPhase,
   DUMMY_NEXT_ARGS,
   instrumentUserWebpack,
   isStorybookClaimedRule,
+  resolveBridgeFailure,
   resolveRspackValidateMode,
   ruleTestMatchesAny,
+  selectBridgeFailureHint,
 } from './next-config'
 
 /**
@@ -500,5 +510,99 @@ describe('resolveRspackValidateMode (F13 — non-silent default, respect overrid
   it('respects a user-supplied value (e.g. strict to debug)', () => {
     expect(resolveRspackValidateMode('strict')).toBe('strict')
     expect(resolveRspackValidateMode('loose-silent')).toBe('loose-silent')
+  })
+})
+
+describe('selectBridgeFailureHint (F9 — attributed remediation hint)', () => {
+  it('points at next-rspack install for the missing-peer error', () => {
+    const err = new Error("Cannot find module 'next-rspack/rspack-core'")
+    expect(selectBridgeFailureHint(err)).toContain('Install next-rspack')
+  })
+
+  it('points at nextConfigPath for the findPagesDir pages/app error', () => {
+    // The exact message `find-pages-dir` throws when neither dir exists.
+    const err = new Error("> Couldn't find any `pages` or `app` directory.")
+    const hint = selectBridgeFailureHint(err)
+    expect(hint).toContain('nextConfigPath')
+    expect(hint).toContain('project root')
+    // Must NOT misattribute to a plugin/webpack() hook.
+    expect(hint).not.toContain('`webpack()` hook')
+  })
+
+  it('falls back to the generic plugin/webpack() hint for other errors', () => {
+    const err = new Error('some unrelated plugin exploded')
+    const hint = selectBridgeFailureHint(err)
+    expect(hint).toContain('`webpack()` hook')
+    expect(hint).not.toContain('nextConfigPath')
+  })
+})
+
+describe('resolveBridgeFailure (F9 — dev degrades, prod fails)', () => {
+  const nextVersion: [number, number] = [15, 3]
+
+  // Suppress (and inspect) the attributed error logging.
+  let errorSpy: ReturnType<typeof rstest.spyOn>
+  beforeEach(() => {
+    errorSpy = rstest.spyOn(logger, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  const EMPTY = {
+    alias: {},
+    fallback: {},
+    defines: {},
+    resolveLoader: {},
+    rawRules: [],
+    rawPlugins: [],
+    userDelta: {
+      rules: [],
+      plugins: [],
+      alias: {},
+      fallback: {},
+      experiments: {},
+      externals: [],
+    },
+  }
+
+  it('dev: degrades to an empty extraction (best-effort boot)', () => {
+    const err = new Error('bridge boom')
+    expect(
+      resolveBridgeFailure(err, {
+        dev: true,
+        allowMissingNextBridge: false,
+        nextVersion,
+      }),
+    ).toEqual(EMPTY)
+  })
+
+  it('prod: re-throws the ORIGINAL error so CI fails the build', () => {
+    const err = new Error('bridge boom')
+    let caught: unknown
+    try {
+      resolveBridgeFailure(err, {
+        dev: false,
+        allowMissingNextBridge: false,
+        nextVersion,
+      })
+    } catch (e) {
+      caught = e
+    }
+    // Same error instance — its stack survives into the thrown error.
+    expect(caught).toBe(err)
+    // …and the stack was ALSO logged (not swallowed).
+    expect(errorSpy).toHaveBeenCalledWith(err.stack)
+  })
+
+  it('prod + allowMissingNextBridge: opts back into the degrade', () => {
+    const err = new Error('bridge boom')
+    expect(
+      resolveBridgeFailure(err, {
+        dev: false,
+        allowMissingNextBridge: true,
+        nextVersion,
+      }),
+    ).toEqual(EMPTY)
   })
 })

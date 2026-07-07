@@ -67,7 +67,12 @@ Storybook for Next.js & Rsbuild 通过 `next-rspack` 把 Storybook 的 preview r
 
 让 `next-rspack` 与 `next` 保持同一版本。
 
-如果 bridge 无法加载 Next.js 的配置(例如未安装 `next-rspack`),Storybook 仍会**仅以 React 支持启动**并记录一条安装提示 —— 但在修好 bridge 之前,CSS、字体、图片以及 navigation mocks 都不会工作。
+如果 bridge 无法加载 Next.js 的配置(例如未安装 `next-rspack`),失败策略取决于构建模式:
+
+- **`storybook dev`** 会降级为尽力而为的启动,**仅提供 React 支持**并记录一条安装提示 —— 在修好 bridge 之前,CSS、字体、图片以及 navigation mocks 都不会工作。
+- **`storybook build`** 会**硬失败**(非零退出)并重新抛出原始错误,这样 CI 能捕获到损坏的产物,而不是发布一个每个 Next.js 特性都静默失效的产物。
+
+把 [`allowMissingNextBridge`](#framework-options) 选项设为 `true`,可让生产构建也降级为仅 React 支持(用于从不依赖 bridge 的、有意为之的纯 React 静态构建)。
 
 ### 配置 `.storybook/main.ts` {#configure-storybookmaints}
 
@@ -173,6 +178,7 @@ export default config
 | :--- | :--- | :--- | :--- |
 | `nextConfigPath` | `string` | 自动探测 | `next.config.{js,ts,mjs}` 文件的路径。可为绝对路径,或相对于 `.storybook` 的相对路径。 |
 | `forwardNextConfigPlugins` | `boolean` | `false` | 把 `next.config.webpack()` 添加的 **plugins** 转发进 Storybook 的 bundler。rules、aliases、fallbacks 和 externals *始终*会被转发 —— 只有 plugins 受门控。见[下文](#what-gets-bridged-from-nextconfigwebpack)。 |
+| `allowMissingNextBridge` | `boolean` | `false` | 当 Next.js 配置 bridge 无法提取时,让生产环境的 `storybook build` 降级为仅 React 支持(而非硬失败)。`storybook dev` 始终降级;只有生产构建受门控。用于有意为之的纯 React 静态构建。 |
 | `image` | `object` | `{}` | 为与 `@storybook/nextjs` 兼容而接受;当前运行时的 `next/image` mock 会回退到上游默认值(未接线)。单条 story 的图片配置通过 `parameters.nextjs.image` 设置,而非此选项。 |
 | `builder` | `BuilderOptions` | `{}` | 转发给 `storybook-builder-rsbuild` 的选项。见[配置指南](/guide/configuration#builder-options)。 |
 

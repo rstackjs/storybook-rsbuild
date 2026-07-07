@@ -43,6 +43,17 @@ export type FrameworkOptions = {
    * `@rspack/core`.
    */
   forwardNextConfigPlugins?: boolean
+  /**
+   * Allow a production `storybook build` to degrade to React-only support when
+   * the Next.js config bridge cannot be extracted, instead of hard-failing.
+   *
+   * Defaults to `false`: `storybook dev` always degrades (best-effort boot),
+   * but `storybook build` re-throws the original bridge error so CI catches a
+   * broken artifact rather than shipping one where every Next.js feature (CSS,
+   * fonts, images, navigation mocks) is silently dead. Set `true` only for an
+   * intentional React-only static build that never relies on the bridge.
+   */
+  allowMissingNextBridge?: boolean
 }
 
 /**

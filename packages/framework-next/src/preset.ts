@@ -225,8 +225,11 @@ export const rsbuildFinal: NonNullable<
 > = async (config, options) => {
   checkRspackInvariant(options.configDir ?? process.cwd())
 
-  const { nextConfigPath, forwardNextConfigPlugins = false } =
-    await options.presets.apply<FrameworkOptions>('frameworkOptions')
+  const {
+    nextConfigPath,
+    forwardNextConfigPlugins = false,
+    allowMissingNextBridge = false,
+  } = await options.presets.apply<FrameworkOptions>('frameworkOptions')
 
   // Resolve `nextConfigPath` against `configDir` when relative — users commonly
   // write `../next.config.ts` in `.storybook/main.ts`, expecting it relative to
@@ -246,7 +249,7 @@ export const rsbuildFinal: NonNullable<
 
   const extraction = await extractNextRspackConfig(
     resolvedNextConfigPath ? dirname(resolvedNextConfigPath) : undefined,
-    { dev: isDev },
+    { dev: isDev, allowMissingNextBridge },
   )
 
   // Layering: Storybook overrides (next/image mock, styled-jsx singleton) →
