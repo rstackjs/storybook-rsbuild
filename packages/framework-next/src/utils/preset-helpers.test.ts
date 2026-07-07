@@ -858,7 +858,7 @@ describe('replaceSwcRules', () => {
   // in a Node `vm`. Keeping `builtin:react-refresh-loader` there crashes
   // `storybook dev` (no `__webpack_require__.c` in that runtime). Mimetype rules
   // must get a refresh-less chain; real file `test` rules keep the footer.
-  it('strips react-refresh-loader from mimetype (inline/data:) rules only', () => {
+  it('strips react-refresh-loader from mimetype and scheme (inline/data:) rules only', () => {
     const chain = [
       { loader: 'builtin:react-refresh-loader' },
       { loader: '/shim.cjs', options: { a: 1 } },
@@ -872,6 +872,12 @@ describe('replaceSwcRules', () => {
         mimetype: { or: ['text/javascript', 'application/javascript'] },
         use: [{ loader: 'builtin:swc-loader' }],
       },
+      {
+        // The sibling `scheme: 'data'` rule targets inline `data:` JS by URI
+        // scheme; it carries no file `test` and must be stripped like mimetype.
+        scheme: 'data',
+        use: [{ loader: 'builtin:swc-loader' }],
+      },
     ]
 
     const replaced = replaceSwcRules(rules, chain)
@@ -881,6 +887,8 @@ describe('replaceSwcRules', () => {
     expect(rules[0].use).toEqual(chain)
     // Mimetype rule drops only the refresh loader, keeps the swc shim.
     expect(rules[1].use).toEqual([{ loader: '/shim.cjs', options: { a: 1 } }])
+    // Scheme rule likewise drops the refresh loader, keeps the swc shim.
+    expect(rules[2].use).toEqual([{ loader: '/shim.cjs', options: { a: 1 } }])
   })
 })
 

@@ -297,16 +297,21 @@ export function replaceSwcRules(rules: any[], nextChain: any[]): boolean {
   let replaced = false
   walkRules(rules, (rule) => {
     if (!rule.use) return
-    // A `mimetype` rule (no file `test`) matches inline modules — `data:` URIs and
-    // virtual JS. Rsbuild's `text/javascript` mimetype rule also catches
-    // html-rspack-plugin's synthetic `data:text/javascript,__webpack_public_path__…`
-    // entry, which its child compiler evaluates in a Node `vm`. A Fast Refresh
-    // footer there dereferences `__webpack_require__.c` (absent in that bare
-    // runtime) and crashes `storybook dev` outright (no module cache → TypeError).
-    // Inline `data:` JS never needs Fast Refresh, so swap in a refresh-less chain
-    // for mimetype rules; real source (file `test` rules) keeps the footer.
+    // A `mimetype` or `scheme` rule (no file `test`) matches inline modules —
+    // `data:` URIs and virtual JS. Rsbuild's `text/javascript` mimetype rule also
+    // catches html-rspack-plugin's synthetic
+    // `data:text/javascript,__webpack_public_path__…` entry, which its child
+    // compiler evaluates in a Node `vm`. A Fast Refresh footer there dereferences
+    // `__webpack_require__.c` (absent in that bare runtime) and crashes
+    // `storybook dev` outright (no module cache → TypeError). The sibling `scheme`
+    // rule (`scheme: 'data'`) targets the same inline `data:` JS by URI scheme
+    // rather than mimetype and must be stripped identically. Inline `data:` JS
+    // never needs Fast Refresh, so swap in a refresh-less chain for both; real
+    // source (file `test` rules) keeps the footer.
     const chain =
-      rule.mimetype != null ? stripReactRefreshLoader(nextChain) : nextChain
+      rule.mimetype != null || rule.scheme != null
+        ? stripReactRefreshLoader(nextChain)
+        : nextChain
     let mutated = false
     const next = asUseArray(rule.use).flatMap((use) => {
       if (loaderNameOf(use) !== 'builtin:swc-loader') return [use]
