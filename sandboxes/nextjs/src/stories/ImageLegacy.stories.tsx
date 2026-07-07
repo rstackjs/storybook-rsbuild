@@ -7,6 +7,7 @@ const meta = {
   args: {
     src: nextjsPng,
     alt: 'Legacy Static',
+    priority: true,
   },
 } satisfies Meta<typeof Image>
 
