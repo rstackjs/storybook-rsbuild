@@ -523,6 +523,38 @@ export function describeUnbridgedTurbopackConfig(
   )
 }
 
+/**
+ * Feature-detects whether the `__NEXT_PRIVATE_RENDER_WORKER` gate actually held
+ * after `loadConfig`. That env var (set at extraction start) makes `loadConfig`
+ * skip `loadWebpackHook()`, which otherwise remaps `webpack` and ~40 siblings to
+ * `next/dist/compiled/webpack` process-wide via the require-hook's
+ * `hookPropertyMap`. If the remap for `webpack` is present anyway, Next changed
+ * its gate semantics and `require('webpack')` in user `webpackFinal` code may
+ * now resolve to Next's compiled copy instead of the user's own webpack.
+ *
+ * Reads `hookPropertyMap` from `next/dist/server/require-hook` (verified against
+ * next@16.2.9: `loadWebpackHook` calls `addHookAliases([['webpack', ...], ...])`
+ * on that shared `Map`). Pure/exported so the detection is unit-testable without
+ * loading Next. We check the map's `webpack` key rather than
+ * `Module._resolveFilename` identity — the framework's own imports patch
+ * `_resolveFilename` unconditionally, so an identity check is a permanent no-op.
+ */
+export function describeRequireHookRegression(
+  hookPropertyMap: unknown,
+): string | null {
+  if (!(hookPropertyMap instanceof Map) || !hookPropertyMap.has('webpack')) {
+    return null
+  }
+  return (
+    "Next.js's require-hook gate changed: the `webpack` require-hook alias is " +
+    'installed even though Storybook set `__NEXT_PRIVATE_RENDER_WORKER` to skip ' +
+    "`loadWebpackHook()`. `require('webpack')` in your `next.config.webpack()`, " +
+    '`webpackFinal`, or webpack addon code may now resolve to ' +
+    '`next/dist/compiled/webpack` instead of your own webpack. See the ' +
+    'storybook-next-rsbuild Shim Catalogue.'
+  )
+}
+
 async function doExtract(
   projectDir: string,
   nextVersion: [number, number] | null,
@@ -560,6 +592,17 @@ async function doExtract(
     PHASE_PRODUCTION_BUILD,
   })
   const nextConfig = await loadConfig(phase, projectDir)
+  // Post-check the `__NEXT_PRIVATE_RENDER_WORKER` gate: `loadConfig` should have
+  // skipped `loadWebpackHook()`, so the require-hook's `webpack` remap must be
+  // absent. If Next changed the gate semantics, warn so a hijacked
+  // `require('webpack')` is attributable. Non-fatal if the module path drifts.
+  try {
+    const requireHookMod: any = await import('next/dist/server/require-hook.js')
+    const hookRegression = describeRequireHookRegression(
+      requireHookMod.hookPropertyMap ?? requireHookMod.default?.hookPropertyMap,
+    )
+    if (hookRegression) logger.warn(hookRegression)
+  } catch {}
   // Turbopack (Next 16's default bundler) config is not bridged — warn ONCE
   // naming the keys so a dropped SVGR-style loader setup is attributable.
   const turbopackWarning = describeUnbridgedTurbopackConfig(nextConfig)
