@@ -55,9 +55,9 @@ Notes:
 
 ### Installation
 
-Install `storybook-next-rsbuild` and `next-rspack` together — the framework needs `next-rspack` in your project to obtain Next.js's build configuration. Keep `next-rspack` on the exact same version as `next`.
+Install `storybook-next-rsbuild` together with `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from your [version matrix](#version-matrix) row. For example, on `next@16.2.3`:
 
-<PackageManagerTabs command="install storybook-next-rsbuild next-rspack -D" />
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14 -D" />
 
 If the framework can't load your Next.js config (for example, `next-rspack` isn't installed), what happens depends on the build mode:
 

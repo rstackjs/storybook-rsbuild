@@ -55,9 +55,9 @@ Storybook 的构建与 Next.js 的构建工具必须共享**同一份 `@rspack/c
 
 ### 安装 {#installation}
 
-把 `storybook-next-rsbuild` 和 `next-rspack` 一起安装 —— framework 需要项目里有 `next-rspack` 才能获取 Next.js 的构建配置。让 `next-rspack` 与 `next` 保持完全相同的版本。
+安装 `storybook-next-rsbuild`,同时安装**固定到你确切 `next` 版本**的 `next-rspack` —— 裸装 `next-rspack` 会拉取 registry 上的最新版,与你的 `next` 不一致时会被启动检查拒绝 —— 以及[版本矩阵](#version-matrix)中你那一行对应的 `@rsbuild/core`。例如在 `next@16.2.3` 上:
 
-<PackageManagerTabs command="install storybook-next-rsbuild next-rspack -D" />
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14 -D" />
 
 如果 framework 无法加载你的 Next.js 配置(例如未安装 `next-rspack`),表现取决于构建模式:
 
