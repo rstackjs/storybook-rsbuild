@@ -10,6 +10,7 @@ import { logger } from 'storybook/internal/node-logger'
 import {
   configLoadPhase,
   DUMMY_NEXT_ARGS,
+  describeRequireHookRegression,
   describeUnbridgedTurbopackConfig,
   instrumentUserWebpack,
   isStorybookClaimedRule,
@@ -563,6 +564,35 @@ describe('describeUnbridgedTurbopackConfig (F6 — turbopack is not bridged)', (
     expect(msg).toContain('turbopack.rules')
     expect(msg).toContain('turbopack.resolveAlias')
     expect(msg).toContain('turbopack.resolveExtensions')
+  })
+})
+
+describe('describeRequireHookRegression (F19 — render-worker gate post-check)', () => {
+  it('returns null when the webpack remap is absent (gate held)', () => {
+    // Fresh require-hook map carries only the styled-jsx overrides, never
+    // `webpack` — the shim skipped loadWebpackHook().
+    const held = new Map<string, string>([
+      ['styled-jsx', '/path/to/styled-jsx'],
+      ['styled-jsx/style', '/path/to/styled-jsx/style'],
+    ])
+    expect(describeRequireHookRegression(held)).toBeNull()
+    expect(describeRequireHookRegression(new Map())).toBeNull()
+  })
+
+  it('warns when the webpack remap is present (gate regressed)', () => {
+    const regressed = new Map<string, string>([
+      ['webpack', 'next/dist/compiled/webpack/webpack-lib'],
+    ])
+    const msg = describeRequireHookRegression(regressed)
+    expect(msg).not.toBeNull()
+    expect(msg).toContain('__NEXT_PRIVATE_RENDER_WORKER')
+    expect(msg).toContain('next/dist/compiled/webpack')
+  })
+
+  it('tolerates a non-Map (module shape drift) without throwing', () => {
+    expect(describeRequireHookRegression(undefined)).toBeNull()
+    expect(describeRequireHookRegression(null)).toBeNull()
+    expect(describeRequireHookRegression({ has: () => true })).toBeNull()
   })
 })
 
