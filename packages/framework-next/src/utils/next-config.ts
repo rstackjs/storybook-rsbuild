@@ -2,31 +2,6 @@ import { createRequire } from 'node:module'
 import { logger } from 'storybook/internal/node-logger'
 import { readProvidedMap, walkRules } from './preset-helpers'
 
-// Must be set before any Next.js internal imports so that
-// getBaseWebpackConfig() emits rspack-compatible config.
-process.env.NEXT_RSPACK = 'true'
-// This var is process-wide and is ALSO read by @rspack/core when Rsbuild calls
-// `rspack(finalConfig)` at compile time, so it governs validation of the whole
-// final Storybook build — including the user's own webpackFinal/tools.rspack
-// mutations. Next.js emits webpack-only keys that @rspack/core 1.5.0's schema
-// rejects, so 'strict' can't be used; but 'loose-silent' would suppress a typo
-// in the user's config too. Default to the loosest NON-silent mode ('loose':
-// prints validation issues as warnings, never throws) so config typos still
-// surface. Only default when unset so a user can override (e.g.
-// RSPACK_CONFIG_VALIDATE=strict to debug, or 'loose-silent' to restore the old
-// behavior). Read only by @rspack/core <= 1.5.x (Next 15 rows); rspack 1.6.0
-// removed JS-side validation, so it is vestigial on Next 16 rows.
-process.env.RSPACK_CONFIG_VALIDATE = resolveRspackValidateMode(
-  process.env.RSPACK_CONFIG_VALIDATE,
-)
-// Setting this var makes Next.js's loadConfig() SKIP loadWebpackHook(), which
-// would otherwise install ~40 process-wide require-hook aliases remapping
-// 'webpack', 'webpack-sources', '@babel/runtime', etc. to next/dist/compiled/*
-// for the entire Storybook process (hijacking those requires in user
-// webpackFinal / webpackAddons code that does `require('webpack')`). (It only
-// *throws* in standalone/untraced installs, not a normal one.)
-process.env.__NEXT_PRIVATE_RENDER_WORKER = 'defined'
-
 /**
  * The RSPACK_CONFIG_VALIDATE mode to use: a user-supplied value always wins;
  * otherwise the non-silent 'loose' default (see the assignment above). Extracted
@@ -381,6 +356,39 @@ export async function extractNextRspackConfig(
     allowMissingNextBridge = false,
   }: { dev?: boolean; allowMissingNextBridge?: boolean } = {},
 ): Promise<NextRspackExtraction> {
+  // Set at extraction time (not module load): all Next.js/rspack reads below are
+  // call-time — `doExtract` reaches Next internals only via dynamic `import()`,
+  // and @rspack/core reads RSPACK_CONFIG_VALIDATE at compile time — so setting
+  // here still lands before every reader. These are NOT unset afterward:
+  // NEXT_RSPACK is read at loader-run time during the Storybook compile, and
+  // RSPACK_CONFIG_VALIDATE governs the final compile too. See AGENTS.md Shim
+  // Catalogue.
+  //
+  // Must be set before any Next.js internal imports so that
+  // getBaseWebpackConfig() emits rspack-compatible config.
+  process.env.NEXT_RSPACK = 'true'
+  // This var is process-wide and is ALSO read by @rspack/core when Rsbuild calls
+  // `rspack(finalConfig)` at compile time, so it governs validation of the whole
+  // final Storybook build — including the user's own webpackFinal/tools.rspack
+  // mutations. Next.js emits webpack-only keys that @rspack/core 1.5.0's schema
+  // rejects, so 'strict' can't be used; but 'loose-silent' would suppress a typo
+  // in the user's config too. Default to the loosest NON-silent mode ('loose':
+  // prints validation issues as warnings, never throws) so config typos still
+  // surface. Only default when unset so a user can override (e.g.
+  // RSPACK_CONFIG_VALIDATE=strict to debug, or 'loose-silent' to restore the old
+  // behavior). Read only by @rspack/core <= 1.5.x (Next 15 rows); rspack 1.6.0
+  // removed JS-side validation, so it is vestigial on Next 16 rows.
+  process.env.RSPACK_CONFIG_VALIDATE = resolveRspackValidateMode(
+    process.env.RSPACK_CONFIG_VALIDATE,
+  )
+  // Setting this var makes Next.js's loadConfig() SKIP loadWebpackHook(), which
+  // would otherwise install ~40 process-wide require-hook aliases remapping
+  // 'webpack', 'webpack-sources', '@babel/runtime', etc. to next/dist/compiled/*
+  // for the entire Storybook process (hijacking those requires in user
+  // webpackFinal / webpackAddons code that does `require('webpack')`). (It only
+  // *throws* in standalone/untraced installs, not a normal one.)
+  process.env.__NEXT_PRIVATE_RENDER_WORKER = 'defined'
+
   const projectDir = dir || process.cwd()
   const nextVersion = getNextVersion()
 
