@@ -18,6 +18,7 @@ import {
   makeFontRule,
   mergeFallback,
   NODE_BUILTINS_FALLBACK,
+  partitionDefinePlugins,
   replaceSwcRules,
   resolveNodeProtocolRequest,
   rulesCongruentForDedup,
@@ -590,19 +591,35 @@ export const rsbuildFinal: NonNullable<
           rspackConfig.module.rules.push(...userDelta.rules)
         }
         if (userDelta.plugins.length > 0) {
-          if (forwardNextConfigPlugins) {
-            rspackConfig.plugins.push(...userDelta.plugins)
-          } else {
-            const names = userDelta.plugins
-              .map((p: any) => p?.constructor?.name || typeof p)
-              .join(', ')
+          // DefinePlugin definitions are already harvested wholesale into
+          // `source.define` at extraction time, so their instances are bridged
+          // regardless of the gate. Never re-push them (double-apply); log them
+          // truthfully instead of claiming they were dropped/forwarded.
+          const { definePlugins, rest } = partitionDefinePlugins(
+            userDelta.plugins,
+          )
+          if (definePlugins.length > 0) {
             logger.info(
-              `Dropping ${userDelta.plugins.length} next.config.webpack() plugin(s) ` +
-                `[${names}]. Most webpack-only plugins (CopyPlugin, source-map ` +
-                `uploaders, stats writers) crash rspack's IPC channel during ` +
-                `processAssets. Set framework option ` +
-                `\`forwardNextConfigPlugins: true\` to opt in.`,
+              `${definePlugins.length} next.config.webpack() DefinePlugin(s) ` +
+                'left in place — their definitions are already bridged via ' +
+                '`source.define`.',
             )
+          }
+          if (rest.length > 0) {
+            if (forwardNextConfigPlugins) {
+              rspackConfig.plugins.push(...rest)
+            } else {
+              const names = rest
+                .map((p: any) => p?.constructor?.name || typeof p)
+                .join(', ')
+              logger.info(
+                `Dropping ${rest.length} next.config.webpack() plugin(s) ` +
+                  `[${names}]. Most webpack-only plugins (CopyPlugin, source-map ` +
+                  `uploaders, stats writers) crash rspack's IPC channel during ` +
+                  `processAssets. Set framework option ` +
+                  `\`forwardNextConfigPlugins: true\` to opt in.`,
+              )
+            }
           }
         }
         if (Object.keys(userDelta.experiments).length > 0) {

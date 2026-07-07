@@ -356,6 +356,35 @@ function isProvidePlugin(plugin: any): boolean {
   return PROVIDE_PLUGIN_NAMES.has(plugin?.constructor?.name)
 }
 
+const DEFINE_PLUGIN_NAMES = new Set(['DefinePlugin', 'RspackDefinePlugin'])
+
+function isDefinePlugin(plugin: any): boolean {
+  return DEFINE_PLUGIN_NAMES.has(plugin?.constructor?.name)
+}
+
+/**
+ * Partition user `next.config.webpack()` plugin instances into DefinePlugins
+ * (constructor name `DefinePlugin` or `RspackDefinePlugin`) vs everything else.
+ *
+ * DefinePlugin *definitions* are harvested wholesale into `source.define` at
+ * extraction time (see `next-config.ts`), so their instances are already
+ * bridged. They must never be re-pushed onto the rspack config — even under
+ * `forwardNextConfigPlugins: true` — or every define would be applied twice.
+ * The `rest` bucket is what the `forwardNextConfigPlugins` gate governs.
+ */
+export function partitionDefinePlugins(plugins: any[]): {
+  definePlugins: any[]
+  rest: any[]
+} {
+  const definePlugins: any[] = []
+  const rest: any[] = []
+  for (const plugin of plugins) {
+    if (isDefinePlugin(plugin)) definePlugins.push(plugin)
+    else rest.push(plugin)
+  }
+  return { definePlugins, rest }
+}
+
 /**
  * Read a webpack/rspack plugin's `{ key: spec }` definitions map. Works for
  * ProvidePlugin and DefinePlugin alike: webpack stores definitions on a
