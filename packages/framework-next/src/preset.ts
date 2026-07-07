@@ -26,6 +26,7 @@ import {
   rulesHandleLess,
   rulesHandleSass,
   ruleTestSignature,
+  SWC_RULE_TIERS,
   type SwcRuleTier,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
@@ -33,17 +34,12 @@ import {
 
 const resolve = (id: string) => fileURLToPath(import.meta.resolve(id))
 
-// SWC rule-selection tiers ranked best → worst. Dev targets `refresh`, prod
-// targets `bare`; a selected tier ranking below the mode's target triggers a
-// mode-branched degradation warning. `null` (no rule) ranks below every tier.
-const SWC_RULE_TIER_RANK: Record<SwcRuleTier, number> = {
-  refresh: 3,
-  bare: 2,
-  plain: 1,
-  any: 0,
-}
+// Rank an SWC tier by its position in `SWC_RULE_TIERS` (best → worst). Dev
+// targets `refresh`, prod targets `bare`; a selected tier ranking below the
+// mode's target triggers a mode-branched degradation warning. `null` (no rule)
+// ranks below every tier.
 const swcRuleTierRank = (tier: SwcRuleTier | null): number =>
-  tier == null ? -1 : SWC_RULE_TIER_RANK[tier]
+  tier == null ? -1 : SWC_RULE_TIERS.length - SWC_RULE_TIERS.indexOf(tier)
 
 const BUILDER_PATH = resolve('storybook-builder-rsbuild')
 const RENDERER_PATH = resolve('@storybook/react/preset')
@@ -196,7 +192,7 @@ const LESS_RE = /\.less(\?|$)/
 // break the documented SVGR flow. Mirrors upstream's two-rule (JS-issuer /
 // CSS-issuer) shape (`@storybook/nextjs/src/images/webpack.ts`).
 const STATIC_IMAGE_RE = /\.(png|jpe?g|gif|webp|avif|ico|bmp)$/i
-const CSS_ISSUER_RE = /\.(css|scss|sass)$/
+const CSS_ISSUER_RE = /\.(css|scss|sass|less)$/
 // Upstream's default when the asset rule's generator filename can't be read.
 const STATIC_IMAGE_FILENAME = 'static/media/[path][name][ext]'
 

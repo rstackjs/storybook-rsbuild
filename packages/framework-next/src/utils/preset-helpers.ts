@@ -175,7 +175,16 @@ export function isNextSwcLoaderName(name: string | null | undefined): boolean {
   return !!name && NEXT_SWC_LOADER_RE.test(name)
 }
 
-export type SwcRuleTier = 'refresh' | 'bare' | 'plain' | 'any'
+/**
+ * SWC rule-selection tiers, ordered best → worst. `selectClientSwcRule` picks
+ * the earliest tier with a matching rule; `preset.ts` compares tier positions
+ * to decide whether the chosen rule falls below the build mode's target — so
+ * this ordering is the single source of truth for both the tier set and its
+ * precedence.
+ */
+export const SWC_RULE_TIERS = ['refresh', 'bare', 'plain', 'any'] as const
+
+export type SwcRuleTier = (typeof SWC_RULE_TIERS)[number]
 
 export interface SwcRuleSelection {
   /** The chosen client `next-swc-loader` rule, or `null` if none exists. */
@@ -228,20 +237,20 @@ function selectClientSwcRule(rawRules: any[]): SwcRuleSelection {
       plainSwcRule ??= rule
     }
   })
-  // Single precedence source: refresh-paired rule wins, then the bare pages
-  // catch-all, then a layered/queried SWC rule, then any SWC rule at all.
-  // `clientRule` and `tier` must never disagree.
-  const tiers: Array<[SwcRuleTier, any]> = [
-    ['refresh', refreshSwcRule],
-    ['bare', bareSwcRule],
-    ['plain', plainSwcRule],
-    ['any', anySwcRule],
-  ]
-  const selected = tiers.find(([, rule]) => rule)
+  // Single precedence source (`SWC_RULE_TIERS`): refresh-paired rule wins, then
+  // the bare pages catch-all, then a layered/queried SWC rule, then any SWC rule
+  // at all. `clientRule` and `tier` must never disagree.
+  const ruleByTier: Record<SwcRuleTier, any> = {
+    refresh: refreshSwcRule,
+    bare: bareSwcRule,
+    plain: plainSwcRule,
+    any: anySwcRule,
+  }
+  const tier = SWC_RULE_TIERS.find((t) => ruleByTier[t]) ?? null
   return {
-    clientRule: selected?.[1] ?? null,
-    tier: selected?.[0] ?? null,
-    clientIssuerLayer: selected?.[1]?.issuerLayer ?? null,
+    clientRule: tier ? ruleByTier[tier] : null,
+    tier,
+    clientIssuerLayer: tier ? (ruleByTier[tier].issuerLayer ?? null) : null,
     sawBuiltinSwcLoader,
   }
 }
