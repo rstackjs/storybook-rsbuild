@@ -34,7 +34,11 @@ const MockedNextLegacyImage = React.forwardRef(function NextLegacyImage(
     ref,
     ...imageParameters,
     ...props,
-    loader: loader ?? defaultLoader,
+    // Deliberate divergence from the upstream port: honor a per-story
+    // `parameters.nextjs.image.loader` (documented in the parameters table)
+    // before falling back to the framework default. Upstream skips straight
+    // to its default loader here.
+    loader: loader ?? imageParameters?.loader ?? defaultLoader,
   })
 })
 
