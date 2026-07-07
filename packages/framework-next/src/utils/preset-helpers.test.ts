@@ -18,6 +18,7 @@ import {
   readProvidedMap,
   replaceSwcRules,
   resolveNodeProtocolRequest,
+  ruleLoaderNames,
   rulesCongruentForDedup,
   rulesHandleSass,
   ruleTestSignature,
@@ -1218,6 +1219,55 @@ describe('rulesCongruentForDedup (condition-aware dedup — F2)', () => {
     expect(
       rulesCongruentForDedup({ test: { or: [/a/] } }, { test: { or: [/a/] } }),
     ).toBe(false)
+  })
+
+  it('keeps rules with differing enforce out of dedup (F12)', () => {
+    // An `enforce: 'pre'` webpackFinal rule runs in a different loader phase than
+    // a bare (normal-phase) next.config rule with the same test — dropping either
+    // is wrong.
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, enforce: 'pre' },
+        { test: /\.svg$/ },
+      ),
+    ).toBe(false)
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, enforce: 'pre' },
+        { test: /\.svg$/, enforce: 'post' },
+      ),
+    ).toBe(false)
+  })
+
+  it('still dedups congruent rules with identical enforce', () => {
+    expect(
+      rulesCongruentForDedup(
+        { test: /\.svg$/, enforce: 'pre' },
+        { test: /\.svg$/, enforce: 'pre' },
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('ruleLoaderNames', () => {
+  it('joins use-chain loader basenames with an arrow', () => {
+    expect(
+      ruleLoaderNames({
+        use: [
+          { loader: '/abs/path/to/next-swc-loader', options: {} },
+          '@svgr/webpack',
+        ],
+      }),
+    ).toBe('next-swc-loader → @svgr/webpack')
+  })
+
+  it('handles a single string / object use and missing loaders', () => {
+    expect(ruleLoaderNames({ use: 'raw-loader' })).toBe('raw-loader')
+    expect(ruleLoaderNames({ test: /\.svg$/ })).toBe('(no loaders)')
+  })
+
+  it('never throws on a function-shaped use', () => {
+    expect(ruleLoaderNames({ use: () => [] })).toBe('<fn>')
   })
 })
 

@@ -21,6 +21,7 @@ import {
   partitionDefinePlugins,
   replaceSwcRules,
   resolveNodeProtocolRequest,
+  ruleLoaderNames,
   rulesCongruentForDedup,
   rulesHandleSass,
   ruleTestSignature,
@@ -743,10 +744,14 @@ export const rsbuildFinal: NonNullable<
             const sameTest = sig
               ? userFinalAddedRules.filter((u) => ruleTestSignature(u) === sig)
               : []
-            if (sameTest.some((u) => rulesCongruentForDedup(r, u))) {
-              logger.info(
-                `Dropping next.config.webpack rule for ${sig} — superseded by a ` +
-                  'congruent .storybook/main webpackFinal rule.',
+            const congruentUser = sameTest.find((u) =>
+              rulesCongruentForDedup(r, u),
+            )
+            if (congruentUser) {
+              logger.warn(
+                `Dropping next.config.webpack rule for ${sig} ` +
+                  `[${ruleLoaderNames(r)}] — superseded by a congruent ` +
+                  `.storybook/main webpackFinal rule [${ruleLoaderNames(congruentUser)}].`,
               )
               return false
             }
