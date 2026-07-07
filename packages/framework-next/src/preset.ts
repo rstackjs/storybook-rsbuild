@@ -47,6 +47,9 @@ const RENDERER_PATH = resolve('@storybook/react/preset')
 const PREVIEW_PATH = resolve('storybook-next-rsbuild/preview')
 const LEGACY_PREVIEW_PATH = resolve('storybook-next-rsbuild/config/preview')
 const NEXT_IMAGE_MOCK = resolve('storybook-next-rsbuild/next-image-mock')
+const NEXT_LEGACY_IMAGE_MOCK = resolve(
+  'storybook-next-rsbuild/next-legacy-image-mock',
+)
 const NEXT_IMAGE_LOADER_STUB = resolve(
   'storybook-next-rsbuild/next-image-loader-stub',
 )
@@ -94,6 +97,7 @@ export const previewAnnotations: PresetProperty<'previewAnnotations'> = (
 // Every value is a module-load-time constant, so build the map once.
 const STORYBOOK_OVERRIDE_ALIASES = {
   'next/image$': NEXT_IMAGE_MOCK,
+  'next/legacy/image$': NEXT_LEGACY_IMAGE_MOCK,
   'styled-jsx': STYLED_JSX_DIR,
   'styled-jsx/style': join(STYLED_JSX_DIR, 'style'),
   'styled-jsx/style.js': join(STYLED_JSX_DIR, 'style'),

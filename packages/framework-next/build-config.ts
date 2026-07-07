@@ -11,6 +11,7 @@ const config: BuildEntries = {
     },
     './next-image-loader-stub': './loaders/next-image-loader-stub.cjs',
     './next-image-mock': './loaders/next-image-mock.js',
+    './next-legacy-image-mock': './loaders/next-legacy-image-mock.js',
     './storybook-nextjs-font-loader':
       './loaders/storybook-nextjs-font-loader.cjs',
     './react-refresh-entry': './loaders/react-refresh-entry.cjs',

@@ -59,16 +59,18 @@ export function filterNextAliases(
 
 /**
  * Framework-reserved alias keys whose resolution the framework must own: the
- * `next/image` mock and the `styled-jsx` singleton (`styled-jsx`,
- * `styled-jsx/style`, …). A user `next.config.webpack()` alias delta spelled
- * with the same key — plain or `$`-exact — would otherwise silently override the
- * mock (broken `/_next/image` requests) or split the styled-jsx identity. Base
- * name is compared so both `next/image` and `next/image$` are caught.
+ * `next/image` / `next/legacy/image` mocks and the `styled-jsx` singleton
+ * (`styled-jsx`, `styled-jsx/style`, …). A user `next.config.webpack()` alias
+ * delta spelled with the same key — plain or `$`-exact — would otherwise
+ * silently override the mock (broken `/_next/image` requests) or split the
+ * styled-jsx identity. Base name is compared so both `next/image` and
+ * `next/image$` are caught.
  */
 export function isProtectedFrameworkAliasKey(key: string): boolean {
   const bare = stripExactMatchMarker(key)
   return (
     bare === 'next/image' ||
+    bare === 'next/legacy/image' ||
     bare === 'styled-jsx' ||
     bare.startsWith('styled-jsx/')
   )

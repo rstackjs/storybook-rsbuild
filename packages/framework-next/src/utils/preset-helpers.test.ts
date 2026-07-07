@@ -81,10 +81,12 @@ describe('filterNextAliases', () => {
 })
 
 describe('isProtectedFrameworkAliasKey', () => {
-  it('protects next/image and styled-jsx keys (plain and $-exact, subpaths)', () => {
+  it('protects next/image, next/legacy/image and styled-jsx keys (plain and $-exact, subpaths)', () => {
     for (const k of [
       'next/image',
       'next/image$',
+      'next/legacy/image',
+      'next/legacy/image$',
       'styled-jsx',
       'styled-jsx$',
       'styled-jsx/style',
@@ -99,6 +101,8 @@ describe('isProtectedFrameworkAliasKey', () => {
     for (const k of [
       'next/imagex',
       'next/image-loader',
+      'next/legacy/imagex',
+      'next/legacy/image-loader',
       'styled-jsxx',
       'next/link',
       'react',
