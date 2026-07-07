@@ -23,6 +23,7 @@ import {
   resolveNodeProtocolRequest,
   ruleLoaderNames,
   rulesCongruentForDedup,
+  rulesHandleLess,
   rulesHandleSass,
   ruleTestSignature,
   type SwcRuleTier,
@@ -186,6 +187,7 @@ class StripNodeProtocolPlugin {
 }
 
 const SASS_RE = /\.s[ac]ss(\?|$)/
+const LESS_RE = /\.less(\?|$)/
 
 // Static image extensions routed to the next-image-loader stub so `import img
 // from './x.png'` yields `StaticImageData` (`{ src, height, width, blurDataURL
@@ -198,39 +200,65 @@ const CSS_ISSUER_RE = /\.(css|scss|sass)$/
 // Upstream's default when the asset rule's generator filename can't be read.
 const STATIC_IMAGE_FILENAME = 'static/media/[path][name][ext]'
 
+// Preflight arms, one per opt-in stylesheet flavor. Each pairs the request
+// matcher with the structural rule probe and the plugin the user must wire.
+const STYLE_PREFLIGHTS = [
+  {
+    label: 'Sass',
+    re: SASS_RE,
+    rulesHandle: rulesHandleSass,
+    plugin: '@rsbuild/plugin-sass',
+    call: 'pluginSass()',
+  },
+  {
+    label: 'Less',
+    re: LESS_RE,
+    rulesHandle: rulesHandleLess,
+    plugin: '@rsbuild/plugin-less',
+    call: 'pluginLess()',
+  },
+] as const
+
 /**
  * Preflight hint for the most common "works in `next dev`, not in Storybook"
- * surprise. Rsbuild owns the CSS pipeline here, so Sass is opt-in via
- * `@rsbuild/plugin-sass` — but a project that imports `.scss` and never wired
- * the plugin only learns that from a cryptic "Module parse failed" deep in the
- * build. When a `.scss`/`.sass` request appears and no rule handles it, emit one
- * actionable warning pointing at the docs.
+ * surprise. Rsbuild owns the CSS pipeline here, so Sass/Less are opt-in via
+ * `@rsbuild/plugin-sass` / `@rsbuild/plugin-less` — but a project that imports
+ * `.scss`/`.less` and never wired the plugin only learns that from a cryptic
+ * "Module parse failed" deep in the build. When a `.scss`/`.sass`/`.less`
+ * request appears and no rule (including a user `.less`/`.scss` rule forwarded
+ * via the next.config delta) handles it, emit one actionable warning per flavor
+ * pointing at the docs.
  */
-class SassPreflightPlugin {
+class StylePreflightPlugin {
   apply(compiler: any) {
-    let checked = false
+    // Warn at most once per flavor per boot, not per request.
+    const checked = new Set<string>()
     compiler.hooks.normalModuleFactory.tap(
-      'StorybookSassPreflight',
+      'StorybookStylePreflight',
       (nmf: any) => {
-        nmf.hooks.beforeResolve.tap('StorybookSassPreflight', (data: any) => {
-          if (checked || !SASS_RE.test(data?.request ?? '')) return
-          // Scanned lazily so the rules array is fully assembled (plugin-sass
-          // registers its rule via Rsbuild's chain, before this fires).
-          checked = true
-          // This is a diagnostics helper: a failure of the probe must NEVER
-          // affect module resolution. Swallow any throw (a pathological rule
-          // shape, etc.) so the tap only ever returns undefined.
-          try {
-            if (rulesHandleSass(compiler.options?.module?.rules)) return
-            logger.warn(
-              `Found a Sass import ("${data.request}") but no Sass loader is ` +
-                'configured. storybook-next-rsbuild delegates the CSS pipeline to ' +
-                'Rsbuild, so Sass is opt-in: install `@rsbuild/plugin-sass` and add ' +
-                '`pluginSass()` via `rsbuildFinal` in .storybook/main.ts. See ' +
-                'https://storybook.rsbuild.rs/guide/framework/next#sass--less',
-            )
-          } catch {
-            // Probe failed — stay silent rather than break the build.
+        nmf.hooks.beforeResolve.tap('StorybookStylePreflight', (data: any) => {
+          const request = data?.request ?? ''
+          for (const arm of STYLE_PREFLIGHTS) {
+            if (checked.has(arm.label) || !arm.re.test(request)) continue
+            // Scanned lazily so the rules array is fully assembled (the style
+            // plugin registers its rule via Rsbuild's chain before this fires).
+            checked.add(arm.label)
+            // This is a diagnostics helper: a failure of the probe must NEVER
+            // affect module resolution. Swallow any throw (a pathological rule
+            // shape, etc.) so the tap only ever returns undefined.
+            try {
+              if (arm.rulesHandle(compiler.options?.module?.rules)) continue
+              logger.warn(
+                `Found a ${arm.label} import ("${request}") but no ${arm.label} ` +
+                  'loader is configured. storybook-next-rsbuild delegates the CSS ' +
+                  `pipeline to Rsbuild, so ${arm.label} is opt-in: install ` +
+                  `\`${arm.plugin}\` and add \`${arm.call}\` via \`rsbuildFinal\` in ` +
+                  '.storybook/main.ts. See ' +
+                  'https://storybook.rsbuild.rs/guide/framework/next#sass--less',
+              )
+            } catch {
+              // Probe failed — stay silent rather than break the build.
+            }
           }
         })
       },
@@ -572,7 +600,7 @@ export const rsbuildFinal: NonNullable<
 
         rspackConfig.plugins.push(
           new StripNodeProtocolPlugin(),
-          new SassPreflightPlugin(),
+          new StylePreflightPlugin(),
         )
 
         // User delta from `next.config.webpack(config, opts)` — appended last
