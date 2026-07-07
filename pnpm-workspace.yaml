@@ -3,6 +3,11 @@ packages:
   - sandboxes/**
   - scripts/**
   - website
+# Re-sync pnpm-injected deps (framework-next's storybook-builder-rsbuild) after
+# these scripts so a builder rebuild doesn't leave a stale hard-linked copy.
+syncInjectedDepsAfterScripts:
+  - build
+  - prep
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@swc/core'
