@@ -23,11 +23,24 @@ import {
   rulesCongruentForDedup,
   rulesHandleSass,
   ruleTestSignature,
+  type SwcRuleTier,
   TARGET_CSS_RE,
   withRuntimeUrlFilter,
 } from './utils/preset-helpers'
 
 const resolve = (id: string) => fileURLToPath(import.meta.resolve(id))
+
+// SWC rule-selection tiers ranked best → worst. Dev targets `refresh`, prod
+// targets `bare`; a selected tier ranking below the mode's target triggers a
+// mode-branched degradation warning. `null` (no rule) ranks below every tier.
+const SWC_RULE_TIER_RANK: Record<SwcRuleTier, number> = {
+  refresh: 3,
+  bare: 2,
+  plain: 1,
+  any: 0,
+}
+const swcRuleTierRank = (tier: SwcRuleTier | null): number =>
+  tier == null ? -1 : SWC_RULE_TIER_RANK[tier]
 
 const BUILDER_PATH = resolve('storybook-builder-rsbuild')
 const RENDERER_PATH = resolve('@storybook/react/preset')
@@ -281,24 +294,46 @@ export const rsbuildFinal: NonNullable<
   }
 
   const nextLoaderChain = buildNextLoaderChain(extraction.rawRules, SWC_SHIM)
-  const { tier: swcRuleTier, sawBuiltinSwcLoader } = analyzeNextLoaderChain(
-    extraction.rawRules,
-  )
+  const {
+    tier: swcRuleTier,
+    clientIssuerLayer,
+    sawBuiltinSwcLoader,
+  } = analyzeNextLoaderChain(extraction.rawRules)
   if (nextLoaderChain) {
     logger.info('Using Next.js SWC loader for JS/TS compilation')
-    // Fast Refresh needs the per-module `module.hot.accept` footer, which only
-    // the react-refresh-paired rule carries. In dev, a non-`refresh` tier means
-    // Next.js emitted rules but none paired a refresh loader — edits will remount
-    // and lose React state. `extractNextRspackConfig` already logs the null-chain
-    // case; this covers "chain built, but from a degraded rule".
-    if (isDev && swcRuleTier !== 'refresh') {
-      logger.warn(
-        'No next-swc-loader rule paired with a react-refresh loader was found in ' +
-          "Next.js's dev config; Fast Refresh will degrade to remount-on-edit " +
-          '(React state is lost on save). The likely cause is Next.js renaming ' +
-          "'builtin:react-refresh-loader' — see buildNextLoaderChain's loader-name " +
-          'match in preset-helpers.ts.',
-      )
+    // Dev and prod select the client rule by the same criterion, and each mode
+    // has a known-good target tier: dev = `refresh` (carries the Fast Refresh
+    // footer), prod = `bare` (Next.js's pages catch-all). A lower-ranked tier
+    // means Next.js's emitted rules drifted and we fell back to a degraded rule.
+    // `extractNextRspackConfig` already logs the null-chain case; this covers
+    // "chain built, but from a degraded rule".
+    const expectedTier: SwcRuleTier = isDev ? 'refresh' : 'bare'
+    if (swcRuleTierRank(swcRuleTier) < swcRuleTierRank(expectedTier)) {
+      if (isDev) {
+        logger.warn(
+          'No next-swc-loader rule paired with a react-refresh loader was found in ' +
+            "Next.js's dev config; Fast Refresh will degrade to remount-on-edit " +
+            '(React state is lost on save). The likely cause is Next.js renaming ' +
+            "'builtin:react-refresh-loader' — see buildNextLoaderChain's loader-name " +
+            'match in preset-helpers.ts.',
+        )
+      } else {
+        const layer =
+          typeof clientIssuerLayer === 'string'
+            ? ` (issuerLayer '${clientIssuerLayer}')`
+            : typeof clientIssuerLayer === 'function'
+              ? ' (issuerLayer function)'
+              : ''
+        logger.warn(
+          "Could not find Next.js's pages catch-all next-swc-loader rule in the " +
+            `production config; selected a '${swcRuleTier}'-tier rule${layer} instead. ` +
+            'This rule may target a server layer, so RSC / `server-only` ' +
+            'import-validation semantics can differ from `next build` — modules that ' +
+            'poison the client bundle may compile silently here. The likely cause is ' +
+            "Next.js reshaping its emitted rules — see buildNextLoaderChain's rule " +
+            'selection in preset-helpers.ts.',
+        )
+      }
     }
   } else if (extraction.rawRules.length > 0) {
     // Extraction succeeded but no shimmable next-swc-loader rule was found, so

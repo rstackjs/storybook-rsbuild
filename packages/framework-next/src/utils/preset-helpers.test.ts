@@ -533,6 +533,93 @@ describe('buildNextLoaderChain', () => {
   })
 })
 
+describe('SWC rule selection against real Next.js oneOf order (WI-4)', () => {
+  const SHIM = '/shim/swc-loader-shim.cjs'
+
+  // Transcribed from a REAL production extraction — `getBaseWebpackConfig({
+  // dev: false })` against `sandboxes/nextjs` (next@16.2.9, next-rspack). The
+  // SWC-bearing rules are reproduced in emitted order with their `issuerLayer` /
+  // `resourceQuery` narrowing and their `serverComponents` swc option; only the
+  // pages catch-all (last) has neither a layer nor a query. First-match-wins
+  // would pick the leading `api-node` rule (`serverComponents: false`), so the
+  // `bare` tier is what reaches Next.js's real client rule.
+  const swc = (serverComponents: boolean) => ({
+    loader: 'next-swc-loader',
+    options: { isServer: serverComponents, serverComponents },
+  })
+  const buildProdRules = () => [
+    { issuerLayer: 'api-node', test: /\.(tsx|ts|js)$/, use: [swc(false)] },
+    { issuerLayer: 'api-edge', test: /\.(tsx|ts|js)$/, use: [swc(false)] },
+    {
+      issuerLayer: 'middleware',
+      test: /\.(tsx|ts|js)$/,
+      use: [{ loader: 'next-flight-loader' }, swc(true)],
+    },
+    {
+      issuerLayer: 'instrument',
+      test: /\.(tsx|ts|js)$/,
+      use: [{ loader: 'next-flight-loader' }, swc(true)],
+    },
+    // Real config emits a function-valued issuerLayer here; a function is
+    // non-null, so this rule lands in the `plain` bucket, not `bare`.
+    { issuerLayer: () => true, test: /\.(tsx|ts|js)$/, use: [swc(true)] },
+    {
+      resourceQuery: /__next_edge_ssr_entry__/,
+      test: /\.(tsx|ts|js)$/,
+      use: [swc(true)],
+    },
+    {
+      issuerLayer: 'app-pages-browser',
+      test: /\.(tsx|ts|js)$/,
+      use: [{ loader: 'next-flight-client-module-loader' }, swc(true)],
+    },
+    {
+      issuerLayer: 'ssr',
+      test: /\.(tsx|ts|js)$/,
+      use: [{ loader: 'next-flight-client-module-loader' }, swc(true)],
+    },
+    // The pages catch-all: no issuerLayer, no resourceQuery. This is the client
+    // target the `bare` tier must reach.
+    { test: /\.(tsx|ts|js)$/, use: [swc(true)] },
+  ]
+
+  it('prod: selects the bare pages catch-all, not the leading api-node rule', () => {
+    const rules = buildProdRules()
+    const { tier, clientIssuerLayer } = analyzeNextLoaderChain(rules)
+    expect(tier).toBe('bare')
+    expect(clientIssuerLayer).toBeNull()
+
+    // The shim inherits the selected rule's swc options — the catch-all is
+    // `serverComponents: true`, NOT the api-node rule's `false`.
+    const chain = buildNextLoaderChain(rules, SHIM)
+    const selected = chain?.find((u) => u?.loader === SHIM)
+    expect(selected?.options?.serverComponents).not.toBe(false)
+    expect(selected?.options?.serverComponents).toBe(true)
+  })
+
+  it('dev: selects the refresh-paired client rule (same criterion, different tier)', () => {
+    // Dev extraction emits the same server rules PLUS the client rule paired
+    // with `builtin:react-refresh-loader` (the Fast Refresh footer carrier).
+    const rules = buildProdRules()
+    const clientOpts = { isServer: false, serverComponents: true }
+    rules.push({
+      test: /\.(tsx|ts|js)$/,
+      use: [
+        { loader: 'builtin:react-refresh-loader' },
+        { loader: 'next-swc-loader', options: clientOpts },
+      ],
+    } as any)
+    const { tier } = analyzeNextLoaderChain(rules)
+    expect(tier).toBe('refresh')
+
+    const chain = buildNextLoaderChain(rules, SHIM)
+    expect(chain).toEqual([
+      { loader: 'builtin:react-refresh-loader' },
+      { loader: SHIM, options: clientOpts },
+    ])
+  })
+})
+
 describe('isNextSwcLoaderName (separator-agnostic matcher)', () => {
   it('matches bare and both-separator paths', () => {
     expect(isNextSwcLoaderName('next-swc-loader')).toBe(true)
@@ -595,13 +682,15 @@ describe('analyzeNextLoaderChain (tier + builtin diagnostics)', () => {
     ]
     expect(analyzeNextLoaderChain(rules)).toEqual({
       tier: 'refresh',
+      clientIssuerLayer: null,
       sawBuiltinSwcLoader: false,
     })
   })
 
-  it('reports the plain tier when the refresh loader is renamed away', () => {
-    // Simulates Next.js renaming 'builtin:react-refresh-loader' → the chain
-    // still builds (plain rule) but Fast Refresh would degrade; preset.ts warns.
+  it('reports the bare tier for a layer-less non-flight rule (prod catch-all)', () => {
+    // A non-flight rule with neither issuerLayer nor resourceQuery is Next.js's
+    // pages catch-all — the prod client target. Even with the refresh loader
+    // renamed away, it classifies as `bare`, not `plain`.
     const rules = [
       {
         test: /\.tsx?$/,
@@ -612,7 +701,28 @@ describe('analyzeNextLoaderChain (tier + builtin diagnostics)', () => {
       },
     ]
     expect(analyzeNextLoaderChain(rules)).toEqual({
+      tier: 'bare',
+      clientIssuerLayer: null,
+      sawBuiltinSwcLoader: false,
+    })
+  })
+
+  it('reports the plain tier + issuerLayer for a layered non-flight rule', () => {
+    // A non-flight rule scoped by issuerLayer (e.g. `api-node`) is a degraded
+    // fallback: it compiles on a server layer. `clientIssuerLayer` surfaces the
+    // layer name so preset.ts can name it in the prod-degradation warning.
+    const rules = [
+      {
+        issuerLayer: 'api-node',
+        test: /\.tsx?$/,
+        use: [
+          { loader: 'next-swc-loader', options: { serverComponents: false } },
+        ],
+      },
+    ]
+    expect(analyzeNextLoaderChain(rules)).toEqual({
       tier: 'plain',
+      clientIssuerLayer: 'api-node',
       sawBuiltinSwcLoader: false,
     })
   })
@@ -626,6 +736,7 @@ describe('analyzeNextLoaderChain (tier + builtin diagnostics)', () => {
     ]
     expect(analyzeNextLoaderChain(rules)).toEqual({
       tier: null,
+      clientIssuerLayer: null,
       sawBuiltinSwcLoader: true,
     })
   })
@@ -642,6 +753,7 @@ describe('analyzeNextLoaderChain (tier + builtin diagnostics)', () => {
     ]
     expect(analyzeNextLoaderChain(rules)).toEqual({
       tier: 'any',
+      clientIssuerLayer: null,
       sawBuiltinSwcLoader: false,
     })
   })

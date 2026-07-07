@@ -138,16 +138,27 @@ export function buildAliasLayers(
  * Picking the "client" rule: Next.js emits several `next-swc-loader` rules —
  * RSC rules pair it with `next-flight-*`, the `issuerLayer: 'api-node'`
  * API-route rule ships it alone, and the real client rule pairs it with
- * `builtin:react-refresh-loader`. We must reach that last one: it is the only
- * rule that carries the per-module Fast Refresh footer (the `module.hot.accept`
- * self-accept). So we skip flight-paired rules and, among the rest, prefer the
- * refresh-paired rule — falling back to a plain rule, then any rule (e.g. prod
- * extraction, where Next.js emits no refresh loader at all). Picking a
- * refresh-less rule (the bug this guards against: the `api-node` rule sorts
- * before the client rule) serves stories without the footer, so SWC's
+ * `builtin:react-refresh-loader`. We must reach the right one by the SAME
+ * criterion in both modes (never by walk order):
+ *   - `refresh`: paired with `builtin:react-refresh-loader` — the dev client
+ *     rule. Only this rule carries the per-module Fast Refresh footer (the
+ *     `module.hot.accept` self-accept).
+ *   - `bare`: non-flight, with NEITHER an `issuerLayer` (string or function) NOR
+ *     a `resourceQuery`. This uniquely selects Next.js's pages catch-all rule —
+ *     the client target in prod, where Next.js emits no refresh loader at all.
+ *   - `plain`: first non-flight rule that DID carry a layer/query (the
+ *     `issuerLayer: 'api-node'`/`'api-edge'` server rules, the edge-ssr
+ *     `resourceQuery` rule, …). A degraded fallback: these compile on a SERVER
+ *     layer, so `serverComponents: false` / `server-only` validation semantics
+ *     differ from a real `next build`.
+ *   - `any`: last resort — any SWC-bearing rule at all, even flight-paired.
+ * Precedence is `refresh` → `bare` → `plain` → `any`. Picking a refresh-less
+ * rule in DEV (the bug this guards against: the `api-node` rule sorts before the
+ * client rule) serves stories without the footer, so SWC's
  * `$RefreshReg$`/`$RefreshSig$` calls bind to the no-op globals in
  * `react-refresh-entry.cjs`, nothing self-accepts, and edits remount the
- * component — losing React state (plain HMR, not Fast Refresh).
+ * component — losing React state (plain HMR, not Fast Refresh). Picking a
+ * layered `plain` rule in PROD compiles client stories down a server path.
  */
 /**
  * Whether a loader name refers to Next.js's JS `next-swc-loader`, tolerant of
@@ -162,13 +173,19 @@ export function isNextSwcLoaderName(name: string | null | undefined): boolean {
   return !!name && NEXT_SWC_LOADER_RE.test(name)
 }
 
-export type SwcRuleTier = 'refresh' | 'plain' | 'any'
+export type SwcRuleTier = 'refresh' | 'bare' | 'plain' | 'any'
 
 export interface SwcRuleSelection {
   /** The chosen client `next-swc-loader` rule, or `null` if none exists. */
   clientRule: any | null
   /** Which selection tier the chosen rule came from (`null` when none). */
   tier: SwcRuleTier | null
+  /**
+   * The chosen rule's `issuerLayer` (string or function), or `null` when the
+   * rule has none / no rule was selected. Surfaced so `preset.ts` can name the
+   * server layer in its prod-degradation warning without re-walking the rules.
+   */
+  clientIssuerLayer: string | ((...args: any[]) => any) | null
   /**
    * Whether a `builtin:next-swc-loader` rule was seen. Emitted by Next.js when
    * `BUILTIN_SWC_LOADER` is set; we can't shim it, so its presence explains a
@@ -185,6 +202,7 @@ export interface SwcRuleSelection {
  */
 function selectClientSwcRule(rawRules: any[]): SwcRuleSelection {
   let refreshSwcRule: any = null
+  let bareSwcRule: any = null
   let plainSwcRule: any = null
   let anySwcRule: any = null
   let sawBuiltinSwcLoader = false
@@ -199,14 +217,21 @@ function selectClientSwcRule(rawRules: any[]): SwcRuleSelection {
     if (names.some((n) => n?.includes('next-flight'))) return
     if (names.some((n) => n?.includes('react-refresh-loader'))) {
       refreshSwcRule ??= rule
+    } else if (rule.issuerLayer == null && rule.resourceQuery == null) {
+      // The pages catch-all: no layer, no query. In prod (no refresh loader) this
+      // is the real client rule; a layered rule (`api-node`, edge-ssr query, …)
+      // would compile client stories on a server layer.
+      bareSwcRule ??= rule
     } else {
       plainSwcRule ??= rule
     }
   })
-  // Single precedence source: refresh-paired rule wins, then a plain SWC rule,
-  // then any SWC rule at all. `clientRule` and `tier` must never disagree.
+  // Single precedence source: refresh-paired rule wins, then the bare pages
+  // catch-all, then a layered/queried SWC rule, then any SWC rule at all.
+  // `clientRule` and `tier` must never disagree.
   const tiers: Array<[SwcRuleTier, any]> = [
     ['refresh', refreshSwcRule],
+    ['bare', bareSwcRule],
     ['plain', plainSwcRule],
     ['any', anySwcRule],
   ]
@@ -214,6 +239,7 @@ function selectClientSwcRule(rawRules: any[]): SwcRuleSelection {
   return {
     clientRule: selected?.[1] ?? null,
     tier: selected?.[0] ?? null,
+    clientIssuerLayer: selected?.[1]?.issuerLayer ?? null,
     sawBuiltinSwcLoader,
   }
 }
@@ -239,17 +265,20 @@ export function buildNextLoaderChain(
 
 /**
  * Pure diagnostics companion to `buildNextLoaderChain`, reusing the same
- * selector. `tier` tells the caller whether the chosen rule carries the Fast
- * Refresh footer (`'refresh'`) or a degraded fallback (`'plain'`/`'any'`);
- * `sawBuiltinSwcLoader` explains a `null` chain. `preset.ts` gates warnings on
- * these without duplicating the rule walk.
+ * selector. `tier` tells the caller which rule was chosen — the dev client rule
+ * (`'refresh'`), the prod pages catch-all (`'bare'`), or a degraded fallback
+ * (`'plain'`/`'any'`); `clientIssuerLayer` names the chosen rule's server layer
+ * (if any) for prod-degradation warnings, and `sawBuiltinSwcLoader` explains a
+ * `null` chain. `preset.ts` gates warnings on these without duplicating the walk.
  */
 export function analyzeNextLoaderChain(rawRules: any[]): {
   tier: SwcRuleTier | null
+  clientIssuerLayer: string | ((...args: any[]) => any) | null
   sawBuiltinSwcLoader: boolean
 } {
-  const { tier, sawBuiltinSwcLoader } = selectClientSwcRule(rawRules)
-  return { tier, sawBuiltinSwcLoader }
+  const { tier, clientIssuerLayer, sawBuiltinSwcLoader } =
+    selectClientSwcRule(rawRules)
+  return { tier, clientIssuerLayer, sawBuiltinSwcLoader }
 }
 
 /**
