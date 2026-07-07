@@ -14,6 +14,7 @@ import {
   makeFontRule,
   mergeFallback,
   NODE_BUILTINS_FALLBACK,
+  partitionDefinePlugins,
   readProvidedMap,
   replaceSwcRules,
   resolveNodeProtocolRequest,
@@ -352,6 +353,43 @@ describe('_args[0] plugin-definitions contract (real rspack plugins)', () => {
       }),
     ]
     expect(dedupProvidePluginKeys(rsbuild, next)).toEqual([])
+  })
+})
+
+describe('partitionDefinePlugins (WI-9e drop-log truthfulness)', () => {
+  // The defines harvest reads ALL DefinePlugins wholesale into `source.define`,
+  // so a user next.config.webpack() DefinePlugin is ALREADY bridged. The
+  // partition keeps preset.ts from (a) claiming it was "dropped" and (b)
+  // re-pushing it under the gate, which would double-apply the definitions.
+
+  it('splits real DefinePlugin instances from the rest', () => {
+    const define = new rspack.DefinePlugin({ __FLAG: JSON.stringify(true) })
+    const provide = new rspack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'] })
+    const { definePlugins, rest } = partitionDefinePlugins([define, provide])
+    expect(definePlugins).toEqual([define])
+    expect(rest).toEqual([provide])
+  })
+
+  it('matches DefinePlugin and RspackDefinePlugin by constructor name', () => {
+    class DefinePlugin {}
+    class RspackDefinePlugin {}
+    class SomeOtherPlugin {}
+    const a = new DefinePlugin()
+    const b = new RspackDefinePlugin()
+    const c = new SomeOtherPlugin()
+    const { definePlugins, rest } = partitionDefinePlugins([a, b, c])
+    expect(definePlugins).toEqual([a, b])
+    expect(rest).toEqual([c])
+  })
+
+  it('preserves order and buckets everything else as rest', () => {
+    class DefinePlugin {}
+    const d1 = new DefinePlugin()
+    const other = { constructor: { name: 'CopyPlugin' } }
+    const bare = null
+    const { definePlugins, rest } = partitionDefinePlugins([other, d1, bare])
+    expect(definePlugins).toEqual([d1])
+    expect(rest).toEqual([other, bare])
   })
 })
 
