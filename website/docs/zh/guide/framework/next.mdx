@@ -16,7 +16,7 @@ Storybook for Next.js & Rsbuild 通过 `next-rspack` 把 Storybook 的 preview r
 
 | Package | Version |
 | :--- | :--- |
-| `next` | `^15.3.0 \|\| ^16.0.0` |
+| `next` | `>=16.0.0 <16.3.0` |
 | `next-rspack` | 与 `next` 相同(同一版本) |
 | `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
 | `storybook` | `^10.3.5` |
@@ -36,9 +36,6 @@ Storybook for Next.js & Rsbuild 通过 `next-rspack` 把 Storybook 的 preview r
 
 | `next` | `next-rspack` | `@rspack/core`(间接) | `@rsbuild/core` |
 | :--- | :--- | :--- | :--- |
-| `15.3.x` | 同 `next` | `1.5.0` † | `1.5.0` † |
-| `15.4.x` | 同 `next` | `1.5.0` † | `1.5.0` † |
-| `15.5.x` | 同 `next` | `1.5.0` † | `1.5.0` † |
 | `16.0.x` | 同 `next` | `1.6.0` | `1.6.0` 或 `1.6.1` |
 | `16.1.x` | 同 `next` | `1.6.7` | `1.6.14` |
 | `16.2.x` | 同 `next` | `1.6.7` | `1.6.14` |
@@ -47,15 +44,13 @@ Storybook for Next.js & Rsbuild 通过 `next-rspack` 把 Storybook 的 preview r
 
 说明:
 
-- **† Next 15 需要 `@rspack/core` override。** Storybook builder 依赖 `rspack.experiments.VirtualModulesPlugin`,它仅存在于 `@rspack/core ≥ 1.5.0`(builder 的 `@rsbuild/core` peer floor 为 `^1.5.0`)。但 `next-rspack@15.x` 原生 pin 的是 `@rspack/core` `1.3.4`/`1.4.5`,缺少该 plugin —— 框架会在启动时抛错。请安装 `@rsbuild/core@1.5.0`,**并**用 pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) 把全树的 `@rspack/core` 强制到同一个 `1.5.0`;`next-rspack@15.x` 在 `@rspack/core 1.5.0` 下可正常运行。Next 16 各行无需 override —— 它们的 `@rspack/core` 本就 ≥ 1.5.0。
 - **`next` 16.3+:暂不支持**(`next-rspack` 已切换到 `@rspack/core` 2.x,而 `storybook-next-rsbuild` 仍在 `@rspack/core` 1.x)。请把 `next` 和 `next-rspack` 固定到 `16.2.x`。framework 会在启动时检测到大版本不匹配并中止,错误信息会指回本表。
 - `next-rspack` 必须与 `next` 安装完全相同的版本(单一发布列车,不存在跨版本兼容)。
 - `@rsbuild/core` 把 `@rspack/core` pin 到一个确切版本(而非范围),所以只有上表中列出的特定 `@rsbuild/core` 版本才会解析到目标 `@rspack/core`。在同一 minor 内安装更新的 `@rsbuild/core` 通常会改变 `@rspack/core` 的 pin 并破坏不变量。
-- 解析链取决于 Next 大版本:**Next 16+** 为 `next-rspack → @next/rspack-core → @rspack/core`;**Next 15** 则是 `next-rspack` 直接依赖 `@rspack/core`。
+- 解析链为 `next-rspack → @next/rspack-core → @rspack/core`。
 - 如果 framework 因 `@rspack/core` 不匹配而中止,请对比它打印的两个路径。这个检查是**严格致命**的 —— 版本字符串**或**解析到的文件路径只要有任何不同,都会中止启动;不存在「仅 warning」的模式。
   - 如果两边的**版本不同**,请按本表重新对齐,或用 pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) 把 `@rspack/core` 强制到目标版本。
   - 如果两边**版本相同但路径不同**,错误会显示 _"duplicate physical copies"_:树里存在同一版本的两份物理拷贝,源于某个 peer dependency 的分裂(yarn Berry 是已知的元凶,经由 `@rspack/core` 的可选 peer `@swc/helpers`)。请把**分裂的那个 peer** 固定住(例如把 `@swc/helpers` 加进 `resolutions`/`overrides`),或运行 `yarn dedupe` / `pnpm dedupe` —— 改 `@rspack/core` 的版本没用,因为它本就已经匹配。
-- 在 **Next 15 各行**(`@rspack/core 1.5.0`)上,rspack 的配置校验运行在宽松模式,所以你 `webpackFinal` / `tools.rspack` 配置里的错误会以 warning 打印而不会让构建失败。调试时可设置 `RSPACK_CONFIG_VALIDATE=strict` 让这类错误抛出。(Next 16 各行已完全移除 rspack 的 JS 侧配置校验,所以该设置在那里无效。)
 
 ## 快速开始 {#getting-started}
 
@@ -602,7 +597,7 @@ export const Default: StoryObj = {
 
 `getConfig()` 和 `publicRuntimeConfig` 原则上可用 —— 因为 Storybook 不做服务端渲染,组件看到的是 `publicRuntimeConfig`(而非 `serverRuntimeConfig`),与上游一致(**见 [Runtime config](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#runtime-config)**)。
 
-有一处差异:对 `next/config` 的旧式支持是**按版本门控**的。Next.js 16 把 `next/config` 从其 package exports 中移除了,因此在 **Next 16+ 上实际上不再支持 runtime config**;它只在 Next 15 上接线。
+有一处差异:对 `next/config` 的旧式 import **不可用**。Next.js 16 把 `next/config` 从其 package exports 中移除了,因此在所支持的 Next 16 线上,从 `next/config` 导入的 `getConfig()` 已无法解析。
 
 ## 已知限制 {#known-limitations}
 
