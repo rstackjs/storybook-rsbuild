@@ -2,9 +2,9 @@ import { PackageManagerTabs } from '@theme'
 
 # Next.js
 
-Storybook for Next.js & Rsbuild bridges Storybook's preview runtime to Next.js's own build pipeline via `next-rspack`, letting you develop Next.js components in isolation while reusing the same loaders, SWC options, and `next.config.ts` settings as your application.
+Storybook for Next.js & Rsbuild lets you develop and test Next.js components in isolation. Instead of asking you to configure Storybook separately, it reuses your app's own build setup — the same `next.config.ts`, compiler options, module aliases, and environment variables that `next dev` uses — so components behave in Storybook exactly as they do in your app.
 
-The framework adds **no build-configuration language of its own**: you keep configuring your app through `next.config.ts`, and the bridge reuses it as-is — the [configuration mental model](#configuration-mental-model) explains where any given setting belongs.
+There is **no framework-specific build configuration to learn**: keep configuring your app through `next.config.ts`, and Storybook picks it up as-is. The [configuration mental model](#configuration-mental-model) explains where any given setting belongs.
 
 :::warning Experimental
 `storybook-next-rsbuild` relies on Next.js internals and moves with the Next.js release cadence. Any `next` minor or patch upgrade may break compatibility — pin `next` for reproducibility and upgrade `storybook-next-rsbuild` together with `next`.
@@ -24,11 +24,11 @@ The framework adds **no build-configuration language of its own**: you keep conf
 
 </div>
 
-`@rsbuild/core` is a peer dependency rather than a pinned one, because the `@rspack/core` it transitively bundles must equal the one `next-rspack` brings in. See the matrix below for the exact version to install.
+`@rsbuild/core` is a peer dependency rather than a pinned one because the right version depends on your `next` version — see the matrix below for the exact version to install.
 
 ## Version matrix
 
-`@rsbuild/core` ships an **exact-pinned** `@rspack/core`. That pin has to match the `@rspack/core` that `next-rspack` pulls in — otherwise Next.js's extracted plugins bind to a different `NormalModule` class than the one Storybook's compilation actually uses, their hooks never fire, and failures surface as inscrutable runtime errors. To prevent that, the framework runs an invariant check at startup and **throws with a link to this table** if the two `@rspack/core` copies differ.
+Storybook's build and Next.js's build tooling must share **a single copy of `@rspack/core`**. Both `@rsbuild/core` and `next-rspack` pin an exact `@rspack/core` version, so the two pins have to agree — the framework checks this at startup and refuses to start when they differ, printing a link back to this table.
 
 Pick the row that matches your `next` version and install the listed `@rsbuild/core`:
 
@@ -44,30 +44,27 @@ Pick the row that matches your `next` version and install the listed `@rsbuild/c
 
 Notes:
 
-- **`next` 16.3+: not yet supported** (`next-rspack` moved to `@rspack/core` 2.x, while `storybook-next-rsbuild` is still on `@rspack/core` 1.x). Pin `next` and `next-rspack` to `16.2.x`. The framework detects the mismatched majors at startup and aborts with a message pointing back here.
-- `next-rspack` must be installed at the exact same version as `next` (single release train, no cross-version compatibility).
-- `@rsbuild/core` pins `@rspack/core` to an exact version (not a range), so only the specific `@rsbuild/core` versions listed above resolve to the target `@rspack/core`. Installing a newer `@rsbuild/core` within the same minor generally shifts the `@rspack/core` pin and breaks the invariant.
-- The resolution chain is `next-rspack → @next/rspack-core → @rspack/core`.
-- If the framework aborts with an `@rspack/core` mismatch error, compare the two paths it prints. The check is **strictly fatal** — any difference in version string **or** resolved file path aborts startup; there is no warning-only mode.
-  - If the two **versions differ**, realign via this table, or force `@rspack/core` to the target version with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions).
-  - If the two versions are **identical but the paths differ**, the error reads _"duplicate physical copies"_: the tree has two copies of the same version from a peer-dependency split (yarn Berry is the known offender, via `@rspack/core`'s optional `@swc/helpers` peer). Pin the **splitting peer** (e.g. add `@swc/helpers` to `resolutions`/`overrides`) or run `yarn dedupe` / `pnpm dedupe` — changing the `@rspack/core` version won't help, because it already matches.
+- **`next` 16.3+: not yet supported** (`next-rspack` moved to `@rspack/core` 2.x, while `storybook-next-rsbuild` is still on 1.x). Pin `next` and `next-rspack` to `16.2.x`; the startup check reports this case with the same guidance.
+- `next-rspack` must be installed at the exact same version as `next`.
+- Only the `@rsbuild/core` versions listed above resolve to the matching `@rspack/core` — a newer `@rsbuild/core`, even within the same minor, usually shifts its `@rspack/core` pin and fails the startup check.
+- If startup aborts with an `@rspack/core` mismatch error, compare the two versions and paths it prints (the check is strict — any difference aborts startup):
+  - **Different versions** — realign using this table, or force `@rspack/core` to the target version with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions).
+  - **Same version, different paths** (the error reads _"duplicate physical copies"_) — your package manager installed two copies of the same version (yarn Berry is the known offender, splitting on `@rspack/core`'s optional `@swc/helpers` peer). Pin the splitting peer (e.g. add `@swc/helpers` to `resolutions`/`overrides`) or run `yarn dedupe` / `pnpm dedupe` — changing the `@rspack/core` version won't help, because it already matches.
 
 ## Getting started
 
 ### Installation
 
-Install `storybook-next-rsbuild` and `next-rspack` together. Next.js internally calls `require('next-rspack/rspack-core')` while building, so `next-rspack` must be resolvable from your project — a missing peer surfaces as an opaque module-not-found error at Storybook start.
+Install `storybook-next-rsbuild` and `next-rspack` together — the framework needs `next-rspack` in your project to obtain Next.js's build configuration. Keep `next-rspack` on the exact same version as `next`.
 
 <PackageManagerTabs command="install storybook-next-rsbuild next-rspack -D" />
 
-Keep `next-rspack` on the same version as `next`.
+If the framework can't load your Next.js config (for example, `next-rspack` isn't installed), what happens depends on the build mode:
 
-If the bridge can't load Next.js's config (for example `next-rspack` isn't installed), the failure policy depends on the build mode:
+- **`storybook dev`** still boots, with **React support only**, and logs what went wrong — CSS, fonts, images, and the navigation mocks won't work until the problem is fixed.
+- **`storybook build`** fails with the original error, so CI catches the problem instead of publishing a Storybook where every Next.js feature is silently missing.
 
-- **`storybook dev`** degrades to a best-effort boot with **React support only** and logs an install hint — CSS, fonts, images, and the navigation mocks won't work until the bridge is fixed.
-- **`storybook build`** **hard-fails** (non-zero exit) and re-throws the original error, so CI catches a broken artifact instead of shipping one where every Next.js feature is silently dead.
-
-Set the [`allowMissingNextBridge`](#framework-options) option to `true` to make a production build degrade to React-only too (for an intentional React-only static build that never relies on the bridge).
+Set the [`allowMissingNextBridge`](#framework-options) option to `true` if you intentionally want a production build with React support only.
 
 ### Configure `.storybook/main.ts`
 
@@ -110,12 +107,12 @@ A relative `nextConfigPath` resolves against the Storybook config directory (`.s
 
 ## Configuration mental model
 
-`storybook-next-rsbuild` loads your `next.config.{js,ts}` with Next.js's own config loader, asks `next-rspack` to emit the full build configuration, and merges the resulting aliases, loaders, defines, and plugins into Rsbuild. The practical consequence is the one thing to internalize:
+Under the hood, the framework loads your `next.config.{js,ts}` with Next.js's own config loader and applies the resulting build settings — compiler options, aliases, environment variables, custom webpack additions — to the Storybook build. The practical consequence is the one thing to internalize:
 
 > **Whatever Next.js compiles → configure it in `next.config.ts` (Next.js style).**
 > **Whatever belongs to the Storybook preview build itself → configure it in `.storybook/main.ts` (Rsbuild style via `rsbuildFinal`, or webpack style via `webpackFinal`).**
 
-There is no third, framework-specific config surface to learn or keep in sync. The settings that make `next dev` work already make Storybook work, because the same `next.config.ts` drives both — in **both** dev (`storybook dev`) and production (`storybook build`), which extract Next.js's config in the matching mode.
+There is no third, framework-specific config surface to learn or keep in sync. The settings that make `next dev` work already make Storybook work, because the same `next.config.ts` drives both — in **both** dev (`storybook dev`) and production (`storybook build`), each loading your config in the matching mode, just like `next dev` vs `next build`.
 
 ### Who owns what
 
@@ -125,17 +122,17 @@ There is no third, framework-specific config surface to learn or keep in sync. T
 | `transpilePackages`, `optimizePackageImports` | Next.js | `next.config.ts` | Next.js |
 | Env vars (`NEXT_PUBLIC_*`, `next.config.env`, `.env*` files) | Next.js | `next.config.ts` / `.env*` (automatic) | Next.js |
 | `compiler.*` (e.g. `styledComponents`, `emotion`) | Next.js | `next.config.ts` | Next.js |
-| Module `resolve.alias` / `fallback`, custom loaders (e.g. SVGR) — except `react`* aliases ([pinned by Storybook](#what-gets-bridged-from-nextconfigwebpack)) | Next.js | `next.config.ts` → `webpack()` | Next.js |
-| `next/font`, `next/image` | Framework (bridged) | `next.config.ts` (automatic) | Next.js |
+| Module `resolve.alias` / `fallback`, custom loaders (e.g. SVGR) — except `react`* aliases ([pinned by Storybook](#custom-webpack-settings)) | Next.js | `next.config.ts` → `webpack()` | Next.js |
+| `next/font`, `next/image` | Framework | `next.config.ts` (automatic) | Next.js |
 | CSS Modules, global CSS, PostCSS / Tailwind | Rsbuild | works out of the box | — |
 | Sass / Less preprocessors | Rsbuild | `.storybook/main.ts` → `rsbuildFinal` | Rsbuild |
 | Storybook-preview-only build tweaks | Storybook builder | `.storybook/main.ts` → `rsbuildFinal` / `webpackFinal` | Rsbuild / webpack |
 
-The split follows the bridge's design — each tool keeps what it does best: **Next.js owns JS/TS compilation and module resolution; Rsbuild owns the CSS pipeline; Storybook owns the preview and the React runtime.** The full rationale (the "four-party contract" between Next.js, Rspack, Rsbuild, and Storybook) lives in [`packages/framework-next/AGENTS.md`](https://github.com/rstackjs/storybook-rsbuild/blob/main/packages/framework-next/AGENTS.md).
+The split gives each tool what it does best: **Next.js compiles your components; Rsbuild handles CSS; Storybook renders the preview and owns the React runtime.**
 
 ### Deciding where a setting goes
 
-1. **Would you put it in `next.config.ts` to make `next dev` / `next build` work?** Leave it there — it's bridged automatically. Don't duplicate it into `.storybook`. **One exception:** the `turbopack` key is **not** bridged (the bridge reads Next.js's webpack config only), so Turbopack loader rules (SVGR etc.) must be mirrored the Storybook way via the [`webpack()` snippet](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
+1. **Would you put it in `next.config.ts` to make `next dev` / `next build` work?** Leave it there — Storybook picks it up automatically. Don't duplicate it into `.storybook`. **One exception:** the `turbopack` key is **not** read (Storybook consumes Next.js's webpack-side configuration), so Turbopack loader rules (SVGR etc.) must be mirrored via the [`webpack()` snippet](#custom-loaders-svgr).
 2. **Is it a CSS preprocessor that needs a plugin (Sass, Less, Stylus)?** Add the matching Rsbuild plugin via `rsbuildFinal`. Rsbuild — not Next.js — runs the CSS pipeline in Storybook, so you extend it the Rsbuild way. (CSS Modules, plain CSS, and PostCSS/Tailwind need nothing.)
 3. **Is it a tweak only the Storybook preview needs** (an alias just for stories, a rule mutation)? Use `rsbuildFinal` for an alias or an Rsbuild plugin; use `webpackFinal` only to mutate an existing rspack rule — see [`rsbuildFinal` vs `webpackFinal`](#rsbuildfinal-vs-webpackfinal).
 
@@ -144,10 +141,10 @@ The split follows the bridge's design — each tool keeps what it does best: **N
 Both hooks extend the Storybook preview build, but they are **not interchangeable** — pick by altitude:
 
 - **`rsbuildFinal`** is the preferred, high-level surface. Reach for it first: add Rsbuild plugins (`pluginSass()`), `source.define` entries, or a stories-only `resolve.alias`. It's the surface the framework's own types advertise.
-- **`webpackFinal`** is the low-level escape hatch. Use it only to **introspect or mutate an existing rspack rule** — e.g. taking `.svg` away from Rsbuild's default asset rule for [SVGR](#advanced-custom-loaders-that-span-both-layers-eg-svgr). Unlike the stock builder, here `webpackFinal` runs **late, against the fully-assembled rspack config**, so the rules you want to read already exist.
+- **`webpackFinal`** is the low-level escape hatch. Use it only to **introspect or mutate an existing rspack rule** — e.g. taking `.svg` away from Rsbuild's default asset rule for [SVGR](#custom-loaders-svgr). Under this framework, `webpackFinal` runs **late, against the fully-assembled config**, so the rules you want to read already exist.
 
-:::info Addon `webpackFinal` runs once here — `webpackAddons` is unnecessary
-Under this framework, the `webpackFinal` of any addon registered in **`addons`** already runs against the fully-assembled rspack config, so you do **not** need to also list that addon under `webpackAddons` (the builder mechanism other Rsbuild frameworks use). If you list the same addon in **both** `addons` and `webpackAddons`, the framework runs its `webpackFinal` exactly once (via the main chain) and logs which duplicate it skipped — remove the `webpackAddons` entry to clear the warning.
+:::info Addon webpackFinal runs once here — webpackAddons is unnecessary
+Under this framework, the `webpackFinal` of any addon registered in **`addons`** already runs against the fully-assembled config, so you do **not** need to also list that addon under `webpackAddons` (the mechanism other Rsbuild frameworks use). If you list the same addon in **both** `addons` and `webpackAddons`, the framework runs its `webpackFinal` exactly once and logs which duplicate it skipped — remove the `webpackAddons` entry to clear the warning.
 :::
 
 ### Same as `@storybook/nextjs-vite`, vs. different here
@@ -158,12 +155,12 @@ The runtime behavior — decorators, mocks, and story-authoring APIs — is port
 | :--- | :--- |
 | [`next/image`](#nextimage), [`next/font`](#nextfont), [`next/head`](#nexthead), [`next/link`, `next/dynamic`](#nextlink--nextdynamic) | Rsbuild owns the CSS pipeline → [Sass / Less are opt-in](#sass--less) |
 | Story routing/navigation **parameters** & [segments](#route-params--layout-segments) | [Both routers are always mounted](#routing--navigation) — `appDirectory` is a no-op |
-| [CSS Modules, Tailwind/PostCSS, styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [Version matrix & `@rspack/core` invariant](#version-matrix) |
-| [Absolute imports, aliases, subpath imports, tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` plugins are gated](#what-gets-bridged-from-nextconfigwebpack) behind an option |
+| [CSS Modules, Tailwind/PostCSS, styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [Version matrix & the `@rspack/core` startup check](#version-matrix) |
+| [Absolute imports, aliases, subpath imports, tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` plugins are gated](#custom-webpack-settings) behind an option |
 | [`*.mock` subpath APIs](#mocking-nextjs-apis-in-stories) (`cache`/`headers`/`navigation`/`router`) | [`node:` protocol & Node builtins](#node-protocol--node-builtins) handling |
 | [SWC transforms, `transpilePackages`, `optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Runtime config is dropped on Next 16+](#runtime-config) |
 
-> **Rule of thumb:** if a Next.js or Storybook feature isn't covered on this page at all, default to the official [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) docs — the runtime is ported from it. The one thing that never carries over is **build/bundler configuration**: ignore upstream's `viteFinal` guidance and drive the build through `next.config.ts` (bridged) plus `rsbuildFinal` / `webpackFinal`, as described above.
+> **Rule of thumb:** if a Next.js or Storybook feature isn't covered on this page at all, default to the official [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) docs — the runtime is ported from it. The one thing that never carries over is **build/bundler configuration**: ignore upstream's `viteFinal` guidance and drive the build through `next.config.ts` plus `rsbuildFinal` / `webpackFinal`, as described above.
 
 ## Framework options
 
@@ -172,28 +169,35 @@ The runtime behavior — decorators, mocks, and story-authoring APIs — is port
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `nextConfigPath` | `string` | auto-detected | Path to a `next.config.{js,ts,mjs}` file. Absolute, or relative to `.storybook`. |
-| `forwardNextConfigPlugins` | `boolean` | `false` | Forward **plugins** added by `next.config.webpack()` into Storybook's bundler. Rules, aliases, fallbacks, and externals are *always* forwarded — only plugins are gated. See [below](#what-gets-bridged-from-nextconfigwebpack). |
-| `allowMissingNextBridge` | `boolean` | `false` | Let a production `storybook build` degrade to React-only support (instead of hard-failing) when the Next.js config bridge can't be extracted. `storybook dev` always degrades; only prod is gated. Enable for an intentional React-only static build. |
-| `image` | `object` | `{}` | Accepted for compatibility with `@storybook/nextjs`; the runtime `next/image` mock currently falls through to upstream defaults (not wired). Per-story image config is set via `parameters.nextjs.image`, not this option. |
+| `forwardNextConfigPlugins` | `boolean` | `false` | Forward **plugins** added by `next.config.webpack()` into Storybook's build. Rules, aliases, fallbacks, and externals are *always* forwarded — only plugins are gated. See [below](#custom-webpack-settings). |
+| `allowMissingNextBridge` | `boolean` | `false` | Let a production `storybook build` fall back to React-only support (instead of failing) when the Next.js config can't be loaded. `storybook dev` always falls back; only the production build is gated. Enable for an intentional React-only static build. |
+| `image` | `object` | `{}` | Accepted for compatibility with `@storybook/nextjs`; has no effect here. Per-story image config is set via `parameters.nextjs.image`, not this option. |
 | `builder` | `BuilderOptions` | `{}` | Options forwarded to `storybook-builder-rsbuild`. See the [Configuration](/guide/configuration#builder-options) guide. |
 
 </div>
 
 TypeScript settings (including `typescript.reactDocgen`) type-check on `main.ts` and behave as documented in the [Configuration](/guide/configuration) guide.
 
-## What gets bridged from `next.config.webpack()`
+## Custom webpack settings
 
-If your project customizes webpack in `next.config.ts`, the bridge forwards your **rules, aliases, fallbacks, externals, and experiments** automatically — they're treated as Next.js-owned config and reused as-is.
+If your project customizes webpack in `next.config.ts`, your **rules, aliases, fallbacks, externals, and experiments** are applied to the Storybook build automatically.
 
-:::info What crosses the bridge, per field
-The bridge captures what your `webpack()` hook produces, but the contract differs by field:
+The framework captures what your `webpack()` hook adds; what carries over differs by field:
 
-- **`module.rules`** — only whole-rule **additions** are forwarded. Editing a Next.js built-in rule **in place** (e.g. `fileLoaderRule.exclude = /\.svg$/`, the canonical SVGR recipe) does **not** reach Storybook, because the bridge never imports Next.js's base rules. _(The one exception: options you set on the `next-swc-loader` `use` entry are carried into Storybook's loader chain.)_ To take `.svg` away from Rsbuild's asset rule, do it on the Storybook side with `webpackFinal` — see [SVGR](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
-- **`resolve.alias` / `resolve.fallback` / `experiments`** — both **added keys and changed values** are forwarded.
-- **Deletions / replacements** (e.g. `config.module.rules = []`) are ignored — Storybook keeps its own rule set. Fields outside the ones above (`optimization`, `cache`, `output`, `devtool`, `resolve.modules`/`extensions`, …) are not bridged either.
-:::
+<div style={{ width: '100%', maxWidth: '760px' }}>
 
-**Plugins are the exception.** They're gated behind the `forwardNextConfigPlugins` option (default `false`), because most plugins people add target Next.js's production pipeline (build-manifest writers, source-map uploaders, stats emitters) and either no-op in Storybook or crash rspack's IPC channel (e.g. `copy-webpack-plugin`'s `processAssets` hook). When the gate is closed, dropped plugins are logged by name. Opt in only for a client-side plugin you've verified against `@rspack/core`:
+| Field | What carries over |
+| :--- | :--- |
+| `module.rules` | New rules you **add**. Options set on the `next-swc-loader` entry carry over too. |
+| `resolve.alias` / `resolve.fallback` / `experiments` | Added keys **and** changed values. |
+| `externals` | New entries you add. |
+| Everything else (`optimization`, `cache`, `output`, `devtool`, …) | Not carried over — Storybook keeps its own settings. Deletions and wholesale replacements (e.g. `config.module.rules = []`) are ignored too. |
+
+</div>
+
+One consequence worth calling out: **editing a Next.js built-in rule in place doesn't reach Storybook**. The canonical SVGR recipe (`fileLoaderRule.exclude = /\.svg$/`) is exactly that — an in-place edit. To take `.svg` away from Rsbuild's asset rule, do it on the Storybook side with `webpackFinal` — see [SVGR](#custom-loaders-svgr).
+
+**Plugins are the exception.** They're gated behind the `forwardNextConfigPlugins` option (default `false`), because most plugins people add target Next.js's production pipeline (build-manifest writers, source-map uploaders, stats emitters) and either do nothing in Storybook or crash the build (`copy-webpack-plugin` is a known case). When the gate is closed, dropped plugins are logged by name. Opt in only for a client-side plugin you've verified works with rspack:
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -203,7 +207,7 @@ const config: StorybookConfig = {
   framework: {
     name: 'storybook-next-rsbuild',
     options: {
-      // Forward client-side plugin instances (DefinePlugin values are always bridged).
+      // Forward client-side plugin instances (DefinePlugin values always carry over).
       forwardNextConfigPlugins: true,
     },
   },
@@ -215,21 +219,21 @@ export default config
 
 **Two narrow exceptions beyond plugins** are filtered on purpose:
 
-- **Framework-reserved aliases** — `react` / `react-dom` / `react-server-dom-webpack` (the React singleton), plus `next/image` (the client-side image mock) and `styled-jsx` (the styled-jsx singleton) — set in `next.config.webpack()` are dropped (with a warning), whether spelled plainly or with a trailing `$`. Storybook owns the React singleton (a second copy breaks hooks and context), and the framework owns the `next/image` mock and the styled-jsx identity, so there is intentionally no escape hatch for repointing them.
+- **Framework-reserved aliases** — `react` / `react-dom` / `react-server-dom-webpack`, plus `next/image` and `styled-jsx` — set in `next.config.webpack()` are dropped (with a warning), whether spelled plainly or with a trailing `$`. Storybook must own the React copy (a second React breaks hooks and context), and the framework must own the `next/image` mock and the styled-jsx identity, so there is intentionally no escape hatch for repointing them.
 - **`.mdx` rules** (e.g. from `@next/mdx`) are dropped (with an info log): in Storybook, `.mdx` is owned by `@storybook/addon-docs`. Your page-MDX loader still applies to real Next.js pages, just not to Storybook docs.
 
 ## Supported Next.js features
 
 ### `next/image`
 
-`next/image` renders inside stories. The framework swaps Next.js's default image loader for a client-side mock, so stories don't depend on a `/_next/image` optimization endpoint — both local and remote `src` values render directly, and no `sharp` install is needed.
+`next/image` renders inside stories. Storybook has no image-optimization server, so the framework serves images directly — no `/_next/image` endpoint and no `sharp` install needed; local and remote `src` values both render.
 
 The usage, local-vs-remote behavior, and the "image imports return an object" rule are identical to upstream — **see [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**. A few notes specific to this framework:
 
 - Local `src` like `/vercel.svg` resolves from Next.js's `public/` dir only if you add it to `staticDirs` (see the [main.ts example](#configure-storybookmaints)).
-- Per-story `next/image` config is applied via `parameters.nextjs.image` (an `ImageConfigContext` value), only when set.
+- Per-story `next/image` config is applied via `parameters.nextjs.image`, only when set.
 - **Static image imports resolve to `StaticImageData`.** `import img from './x.png'` yields the `{ src, width, height, blurDataURL }` object — matching upstream and `next build` — so `<Image src={img} />` gets intrinsic dimensions and `placeholder="blur"` works. (`.svg` imports are left to your SVGR setup and are not rewritten to `StaticImageData`.)
-- **`next/legacy/image` is mocked too.** It goes through the same client-side loader as `next/image`, so legacy stories render without a `/_next/image` endpoint.
+- **`next/legacy/image` works too.** It's served the same way as `next/image`, so legacy stories render without a `/_next/image` endpoint.
 
 ```tsx twoslash title="Image.stories.tsx"
 // @noErrors
@@ -248,7 +252,7 @@ export const Default: StoryObj<typeof meta> = {}
 
 ### `next/font`
 
-Both `next/font/google` and `next/font/local` work out of the box, with no `staticDirs` mapping required. This is **the one CSS concern the framework owns itself**: the synthetic `target.css` that `next-swc` emits for each `next/font` call is routed to a dedicated font loader that injects the `@font-face`/class CSS at runtime; everything else stays on Rsbuild's CSS pipeline.
+Both `next/font/google` and `next/font/local` work out of the box, with no `staticDirs` mapping required — the framework resolves your fonts at build time and injects the `@font-face`/class CSS when the story renders.
 
 The supported surface — including the *not-supported* options (`fallback`, `adjustFontFallback`, `preload`/`display` ignored) and the `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` CI mocking advice — matches upstream. **See [Next.js font optimization](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-font-optimization).**
 
@@ -387,7 +391,7 @@ export const Default: StoryObj<typeof Component> = {}
 | :--- | :--- | :--- | :--- |
 | `nextjs.navigation` | App Router (`next/navigation`) | `{ pathname?, query?, segments? }` | The exported type is `Partial<NextRouter>`, but at runtime the object also accepts `segments` (the route-param/segment driver). |
 | `nextjs.router` | Pages Router (`next/router`) | `Partial<NextRouter>` | Seeds the stubbed Pages Router. |
-| `nextjs.image` | `next/image` mock | `Partial<ImageProps>` | Per-story default `ImageProps` consumed by the `next/image` mock (e.g. `priority`, `quality`, `loader`). |
+| `nextjs.image` | `next/image` | `Partial<ImageProps>` | Per-story default `ImageProps` applied to `next/image` (e.g. `priority`, `quality`, `loader`). |
 | `nextjs.appDirectory` | — | — | **Accepted but ignored.** Both routers always mount; kept only for `nextjs-vite` source compatibility. |
 
 </div>
@@ -396,11 +400,12 @@ export const Default: StoryObj<typeof Component> = {}
 
 ### CSS, CSS Modules, PostCSS / Tailwind, styled-jsx
 
-**Rsbuild owns the CSS pipeline** (the deliberate division of labor from the [mental model](#configuration-mental-model)). CSS Modules, global CSS imports, PostCSS, and Tailwind work out of the box with no extra wiring and behave the same as in your Next.js app — Rsbuild handles them, not a bridged Next.js CSS chain. `styled-jsx` works too; it's an SWC transform that flows through Next.js's loader chain.
+**Rsbuild owns the CSS pipeline** (the deliberate division of labor from the [mental model](#configuration-mental-model)). CSS Modules, global CSS imports, PostCSS, and Tailwind work out of the box with no extra wiring and behave the same as in your Next.js app. `styled-jsx` works too — it's compiled by Next.js's compiler like the rest of your components.
 
 Usage matches upstream — **see [CSS Modules](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#csssassscss-modules), [Tailwind](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#tailwind) / [PostCSS](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#postcss), and [Styled JSX](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#styled-jsx)**. The only thing to know is *who* owns it: because Rsbuild runs the pipeline (not Next.js), custom PostCSS/Tailwind config is picked up by Rsbuild's auto-detection, and preprocessors are opt-in — see next.
 
-:::info Write `postcss.config` plugins in object form, not the array-of-strings shorthand
+#### Write `postcss.config` plugins in object form, not the array-of-strings shorthand
+
 Because **Rsbuild** loads your `postcss.config.{js,mjs,ts}` (via `postcss-load-config`) instead of Next.js, the bare **array-of-strings** plugin shorthand is not resolved:
 
 ```js
@@ -421,11 +426,10 @@ export default {
 ```
 
 An array of already-instantiated plugins (`plugins: [tailwindcss(), cssnano()]`) works as well.
-:::
 
 ### Sass / Less
 
-This is the one styling behavior that **differs from official Next.js Storybook**. Upstream inherits Next.js's built-in Sass support with zero config; here, because Rsbuild owns the CSS pipeline, Sass and Less are **opt-in through an Rsbuild plugin** and `next.config` Sass options do **not** flow through. If you import a `.scss`/`.sass` file without a Sass loader configured, the framework emits a one-time warning pointing back here.
+This is the one styling behavior that **differs from official Next.js Storybook**. Upstream inherits Next.js's built-in Sass support with zero config; here, because Rsbuild owns the CSS pipeline, Sass and Less are **opt-in through an Rsbuild plugin**, and Sass options in `next.config` are **not** applied. If you import a `.scss`/`.sass` file without a Sass loader configured, the framework emits a one-time warning pointing back here.
 
 Install the plugin and merge it via `rsbuildFinal`:
 
@@ -440,8 +444,7 @@ import type { StorybookConfig } from 'storybook-next-rsbuild'
 const config: StorybookConfig = {
   framework: 'storybook-next-rsbuild',
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
-  // Rsbuild owns the CSS pipeline — extend it the Rsbuild way. The plugin
-  // merges into the config the framework's bridge produces.
+  // Rsbuild owns the CSS pipeline — extend it the Rsbuild way.
   rsbuildFinal: (config) =>
     mergeRsbuildConfig(config, { plugins: [pluginSass()] }),
 }
@@ -453,7 +456,7 @@ Pick the `@rsbuild/plugin-sass` version compatible with the `@rsbuild/core` your
 
 ### CSS-in-JS (styled-components via SWC, Emotion at runtime)
 
-These are Next.js compiler transforms, so you enable them the Next.js way — in `next.config.ts` — and they flow through the bridged `next-swc` chain. No Storybook-side wiring:
+These are Next.js compiler transforms, so you enable them the Next.js way — in `next.config.ts` — and stories are compiled with them the same way your app is. No Storybook-side wiring:
 
 ```ts twoslash title="next.config.ts"
 // @noErrors
@@ -468,38 +471,38 @@ const nextConfig: NextConfig = {
 export default nextConfig
 ```
 
-Emotion needs no special transform — it's runtime CSS-in-JS and works as-is. (Next.js's `compiler.emotion` SWC transform is optional, and bridged too if you enable it.)
+Emotion needs no special transform — it's runtime CSS-in-JS and works as-is. (Next.js's `compiler.emotion` transform is optional, and honored too if you enable it.)
 
 ## Compilation & module resolution
 
 ### SWC transforms, `transpilePackages`, `optimizePackageImports`
 
-Stories are compiled with Next.js's own `next-swc-loader`, so build behavior matches your app:
+Stories are compiled with Next.js's own compiler (SWC), so build behavior matches your app:
 
 - `'use client'` directives behave like they do in Next.js, and `server-only` modules resolve as in a real build.
 - `transpilePackages` entries in your `next.config.ts` apply to stories automatically.
-- `optimizePackageImports` (default-on in Next 15+) is honored — the `__barrel_optimize__` requests `next-swc` emits are routed through the SWC chain, so even TypeScript-source barrels compile correctly.
+- `optimizePackageImports` (default-on in Next 15+) is honored, including packages whose published source is TypeScript.
 - JSX runtime selection follows your `next.config.ts`.
 
-These are Next.js-owned concerns: configure them in `next.config.ts` and they're bridged. (TypeScript behavior matches upstream — **see [Typescript](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#typescript)**.)
+These are Next.js-owned concerns: configure them in `next.config.ts` and they apply to stories automatically. (TypeScript behavior matches upstream — **see [Typescript](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#typescript)**.)
 
 ### Imports, aliases & tsconfig paths
 
-Root-relative absolute imports, module aliases (`@/...`), Node-standard subpath imports (`#...` from `package.json#imports`), and `tsconfig.json` `baseUrl`/`paths` all resolve, because the bridge forwards Next.js's resolved aliases. The behavior — and the "absolute imports cannot be mocked" caveat — matches upstream. **See [Imports](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#imports).**
+Root-relative absolute imports, module aliases (`@/...`), Node-standard subpath imports (`#...` from `package.json#imports`), and `tsconfig.json` `baseUrl`/`paths` all resolve, because the framework applies Next.js's resolved aliases. The behavior — and the "absolute imports cannot be mocked" caveat — matches upstream. **See [Imports](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#imports).**
 
 ### Environment variables
 
-`NEXT_PUBLIC_*` variables and `next.config.ts`'s `env` key reach your stories automatically: Next.js compiles them into `process.env.*` through its `DefinePlugin`, and the bridge forwards those defines to Rsbuild as-is. `.env*` files are picked up too, because the framework loads your config through Next.js's own loader (which runs `@next/env`) **in the matching build mode**: `storybook dev` loads `.env.development[.local]`, and `storybook build` loads `.env.production[.local]` (both also load the base `.env` / `.env.local`) — exactly as `next dev` and `next build` do. There's nothing to redefine via `rsbuildFinal`'s `source.define`.
+`NEXT_PUBLIC_*` variables and `next.config.ts`'s `env` key reach your stories automatically — they're inlined at build time, exactly as `next dev` / `next build` do. `.env*` files are picked up too, in the matching build mode: `storybook dev` loads `.env.development[.local]`, and `storybook build` loads `.env.production[.local]` (both also load the base `.env` / `.env.local`). There's nothing to redefine via `rsbuildFinal`'s `source.define`.
 
 One limit mirrors a real build: **server-only** env vars — those *without* the `NEXT_PUBLIC_` prefix — are not inlined into the client bundle, so they read as `undefined` in stories, exactly as they would in a client component under `next build`.
 
 ### `node:` protocol & Node builtins
 
-Importing Node builtins in browser-bound code won't crash the Storybook build. Bare builtins (`fs`, `path`, `querystring`, …) resolve to an empty fallback, and `node:`-prefixed specifiers are normalized before resolution: a builtin like `node:path` is stripped to its bare name; a `node:`-only specifier with no bare counterpart (`node:sqlite`, `node:test`) resolves to an empty module. Next.js's `Buffer`/`process` provides are also kept, so libraries like `next-auth` / `openid-client` don't throw `Buffer is not defined` at render. This is framework-specific behavior with no upstream equivalent — there's nothing to configure.
+Importing Node builtins in browser-bound code won't crash the Storybook build. Bare builtins (`fs`, `path`, `querystring`, …) and `node:`-prefixed imports (`node:path`, even `node:sqlite`) resolve to browser-safe stand-ins — an empty module, or a polyfill where Next.js supplies one. The `Buffer` / `process` globals that some libraries expect (e.g. `next-auth`, `openid-client`) are also provided. There's nothing to configure.
 
-### Advanced: custom loaders that span both layers (e.g. SVGR)
+### Custom loaders (SVGR)
 
-A few setups need to touch **both** config layers because Next.js's webpack config and Storybook's preview config don't see each other. SVGR is the canonical case: you add the loader rule the Next.js way (so it's bridged), but you also have to take `.svg` away from Rsbuild's default asset rule — a preview-side concern — via `webpackFinal`. The framework runs your `webpackFinal` **late, against the fully assembled rspack config**, so introspecting and mutating existing rules works. (If your `webpackFinal` adds a rule with the **same `test` and no differing narrowing conditions** as a `next.config`-added rule, the framework drops the `next.config` duplicate to avoid a double pass. A rule scoped differently — via `include`/`exclude`/`resourceQuery`/`issuer` — targets a disjoint set of modules, so both are kept.)
+A few setups need a change in **both** config files, because Next.js's build config and Storybook's preview config each cover part of the job. SVGR is the canonical case: you add the loader rule in `next.config.ts` (so both `next dev` and Storybook get it), and you also take `.svg` away from Rsbuild's default asset rule — a Storybook-side concern — via `webpackFinal`. Your `webpackFinal` runs against the fully assembled config, so it can inspect and mutate existing rules. (If `webpackFinal` adds a rule that matches the same files as a rule from `next.config.ts`, the framework keeps only the Storybook-side one and logs it, so files aren't processed twice. Rules scoped to different files — via `include`/`exclude`/`resourceQuery`/`issuer` — are both kept.)
 
 ```ts twoslash title="next.config.ts"
 // @noErrors
@@ -526,9 +529,10 @@ const config: StorybookConfig = {
   // next.config.webpack() is the one that processes them.
   webpackFinal: async (config) => {
     for (const rule of config.module?.rules ?? []) {
-      // Match ONLY Rsbuild's default asset rule — it carries a `oneOf`. The bridged
-      // @svgr/webpack rule also has `test: /\.svg$/i` but no `oneOf`; excluding .svg
-      // from it too would disable SVGR and every `*.svg` would be parsed as raw JS.
+      // Match ONLY Rsbuild's default asset rule — it carries a `oneOf`. The
+      // @svgr/webpack rule from next.config also has `test: /\.svg$/i` but no
+      // `oneOf`; excluding .svg from it too would disable SVGR and every
+      // `*.svg` would be parsed as raw JS.
       if (
         rule &&
         typeof rule === 'object' &&
@@ -587,11 +591,11 @@ export const Default: StoryObj = {
 
 To mock your **own** (non-Next.js) modules, use Storybook's [module mocking](https://storybook.js.org/docs/writing-stories/mocking-data-and-modules/mocking-modules) guide.
 
-:::warning Caveats
+Caveats:
+
 - **Singleton state.** `getRouter()` returns the instance seeded by the most recent story render. Don't hold the reference across stories — read it fresh inside each `play`.
 - **Client-side only.** Storybook does not run a Next.js server, so `cache.mock` and `headers.mock` are the only way server-only APIs resolve when imported from client components in stories.
-- **Coupled to Next.js internals.** These subpaths re-export through `next/dist/*` paths. A future `next` release may rename them, which typically requires a `storybook-next-rsbuild` upgrade.
-:::
+- **Coupled to Next.js internals.** A `next` upgrade can move the modules these entries wrap — upgrade `storybook-next-rsbuild` together with `next`.
 
 ## Runtime config
 
@@ -603,12 +607,12 @@ One delta: the legacy `next/config` import is **not available**. Next.js 16 remo
 
 - **No Server Components runtime.** Components marked `'use client'` render; pure Server Components are not executed. Note this framework does **not** expose the `experimentalRSC` Suspense-wrapper path that [`@storybook/nextjs-vite` documents](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc) — only client components render.
 - **No API routes, middleware, or server actions.** Storybook doesn't run a Next.js server — `route.ts`, `middleware.ts`, and `'use server'` entry points don't execute. (Same as `@storybook/nextjs-vite`.)
-- **No `/_next/image` optimization.** `next/image` (and `next/legacy/image`) use a client-side mock loader; runtime behavior differs from production where the image is optimized on the fly.
-- **`turbopack.*` config keys are not bridged.** The bridge reads Next.js's webpack config only, so `turbopack.rules` / `resolveAlias` / `resolveExtensions` (and the legacy `experimental.turbo`) are ignored. Mirror Turbopack loader rules the Storybook way via the [`webpack()` snippet](#advanced-custom-loaders-that-span-both-layers-eg-svgr).
+- **No `/_next/image` optimization.** `next/image` (and `next/legacy/image`) serve images directly; runtime behavior differs from production, where the image is optimized on the fly.
+- **`turbopack.*` config keys are ignored.** Storybook consumes Next.js's webpack-side configuration, so `turbopack.rules` / `resolveAlias` / `resolveExtensions` (and the legacy `experimental.turbo`) have no effect — the framework logs a warning when it finds them. Mirror Turbopack loader rules via the [`webpack()` snippet](#custom-loaders-svgr).
 - **Sass/Less need an Rsbuild plugin.** Preprocessor support is opt-in via `rsbuildFinal` rather than inherited from Next.js (see [Sass / Less](#sass--less)).
 - **Runtime config is dropped on Next 16+** (see [Runtime config](#runtime-config)).
-- **Deployment/output keys mostly don't affect serving.** `output` (`export`/`standalone`), `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix. **`basePath` is the exception:** its value still flows through Next.js's defines, so `next/link` and router hrefs *are* `basePath`-prefixed at runtime — exactly as under `@storybook/nextjs-vite`.
-- **Version coupling.** The bridge depends on Next.js internal modules. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
+- **Deployment/output keys mostly don't affect serving.** `output` (`export`/`standalone`), `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix. **`basePath` is the exception:** its value is still compiled into the client code, so `next/link` and router hrefs *are* `basePath`-prefixed at runtime — same as `@storybook/nextjs-vite`.
+- **Version coupling.** The framework relies on Next.js internals. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
 
 ## Next steps
 
@@ -616,4 +620,4 @@ One delta: the legacy `next/config` import is **not available**. Next.js 16 remo
 - **[Interaction Testing](https://storybook.js.org/docs/writing-tests/interaction-testing)** — asserting against the router mocks above.
 - **[Configuration](/guide/configuration)** — `rsbuildFinal`, builder options, and TypeScript settings.
 
-A complete, runnable reference lives in the repository at [`sandboxes/nextjs`](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/nextjs), covering App Router, Pages Router, `next/font`, `next/image`, CSS Modules, Tailwind, Sass, styled-components, Emotion, `optimizePackageImports`, `transpilePackages`, SVGR, and user `next.config.webpack()` deltas.
+A complete, runnable reference lives in the repository at [`sandboxes/nextjs`](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/nextjs), covering App Router, Pages Router, `next/font`, `next/image`, CSS Modules, Tailwind, Sass, styled-components, Emotion, `optimizePackageImports`, `transpilePackages`, SVGR, and custom `next.config.webpack()` settings.
