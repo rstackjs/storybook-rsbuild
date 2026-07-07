@@ -41,4 +41,3 @@ const nextImageLoaderStub = function NextImageLoader(content) {
 nextImageLoaderStub.raw = true
 
 module.exports = nextImageLoaderStub
-module.exports.raw = true

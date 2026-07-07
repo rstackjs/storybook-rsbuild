@@ -16,35 +16,13 @@ import * as React from 'react'
 // identity as the decorator's import (both go through the package's
 // `./image-context` export), so `useContext` actually reads the provided value.
 import { ImageContext } from 'storybook-next-rsbuild/image-context'
+import { makeDefaultLoader } from './next-image-default-loader.js'
 
 // Handle CJS/ESM interop — Rspack may double-wrap the default export
 const OriginalLegacyImage =
   _NextLegacyImage.default?.default ?? _NextLegacyImage.default
 
-function defaultLoader({ src, width, quality = 75 }) {
-  // Mirror @storybook/nextjs: fail with an actionable message instead of an
-  // opaque `width.toString()` TypeError if a caller omits src/width.
-  const missingValues = []
-  if (!src) missingValues.push('src')
-  if (!width) missingValues.push('width')
-  if (missingValues.length > 0) {
-    throw new Error(
-      `Next Image Optimization requires ${missingValues.join(', ')} to be provided. ` +
-        'Make sure you pass them as props to the `next/legacy/image` component. ' +
-        `Received: ${JSON.stringify({ src, width, quality })}`,
-    )
-  }
-
-  const url = new URL(src, globalThis.location?.href)
-  if (!url.searchParams.has('w') && !url.searchParams.has('q')) {
-    url.searchParams.set('w', width.toString())
-    url.searchParams.set('q', quality.toString())
-  }
-  if (!src.startsWith('http://') && !src.startsWith('https://')) {
-    return url.toString().slice(url.origin.length)
-  }
-  return url.toString()
-}
+const defaultLoader = makeDefaultLoader('next/legacy/image')
 
 const MockedNextLegacyImage = React.forwardRef(function NextLegacyImage(
   { loader, ...props },
