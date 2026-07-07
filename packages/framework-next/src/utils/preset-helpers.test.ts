@@ -20,6 +20,7 @@ import {
   resolveNodeProtocolRequest,
   ruleLoaderNames,
   rulesCongruentForDedup,
+  rulesHandleLess,
   rulesHandleSass,
   ruleTestSignature,
   TARGET_CSS_RE,
@@ -1322,5 +1323,63 @@ describe('rulesHandleSass (structural Sass probe — F7)', () => {
   it('returns false for a non-array input', () => {
     expect(rulesHandleSass(undefined)).toBe(false)
     expect(rulesHandleSass(null)).toBe(false)
+  })
+})
+
+describe('rulesHandleLess (structural Less probe — symmetry with Sass)', () => {
+  it('detects a rule whose test matches .less', () => {
+    expect(rulesHandleLess([{ test: /\.less$/, use: [] }])).toBe(true)
+  })
+
+  it('detects less-loader in string / object / array use forms', () => {
+    expect(rulesHandleLess([{ test: /x/, use: 'less-loader' }])).toBe(true)
+    expect(
+      rulesHandleLess([
+        { test: /x/, use: { loader: '/p/less-loader/index.js' } },
+      ]),
+    ).toBe(true)
+    expect(
+      rulesHandleLess([
+        {
+          test: /x/,
+          use: [{ loader: 'css-loader' }, { loader: 'less-loader' }],
+        },
+      ]),
+    ).toBe(true)
+    expect(rulesHandleLess([{ loader: 'less-loader' }])).toBe(true)
+  })
+
+  it('recurses into oneOf and nested rules', () => {
+    expect(
+      rulesHandleLess([{ oneOf: [{ test: /y/, use: 'less-loader' }] }]),
+    ).toBe(true)
+    expect(rulesHandleLess([{ rules: [{ test: /\.less$/, use: [] }] }])).toBe(
+      true,
+    )
+  })
+
+  it('does NOT throw or match on a function-shaped use (crash guard)', () => {
+    const rules = [{ test: /\.svg$/, use: () => [{ loader: 'x' }] }]
+    expect(() => rulesHandleLess(rules)).not.toThrow()
+    expect(rulesHandleLess(rules)).toBe(false)
+  })
+
+  it('does NOT throw on circular loader options', () => {
+    const circular: any = { loader: 'some-loader', options: {} }
+    circular.options.self = circular.options
+    expect(() =>
+      rulesHandleLess([{ test: /\.js$/, use: [circular] }]),
+    ).not.toThrow()
+  })
+
+  it('does NOT match a Sass rule (flavor isolation)', () => {
+    expect(rulesHandleLess([{ test: /\.s[ac]ss$/, use: 'sass-loader' }])).toBe(
+      false,
+    )
+  })
+
+  it('returns false for a non-array input', () => {
+    expect(rulesHandleLess(undefined)).toBe(false)
+    expect(rulesHandleLess(null)).toBe(false)
   })
 })

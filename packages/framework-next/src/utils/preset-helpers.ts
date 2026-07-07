@@ -720,31 +720,50 @@ export function ruleLoaderNames(rule: any): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Sass preflight probe                                                       */
+/* Style preflight probes (Sass / Less)                                       */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Whether a `rules` array (recursing into `oneOf`/`rules`) already handles Sass,
- * either by a `test` RegExp that matches `.scss` or by a rule whose loader chain
- * references `sass-loader`. Loader names are read structurally (string / object
- * `.loader` / array of those) — never via `JSON.stringify`, which returns
- * `undefined` for a function-shaped `use` (legal rspack config) and makes
- * `.includes` throw, and which throws outright on circular loader options. A
- * function-shaped `use` is treated as opaque (not Sass) rather than crashing the
- * build this preflight only exists to *explain*.
+ * Whether a `rules` array (recursing into `oneOf`/`rules`) already handles a
+ * given stylesheet flavor, either by a `test` RegExp that matches `sample` (a
+ * representative filename like `a.scss`/`a.less`) or by a rule whose loader
+ * chain references `loaderSubstr` (e.g. `sass-loader`/`less-loader`). Loader
+ * names are read structurally (string / object `.loader` / array of those) —
+ * never via `JSON.stringify`, which returns `undefined` for a function-shaped
+ * `use` (legal rspack config) and makes `.includes` throw, and which throws
+ * outright on circular loader options. A function-shaped `use` is treated as
+ * opaque (not a match) rather than crashing the build this preflight only
+ * exists to *explain*.
  */
-export function rulesHandleSass(rules: unknown): boolean {
+function rulesHandleStyle(
+  rules: unknown,
+  sample: string,
+  loaderSubstr: string,
+): boolean {
   if (!Array.isArray(rules)) return false
   return rules.some((rule: any) => {
     if (!rule || typeof rule !== 'object') return false
-    if (rule.test instanceof RegExp && rule.test.test('a.scss')) return true
+    if (rule.test instanceof RegExp && rule.test.test(sample)) return true
     const names = [
       ...asUseArray(rule.use).map(loaderNameOf),
       loaderNameOf(rule.loader),
     ]
-    if (names.some((n) => typeof n === 'string' && n.includes('sass-loader'))) {
+    if (names.some((n) => typeof n === 'string' && n.includes(loaderSubstr))) {
       return true
     }
-    return rulesHandleSass(rule.oneOf) || rulesHandleSass(rule.rules)
+    return (
+      rulesHandleStyle(rule.oneOf, sample, loaderSubstr) ||
+      rulesHandleStyle(rule.rules, sample, loaderSubstr)
+    )
   })
+}
+
+/** Whether a `rules` array already handles Sass. See `rulesHandleStyle`. */
+export function rulesHandleSass(rules: unknown): boolean {
+  return rulesHandleStyle(rules, 'a.scss', 'sass-loader')
+}
+
+/** Whether a `rules` array already handles Less. See `rulesHandleStyle`. */
+export function rulesHandleLess(rules: unknown): boolean {
+  return rulesHandleStyle(rules, 'a.less', 'less-loader')
 }
