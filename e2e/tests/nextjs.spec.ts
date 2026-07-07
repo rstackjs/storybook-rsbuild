@@ -111,9 +111,11 @@ test.describe(sandbox.name, () => {
     const frame = await openStory(page, 'stories-imagelegacy--default')
     const img = frame.getByRole('img', { name: 'Legacy Static' })
     await expect(img).toBeVisible()
+    // Auto-retry until the loader's src settles, then confirm it's the direct
+    // asset path (with ?w=&q=), never Next's /_next/image optimizer endpoint.
+    await expect(img).toHaveAttribute('src', /\?w=\d+&q=\d+/)
     const src = await img.getAttribute('src')
     expect(src).not.toContain('/_next/image')
-    expect(src).toMatch(/\?w=\d+&q=\d+/)
   })
 
   test('next/font applies a Google font className', async ({ page }) => {
