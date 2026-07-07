@@ -47,6 +47,7 @@
       "types": "./dist/export-mocks/navigation/index.d.ts",
       "default": "./dist/export-mocks/navigation/index.js"
     },
+    "./next-image-loader-stub": "./loaders/next-image-loader-stub.cjs",
     "./next-image-mock": "./loaders/next-image-mock.js",
     "./node": {
       "types": "./dist/node/index.d.ts",

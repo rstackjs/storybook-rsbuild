@@ -9,6 +9,7 @@ const config: BuildEntries = {
       types: './loaders/image-context.d.cts',
       default: './loaders/image-context.cjs',
     },
+    './next-image-loader-stub': './loaders/next-image-loader-stub.cjs',
     './next-image-mock': './loaders/next-image-mock.js',
     './storybook-nextjs-font-loader':
       './loaders/storybook-nextjs-font-loader.cjs',
