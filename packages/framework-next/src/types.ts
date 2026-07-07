@@ -18,13 +18,13 @@ export type FrameworkOptions = {
   /** Path to the Next.js configuration file. */
   nextConfigPath?: string
   /**
-   * Configuration for the `next/image` mock. Accepted for compatibility with
-   * `@storybook/nextjs` and `@storybook/nextjs-vite`; the runtime mock currently
-   * falls through to upstream `next/image` defaults.
+   * @deprecated Accepted for `main.ts` compatibility with `@storybook/nextjs`
+   * and `@storybook/nextjs-vite`, but inert here: none of these fields are
+   * wired into the build. Per-story `next/image` defaults belong on
+   * `parameters.nextjs.image` instead (consumed by the image mock via
+   * ImageContext).
    */
   image?: {
-    /** Default `loading` prop forwarded to `next/image`. */
-    loading?: 'lazy' | 'eager'
     /** Glob patterns of image files to include for static handling. */
     includeFiles?: string[]
     /** Glob patterns of image files to exclude from static handling. */
@@ -101,6 +101,11 @@ export interface NextJsParameters {
     navigation?: Partial<NextRouter>
     /** Next.js router configuration for next/router (pages directory). */
     router?: Partial<NextRouter>
+    /**
+     * Per-story `next/image` prop defaults, consumed by the image mock via
+     * ImageContext. Merged under the props each story passes to `<Image>`.
+     */
+    image?: Partial<import('next/image').ImageProps>
   }
 }
 
