@@ -1,3 +1,4 @@
+import { rspack } from '@rsbuild/core'
 import { describe, expect, it } from '@rstest/core'
 import {
   analyzeNextLoaderChain,
@@ -300,6 +301,57 @@ describe('dedupProvidePluginKeys (F14 unreadable-shape hardening)', () => {
       { Buffer: ['buffer', 'Buffer'] },
       'trailing-arg',
     ])
+  })
+})
+
+describe('_args[0] plugin-definitions contract (real rspack plugins)', () => {
+  // Contract pin (F11-adjacent): `readProvidedMap` / `dedupProvidePluginKeys`
+  // read rspack's INTERNAL `._args[0]` — there is no public getter. The other
+  // suites hand-build fixtures; this one constructs REAL plugins so a future
+  // rspack wrapper-shape change flips from a silent runtime warn in user
+  // projects into red CI on the rspack-bump PR. Bare `@rspack/core` does not
+  // resolve under pnpm strict linking — go through `@rsbuild/core`'s `rspack`.
+
+  it('round-trips a real DefinePlugin definitions map through readProvidedMap', () => {
+    const defines = {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+      __NEXT_TEST: JSON.stringify(true),
+    }
+    expect(readProvidedMap(new rspack.DefinePlugin(defines))).toEqual(defines)
+  })
+
+  it('round-trips a real ProvidePlugin definitions map through readProvidedMap', () => {
+    const provided = { Buffer: ['buffer', 'Buffer'], process: ['process'] }
+    expect(readProvidedMap(new rspack.ProvidePlugin(provided))).toEqual(
+      provided,
+    )
+  })
+
+  it('dedupProvidePluginKeys drops overlapping keys across real ProvidePlugins', () => {
+    const rsbuild = [new rspack.ProvidePlugin({ process: '/abs/process' })]
+    const next = [
+      new rspack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+        process: ['process'],
+      }),
+    ]
+    const out = dedupProvidePluginKeys(rsbuild, next)
+    expect(out).toHaveLength(1)
+    // `process` dropped (rsbuild provides it), `Buffer` survives.
+    expect(readProvidedMap(out[0])).toEqual({ Buffer: ['buffer', 'Buffer'] })
+  })
+
+  it('dedupProvidePluginKeys removes a real ProvidePlugin when every key is covered', () => {
+    const rsbuild = [
+      new rspack.ProvidePlugin({ process: '/abs/process', Buffer: '/abs/buf' }),
+    ]
+    const next = [
+      new rspack.ProvidePlugin({
+        process: ['process'],
+        Buffer: ['buffer', 'Buffer'],
+      }),
+    ]
+    expect(dedupProvidePluginKeys(rsbuild, next)).toEqual([])
   })
 })
 
