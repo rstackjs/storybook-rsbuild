@@ -20,7 +20,7 @@
     "@rsbuild/core": "^2.1.1",
     "@rsbuild/plugin-sass": "^1.5.3",
     "@rsbuild/plugin-vue": "1.2.9",
-    "@rslib/core": "^0.23.1",
+    "@rslib/core": "^0.23.2",
     "@storybook/addon-docs": "10.4.6",
     "@storybook/addon-onboarding": "10.4.6",
     "@storybook/vue3": "10.4.6",
