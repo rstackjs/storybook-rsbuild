@@ -13,16 +13,16 @@
     "upgrade": "modern upgrade"
   },
   "dependencies": {
-    "@modern-js/runtime": "3.5.0",
-    "@module-federation/modern-js-v3": "2.6.0",
+    "@modern-js/runtime": "3.6.0",
+    "@module-federation/modern-js-v3": "2.7.0",
     "antd": "^5.29.3",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@modern-js/app-tools": "^3.5.0",
-    "@modern-js/tsconfig": "3.5.0",
-    "@module-federation/storybook-addon": "^6.0.14",
+    "@modern-js/app-tools": "^3.6.0",
+    "@modern-js/tsconfig": "3.6.0",
+    "@module-federation/storybook-addon": "^6.0.15",
     "@rsbuild/core": "^2.1.1",
     "@storybook/addon-docs": "10.4.6",
     "@storybook/addon-onboarding": "10.4.6",
