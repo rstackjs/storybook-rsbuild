@@ -25,7 +25,7 @@
   "devDependencies": {
     "@modern-js/app-tools": "^3.6.0",
     "@modern-js/tsconfig": "3.6.0",
-    "@rsbuild/core": "^2.1.1",
+    "@rsbuild/core": "^2.1.5",
     "@storybook/addon-docs": "10.4.6",
     "@storybook/addon-onboarding": "10.4.6",
     "@storybook/react": "10.4.6",
