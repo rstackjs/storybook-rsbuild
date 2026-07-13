@@ -3,6 +3,11 @@ packages:
   - sandboxes/**
   - scripts/**
   - website
+# Re-sync pnpm-injected deps (framework-next's storybook-builder-rsbuild) after
+# these scripts so a builder rebuild doesn't leave a stale hard-linked copy.
+syncInjectedDepsAfterScripts:
+  - build
+  - prep
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@swc/core'
@@ -20,3 +25,7 @@ hoistPattern:
   - '@babel/types'
   - '@babel/generator'
   - '@babel/traverse'
+  # next internally calls require('next-rspack/rspack-core') but doesn't
+  # declare next-rspack as a dependency. Consumers install it as a peer; this
+  # monorepo hoists it so workspace sandboxes' next package can resolve it.
+  - 'next-rspack'

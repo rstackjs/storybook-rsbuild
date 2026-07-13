@@ -1,0 +1,39 @@
+{
+  "name": "@sandboxes/nextjs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "build:storybook": "storybook build --stats-json",
+    "dev": "next dev",
+    "storybook": "storybook dev -p 6006"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@sandboxes/nextjs-barrel": "workspace:*",
+    "@sandboxes/nextjs-transpiled": "workspace:*",
+    "lucide-react": "^0.468.0",
+    "next": "16.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "styled-components": "^6.4.2"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "1.6.14",
+    "@rsbuild/plugin-sass": "^1.5.3",
+    "@storybook/addon-docs": "10.5.0",
+    "@storybook/react": "10.5.0",
+    "@svgr/webpack": "^8.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "next-rspack": "16.2.3",
+    "postcss": "^8.4.49",
+    "storybook": "10.5.0",
+    "storybook-next-rsbuild": "workspace:*",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  }
+}

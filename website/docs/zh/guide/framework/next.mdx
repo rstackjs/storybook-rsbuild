@@ -1,0 +1,623 @@
+import { PackageManagerTabs } from '@theme'
+
+# Next.js
+
+Storybook for Next.js & Rsbuild 让你在隔离环境中开发和测试 Next.js 组件。它不要求你为 Storybook 单独做一套配置,而是直接复用应用自己的构建设置 —— 与 `next dev` 相同的 `next.config.ts`、编译选项、模块 alias 和环境变量 —— 所以组件在 Storybook 中的行为与在应用中完全一致。
+
+**没有任何 framework 专属的构建配置需要学习**:照常在 `next.config.ts` 里配置你的应用,Storybook 会原样使用它。[配置心智模型](#configuration-mental-model)会讲清楚任意一项设置该写在哪里。
+
+:::warning 实验性
+`storybook-next-rsbuild` 依赖 Next.js 内部实现,并跟随 Next.js 的发布节奏演进。任何 `next` 的 minor 或 patch 升级都可能破坏兼容性 —— 请锁定 `next` 以保证可复现性,并让 `storybook-next-rsbuild` 与 `next` 一起升级。
+:::
+
+## 环境要求 {#requirements}
+
+<div style={{ width: '100%', maxWidth: '460px' }}>
+
+| Package | Version |
+| :--- | :--- |
+| `next` | `>=16.0.0 <16.3.0` |
+| `next-rspack` | 与 `next` 相同(同一版本) |
+| `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
+| `storybook` | `^10.5.0` |
+| `@rsbuild/core` | 见[版本矩阵](#version-matrix) |
+
+</div>
+
+`@rsbuild/core` 是 peer dependency 而非固定依赖,因为该装哪个版本取决于你的 `next` 版本 —— 具体见下方矩阵。
+
+## 版本矩阵 {#version-matrix}
+
+Storybook 的构建与 Next.js 的构建工具必须共享**同一份 `@rspack/core`**。`@rsbuild/core` 和 `next-rspack` 各自 pin 了一个确切的 `@rspack/core` 版本,两者必须一致 —— framework 会在启动时检查,不一致就拒绝启动,并打印指回本表的链接。
+
+请选择与你 `next` 版本匹配的那一行,并安装列出的 `@rsbuild/core`:
+
+<div style={{ width: '100%', maxWidth: '700px' }}>
+
+| `next` | `next-rspack` | `@rspack/core`(间接) | `@rsbuild/core` |
+| :--- | :--- | :--- | :--- |
+| `16.0.x` | 同 `next` | `1.6.0` | `1.6.0` 或 `1.6.1` |
+| `16.1.x` | 同 `next` | `1.6.7` | `1.6.14` |
+| `16.2.x` | 同 `next` | `1.6.7` | `1.6.14` |
+
+</div>
+
+说明:
+
+- **`next` 16.3+:暂不支持**(`next-rspack` 已切换到 `@rspack/core` 2.x,而 `storybook-next-rsbuild` 仍在 1.x)。请把 `next` 和 `next-rspack` 固定到 `16.2.x`;启动检查遇到这种情况会给出相同的指引。
+- `next-rspack` 必须与 `next` 安装完全相同的版本。
+- 只有上表列出的 `@rsbuild/core` 版本才会解析到匹配的 `@rspack/core` —— 更新的 `@rsbuild/core`(即使在同一 minor 内)通常会改变它的 `@rspack/core` pin,导致启动检查失败。
+- 如果启动因 `@rspack/core` 不匹配而中止,请对比它打印的两个版本和路径(检查是严格的 —— 任何差异都会中止启动):
+  - **版本不同** —— 按本表重新对齐,或用 pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) 把 `@rspack/core` 强制到目标版本。
+  - **版本相同但路径不同**(错误显示 _"duplicate physical copies"_)—— 包管理器安装了同一版本的两份拷贝(yarn Berry 是已知的元凶,由 `@rspack/core` 的可选 peer `@swc/helpers` 引起分裂)。请固定引起分裂的那个 peer(例如把 `@swc/helpers` 加进 `resolutions`/`overrides`),或运行 `yarn dedupe` / `pnpm dedupe` —— 改 `@rspack/core` 的版本没用,因为它本就已经匹配。
+
+## 快速开始 {#getting-started}
+
+### 安装 {#installation}
+
+安装 `storybook-next-rsbuild`,同时安装**固定到你确切 `next` 版本**的 `next-rspack` —— 裸装 `next-rspack` 会拉取 registry 上的最新版,与你的 `next` 不一致时会被启动检查拒绝 —— 以及[版本矩阵](#version-matrix)中你那一行对应的 `@rsbuild/core`。例如在 `next@16.2.3` 上:
+
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14 -D" />
+
+如果 framework 无法加载你的 Next.js 配置(例如未安装 `next-rspack`),表现取决于构建模式:
+
+- **`storybook dev`** 仍会启动,但**仅提供 React 支持**,并把出错原因记录在日志里 —— 在问题修复之前,CSS、字体、图片以及 navigation mocks 都不会工作。
+- **`storybook build`** 会带着原始错误直接失败,让 CI 捕获到问题,而不是发布一个所有 Next.js 特性都静默失效的 Storybook。
+
+如果你有意只需要一个纯 React 的生产构建,把 [`allowMissingNextBridge`](#framework-options) 选项设为 `true`。
+
+### 配置 `.storybook/main.ts` {#configure-storybookmaints}
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-next-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: ['@storybook/addon-docs'],
+  // Needed if stories reference assets from Next.js's `public/` dir
+  // (e.g. <Image src="/vercel.svg" />).
+  staticDirs: ['../public'],
+}
+
+export default config
+```
+
+这样就够了 —— framework 会自动探测项目根目录下的 `next.config.{js,ts,mjs}`。如果你的配置在别处,设置 `nextConfigPath`:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-next-rsbuild',
+    options: {
+      nextConfigPath: '../next.config.ts',
+    },
+  },
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+相对的 `nextConfigPath` 以 Storybook 配置目录(`.storybook`)为基准解析;绝对路径则原样使用。
+
+## 配置心智模型 {#configuration-mental-model}
+
+在底层,framework 用 Next.js 自己的 config loader 加载你的 `next.config.{js,ts}`,并把得到的构建设置 —— 编译选项、alias、环境变量、自定义 webpack 增量 —— 应用到 Storybook 的构建上。由此得出最需要内化的一点:
+
+> **凡是 Next.js 负责编译的东西 → 写在 `next.config.ts`(Next.js 风格)。**
+> **凡是属于 Storybook preview 构建本身的东西 → 写在 `.storybook/main.ts`(通过 `rsbuildFinal` 的 Rsbuild 风格,或通过 `webpackFinal` 的 webpack 风格)。**
+
+没有第三种 framework 专属的配置面需要学习或保持同步。让 `next dev` 跑通的那套配置,已经足以让 Storybook 跑通,因为同一份 `next.config.ts` 同时驱动两者 —— 在 **dev**(`storybook dev`)和 **production**(`storybook build`)两种模式下都是如此,各自以匹配的模式加载你的配置,就像 `next dev` 与 `next build` 的关系。
+
+### 各自的归属 {#who-owns-what}
+
+| 关注点 | 归属 | 配置位置 | 风格 |
+| :--- | :--- | :--- | :--- |
+| `'use client'` / `server-only`、JSX runtime、SWC transforms | Next.js | `next.config.ts`(自动) | Next.js |
+| `transpilePackages`、`optimizePackageImports` | Next.js | `next.config.ts` | Next.js |
+| 环境变量(`NEXT_PUBLIC_*`、`next.config.env`、`.env*` 文件) | Next.js | `next.config.ts` / `.env*`(自动) | Next.js |
+| `compiler.*`(如 `styledComponents`、`emotion`) | Next.js | `next.config.ts` | Next.js |
+| 模块 `resolve.alias` / `fallback`、自定义 loaders(如 SVGR)—— `react`* 系列 alias 除外([由 Storybook 固定](#custom-webpack-settings)) | Next.js | `next.config.ts` → `webpack()` | Next.js |
+| `next/font`、`next/image` | Framework | `next.config.ts`(自动) | Next.js |
+| CSS Modules、全局 CSS、PostCSS / Tailwind | Rsbuild | 开箱即用 | — |
+| Sass / Less 预处理器 | Rsbuild | `.storybook/main.ts` → `rsbuildFinal` | Rsbuild |
+| 仅 Storybook preview 需要的构建微调 | Storybook builder | `.storybook/main.ts` → `rsbuildFinal` / `webpackFinal` | Rsbuild / webpack |
+
+这种划分让每个工具各司其长:**Next.js 编译你的组件;Rsbuild 处理 CSS;Storybook 渲染 preview 并持有 React runtime。**
+
+### 一项设置该写在哪里 {#deciding-where-a-setting-goes}
+
+1. **为了让 `next dev` / `next build` 跑通,你会把它写进 `next.config.ts` 吗?** 那就留在那里 —— Storybook 会自动使用它。不要再复制一份到 `.storybook`。**唯一的例外:** `turbopack` 键**不会**被读取(Storybook 使用的是 Next.js webpack 侧的配置),所以 Turbopack 的 loader 规则(SVGR 等)必须通过 [`webpack()` 片段](#custom-loaders-svgr)镜像一份。
+2. **它是一个需要插件支持的 CSS 预处理器(Sass、Less、Stylus)吗?** 通过 `rsbuildFinal` 添加对应的 Rsbuild 插件。在 Storybook 中跑 CSS 管线的是 Rsbuild 而非 Next.js,所以你要按 Rsbuild 的方式来扩展。(CSS Modules、纯 CSS,以及 PostCSS/Tailwind 无需任何配置。)
+3. **它是只有 Storybook preview 才需要的微调吗**(只给 stories 用的 alias、某条规则的改写)? 加 alias 或 Rsbuild 插件用 `rsbuildFinal`;只有要改写一条已存在的 rspack 规则时才用 `webpackFinal` —— 见 [`rsbuildFinal` vs `webpackFinal`](#rsbuildfinal-vs-webpackfinal)。
+
+### `rsbuildFinal` vs `webpackFinal` {#rsbuildfinal-vs-webpackfinal}
+
+两个 hook 都用于扩展 Storybook preview 构建,但它们**并不可互换** —— 按层级来选:
+
+- **`rsbuildFinal`** 是首选的高层配置面。优先用它:添加 Rsbuild 插件(`pluginSass()`)、`source.define` 条目,或只给 stories 用的 `resolve.alias`。这也是 framework 自身类型所暴露的配置面。
+- **`webpackFinal`** 是底层逃生口。仅当你必须**查看或改写一条已存在的 rspack 规则**时才用它 —— 例如为 [SVGR](#custom-loaders-svgr) 把 `.svg` 从 Rsbuild 默认 asset 规则里夺走。在本 framework 下,`webpackFinal` 在配置**完全组装好之后才晚一步运行**,所以你想读取的规则那时已经存在。
+
+:::info addon 的 webpackFinal 在此只运行一次,无需 webpackAddons
+在本 framework 下,任何注册在 **`addons`** 里的 addon,其 `webpackFinal` 都已经作用于完全组装好的配置,所以你**不需要**再把它列进 `webpackAddons`(那是其他 Rsbuild framework 使用的机制)。如果你把同一个 addon 同时列在 `addons` 和 `webpackAddons` 里,framework 会保证它的 `webpackFinal` 只运行一次,并记录它跳过了哪一个重复项 —— 移除 `webpackAddons` 里的那一项即可消除该 warning。
+:::
+
+### 与 `@storybook/nextjs-vite` 相同 vs. 此处不同 {#same-as-storybooknextjs-vite-vs-different-here}
+
+运行时行为 —— decorators、mocks 以及编写 story 的 API —— 都移植自 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite)。因此对于下表左列的一切,**请直接 follow 官方 Storybook 文档**,本页只给出链接。右列才是本 framework 真正不同的地方,下文会详细展开。
+
+| ✅ 相同 —— follow 官方文档(已链接) | ⚠️ 此处不同 —— 请读下文对应小节 |
+| :--- | :--- |
+| [`next/image`](#nextimage)、[`next/font`](#nextfont)、[`next/head`](#nexthead)、[`next/link`、`next/dynamic`](#nextlink--nextdynamic) | Rsbuild 负责 CSS 管线 → [Sass / Less 需手动开启](#sass--less) |
+| story 的 routing/navigation **参数**与 [segments](#route-params--layout-segments) | [两个 router 始终都挂载](#routing--navigation) —— `appDirectory` 无效 |
+| [CSS Modules、Tailwind/PostCSS、styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [版本矩阵与 `@rspack/core` 启动检查](#version-matrix) |
+| [绝对导入、aliases、subpath imports、tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` 的 plugins 受选项门控](#custom-webpack-settings) |
+| [`*.mock` subpath API](#mocking-nextjs-apis-in-stories)(`cache`/`headers`/`navigation`/`router`) | [`node:` 协议与 Node 内置模块](#node-protocol--node-builtins)的处理 |
+| [SWC transforms、`transpilePackages`、`optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Next 16+ 不再支持 runtime config](#runtime-config) |
+
+> **经验法则:** 如果某个 Next.js 或 Storybook 特性在本页完全没有提及,默认按官方 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) 文档来 —— runtime 正是移植自它。唯一不能照搬的是**构建/打包配置**:请忽略上游的 `viteFinal` 指引,改为通过 `next.config.ts` 加 `rsbuildFinal` / `webpackFinal` 来驱动构建,如上所述。
+
+## Framework 选项 {#framework-options}
+
+<div style={{ width: '100%', maxWidth: '760px' }}>
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `nextConfigPath` | `string` | 自动探测 | `next.config.{js,ts,mjs}` 文件的路径。可为绝对路径,或相对于 `.storybook` 的相对路径。 |
+| `forwardNextConfigPlugins` | `boolean` | `false` | 把 `next.config.webpack()` 添加的 **plugins** 转发进 Storybook 的构建。rules、aliases、fallbacks 和 externals *始终*会被转发 —— 只有 plugins 受门控。见[下文](#custom-webpack-settings)。 |
+| `allowMissingNextBridge` | `boolean` | `false` | 当 Next.js 配置无法加载时,让生产环境的 `storybook build` 回退到仅 React 支持(而非失败)。`storybook dev` 始终回退;只有生产构建受门控。用于有意为之的纯 React 静态构建。 |
+| `image` | `object` | `{}` | 为与 `@storybook/nextjs` 兼容而接受;在这里没有任何作用。单条 story 的图片配置通过 `parameters.nextjs.image` 设置,而非此选项。 |
+| `builder` | `BuilderOptions` | `{}` | 转发给 `storybook-builder-rsbuild` 的选项。见[配置指南](/guide/configuration#builder-options)。 |
+
+</div>
+
+TypeScript 相关设置(包括 `typescript.reactDocgen`)会在 `main.ts` 中通过类型检查,行为与[配置指南](/guide/configuration)中所述一致。
+
+## 自定义 webpack 配置 {#custom-webpack-settings}
+
+如果你的项目在 `next.config.ts` 中自定义了 webpack,你的 **rules、aliases、fallbacks、externals 和 experiments** 都会自动应用到 Storybook 的构建上。
+
+framework 会捕获你的 `webpack()` hook 新增的内容;什么会带过来因字段而异:
+
+<div style={{ width: '100%', maxWidth: '760px' }}>
+
+| 字段 | 什么会带过来 |
+| :--- | :--- |
+| `module.rules` | 你**新增**的整条 rule。设在 `next-swc-loader` 条目上的 options 也会带过来。 |
+| `resolve.alias` / `resolve.fallback` / `experiments` | 新增的键**和**被改动的值。 |
+| `externals` | 你新增的条目。 |
+| 其余一切(`optimization`、`cache`、`output`、`devtool` 等) | 不会带过来 —— Storybook 保留自己的设置。删除和整体替换(如 `config.module.rules = []`)同样会被忽略。 |
+
+</div>
+
+有一个后果值得单独点出:**原地修改 Next.js 内置的 rule 不会抵达 Storybook**。典型的 SVGR 配方(`fileLoaderRule.exclude = /\.svg$/`)恰恰就是这种原地修改。要把 `.svg` 从 Rsbuild 的 asset 规则里夺走,请在 Storybook 侧用 `webpackFinal` —— 见 [SVGR](#custom-loaders-svgr)。
+
+**plugins 是例外。** 它们受 `forwardNextConfigPlugins` 选项门控(默认 `false`),因为人们添加的大多数 plugins 都针对 Next.js 的生产管线(build-manifest 写入、source-map 上传、stats 输出),在 Storybook 中要么无作用,要么会让构建崩溃(`copy-webpack-plugin` 是已知案例)。门控关闭时,被丢弃的 plugins 会按名称记录在日志里。只有当某个 client-side plugin 经你验证在 rspack 下可用时,才开启它:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-next-rsbuild',
+    options: {
+      // Forward client-side plugin instances (DefinePlugin values always carry over).
+      forwardNextConfigPlugins: true,
+    },
+  },
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+}
+
+export default config
+```
+
+**除 plugins 外还有两处刻意过滤的例外:**
+
+- **framework 保留的 alias** —— `react` / `react-dom` / `react-server-dom-webpack`,外加 `next/image` 和 `styled-jsx`:在 `next.config.webpack()` 里设置的这些 alias 会被丢弃(并记录一条 warning),无论是裸写还是带尾部 `$`。Storybook 必须持有唯一的 React 拷贝(出现第二份 React 会破坏 hooks 和 context),framework 必须持有 `next/image` mock 和 styled-jsx 的唯一身份,因此刻意不提供重新指向它们的逃生口。
+- **`.mdx` 规则**(如来自 `@next/mdx`):会被丢弃(并记录一条 info 日志)。在 Storybook 中,`.mdx` 由 `@storybook/addon-docs` 拥有。你的 page-MDX loader 仍然作用于真实的 Next.js 页面,只是不作用于 Storybook docs。
+
+## 支持的 Next.js 特性 {#supported-nextjs-features}
+
+### `next/image` {#nextimage}
+
+`next/image` 可以在 stories 中渲染。Storybook 没有图片优化服务器,所以 framework 会直接提供图片 —— 无需 `/_next/image` 端点,也无需安装 `sharp`;本地与远程的 `src` 都能渲染。
+
+用法、本地/远程的行为差异,以及「图片导入返回一个对象」这条规则都与上游一致 —— **见 [Next.js's Image component](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjss-image-component)**。本 framework 特有的几点:
+
+- 像 `/vercel.svg` 这样的本地 `src` 只有在你把 Next.js 的 `public/` 目录加入 `staticDirs` 时才能解析(见 [main.ts 示例](#configure-storybookmaints))。
+- 单条 story 的 `next/image` 配置通过 `parameters.nextjs.image` 应用,且仅在设置时生效。
+- **静态图片导入解析为 `StaticImageData`。** `import img from './x.png'` 得到 `{ src, width, height, blurDataURL }` 对象 —— 与上游和 `next build` 一致 —— 因此 `<Image src={img} />` 会拿到固有尺寸,`placeholder="blur"` 也能工作。(`.svg` 导入交由你的 SVGR 配置处理,不会被改写为 `StaticImageData`。)
+- **`next/legacy/image` 同样可用。** 它与 `next/image` 走相同的直出方式,因此旧版 stories 无需 `/_next/image` 端点即可渲染。
+
+```tsx twoslash title="Image.stories.tsx"
+// @noErrors
+import Image from 'next/image'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+const meta = {
+  component: Image,
+  args: { src: '/vercel.svg', alt: 'Vercel', width: 200, height: 48 },
+} satisfies Meta<typeof Image>
+
+export default meta
+
+export const Default: StoryObj<typeof meta> = {}
+```
+
+### `next/font` {#nextfont}
+
+`next/font/google` 和 `next/font/local` 都开箱即用,且无需 `staticDirs` 映射 —— framework 在构建时解析你的字体,并在 story 渲染时注入 `@font-face`/class CSS。
+
+所支持的范围 —— 包括*不支持*的选项(`fallback`、`adjustFontFallback`、`preload`/`display` 被忽略)以及 `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` 的 CI mocking 建议 —— 都与上游一致。**见 [Next.js font optimization](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-font-optimization)。**
+
+```tsx twoslash title="Font.stories.tsx"
+// @noErrors
+import { Inter } from 'next/font/google'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+const inter = Inter({ subsets: ['latin'] })
+
+function FontDemo({ className }: { className: string }) {
+  return <p className={className}>The quick brown fox jumps over the lazy dog.</p>
+}
+
+const meta = { component: FontDemo } satisfies Meta<typeof FontDemo>
+export default meta
+
+export const Default: StoryObj<typeof meta> = {
+  args: { className: inter.className },
+}
+```
+
+### `next/head` {#nexthead}
+
+通过一个内置 decorator 更新 `document.head`,开箱即用。children 会落到 preview iframe 的 `<head>` 中,与上游所述一致 —— **见 [Next.js Head](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-head)**。
+
+### `next/link` 与 `next/dynamic` {#nextlink--nextdynamic}
+
+两者都原样工作。`next/link` 通过 mock 的 router 进行导航(见 [Routing](#routing--navigation));`next/dynamic` 的 lazy chunks 无需特殊接线即可解析。Routing 行为见上游文档 —— **见 [Next.js routing](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-routing)**。
+
+## 路由与导航 {#routing--navigation}
+
+> **两个 router 始终都处于激活状态。** 与 `@storybook/nextjs-vite` 不同,本 framework 在**每一条** story 上都挂载 App Router(`next/navigation`)和 Pages Router(`next/router`)的 context —— 没有 router 选择器。这里的 `parameters.nextjs.appDirectory` 标志**没有任何作用**(也不在导出的类型里),因此一条 story 可以独立地读取 `next/navigation` 和 `next/router`。这是刻意为之:混合路由(Next.js 13+)的项目正需要如此。
+
+如果你正从 `@storybook/nextjs-vite` 迁移,**请从参数中移除 `appDirectory`** —— 它会被接受但忽略,App/Pages 的 hooks 无论如何都能工作。
+
+### App Router —— `next/navigation` {#app-router--nextnavigation}
+
+通过 `parameters.nextjs.navigation`(`pathname`、`query` 和 `segments`)来给 `usePathname`、`useSearchParams`、`useParams` 以及 layout-segment 系列 hooks 读取的 navigation context 注入初始值。hook 行为与默认 context(`{ pathname: '/', query: {} }`)都继承自上游 —— **见 [Next.js navigation](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-navigation)**。
+
+```tsx twoslash title="Navigation.stories.tsx"
+// @noErrors
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+function Component() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  return (
+    <button type="button" onClick={() => router.push('/next')}>
+      Navigate from {pathname}?{searchParams.toString()}
+    </button>
+  )
+}
+
+export default {
+  component: Component,
+  parameters: {
+    nextjs: {
+      // No `appDirectory` needed — both routers are always mounted.
+      navigation: {
+        pathname: '/hello',
+        query: { foo: 'bar' },
+      },
+    },
+  },
+} satisfies Meta<typeof Component>
+
+export const Default: StoryObj<typeof Component> = {}
+```
+
+### 路由参数与 layout segments {#route-params--layout-segments}
+
+`useSelectedLayoutSegment`、`useSelectedLayoutSegments` 和 `useParams` 由 `parameters.nextjs.navigation.segments` 驱动,它接受两种形式:
+
+- **`string[]`** —— 一条用于构建 layout-segment 树的 parallel-route 路径,例如 `segments: ['dashboard', 'analytics']`。
+- **`[key, value][]` 元组**(或一个普通对象)—— `useParams()` 返回的显式路由参数,例如 `segments: [['address', '0xdeadbeef']]` → `useParams()` 返回 `{ address: '0xdeadbeef' }`。
+
+hook 的返回语义与上游一致 —— **见 [`useSelectedLayoutSegment(s)` / `useParams` hooks](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#useselectedlayoutsegment-useselectedlayoutsegments-and-useparams-hooks)**。
+
+```tsx twoslash title="RouteParams.stories.tsx"
+// @noErrors
+import { useParams } from 'next/navigation'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+function Profile() {
+  const { address } = useParams()
+  return <span>Address: {address}</span>
+}
+
+export default {
+  component: Profile,
+  parameters: {
+    nextjs: {
+      navigation: { segments: [['address', '0xdeadbeef']] },
+    },
+  },
+} satisfies Meta<typeof Profile>
+
+export const Default: StoryObj<typeof Profile> = {}
+```
+
+### Pages Router —— `next/router` {#pages-router--nextrouter}
+
+Pages Router 的 stories 通过 `parameters.nextjs.router` 注入初始值。接受的形状与默认 router 状态(`pathname: '/'`、`isReady: true` 等)都继承自上游 —— **见 [Next.js routing](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#nextjs-routing) 与 [default router](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#default-router)**。
+
+```tsx twoslash title="PagesRouter.stories.tsx"
+// @noErrors
+import { useRouter } from 'next/router'
+import type { Meta, StoryObj } from 'storybook-next-rsbuild'
+
+function Component() {
+  const router = useRouter()
+  return <span>Path: {router.pathname}</span>
+}
+
+export default {
+  component: Component,
+  parameters: {
+    nextjs: {
+      router: { pathname: '/pages-route', query: { id: '42' } },
+    },
+  },
+} satisfies Meta<typeof Component>
+
+export const Default: StoryObj<typeof Component> = {}
+```
+
+### 参数参考 {#parameters-reference}
+
+<div style={{ width: '100%', maxWidth: '760px' }}>
+
+| Parameter | 适用于 | 形状 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `nextjs.navigation` | App Router(`next/navigation`) | `{ pathname?, query?, segments? }` | 导出的类型是 `Partial<NextRouter>`,但运行时该对象同样接受 `segments`(路由参数/segment 的驱动)。 |
+| `nextjs.router` | Pages Router(`next/router`) | `Partial<NextRouter>` | 给 stub 的 Pages Router 注入初始值。 |
+| `nextjs.image` | `next/image` | `Partial<ImageProps>` | 单条 story 的默认 `ImageProps`,应用到 `next/image` 上(如 `priority`、`quality`、`loader`)。 |
+| `nextjs.appDirectory` | — | — | **接受但忽略。** 两个 router 始终都挂载;保留它只是为了与 `nextjs-vite` 的源码兼容。 |
+
+</div>
+
+## 样式 {#styling}
+
+### CSS、CSS Modules、PostCSS / Tailwind、styled-jsx {#css-css-modules-postcss--tailwind-styled-jsx}
+
+**Rsbuild 负责 CSS 管线**(这是[心智模型](#configuration-mental-model)里刻意的分工)。CSS Modules、全局 CSS 导入、PostCSS 和 Tailwind 无需额外接线即开箱即用,行为与你的 Next.js 应用一致。`styled-jsx` 也能工作 —— 它和你的其他组件一样由 Next.js 的编译器编译。
+
+用法与上游一致 —— **见 [CSS Modules](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#csssassscss-modules)、[Tailwind](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#tailwind) / [PostCSS](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#postcss),以及 [Styled JSX](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#styled-jsx)**。唯一要知道的是*归属*:因为跑管线的是 Rsbuild(而非 Next.js),自定义的 PostCSS/Tailwind 配置会被 Rsbuild 的自动探测拾取,而预处理器则需手动开启 —— 见下文。
+
+#### `postcss.config` 的插件请用对象形式,而非字符串数组简写
+
+因为加载你的 `postcss.config.{js,mjs,ts}` 的是 **Rsbuild**(经由 `postcss-load-config`)而非 Next.js,所以裸的**字符串数组**插件简写不会被解析:
+
+```js
+// ❌ 这里会被拒绝 —— `Invalid PostCSS Plugin found at: plugins[0]`
+export default { plugins: ['@tailwindcss/postcss', 'cssnano'] }
+```
+
+该简写是 Next.js 的私有扩展(由 Next 自己去 require 这些字符串);而 `postcss-load-config` —— Rsbuild、裸 webpack 的 `postcss-loader`、Vite 等都用它 —— 只在**对象**形式里解析插件**名字符串**。请改用对象形式(它在 Next.js 里同样合法,所以同一份文件对 `next dev`/`next build` 继续有效):
+
+```js
+// ✅ 在 Next.js 和 Storybook 中都能工作
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    ...(process.env.NODE_ENV === 'production' ? { cssnano: {} } : {}),
+  },
+}
+```
+
+传入一个已实例化的插件数组(`plugins: [tailwindcss(), cssnano()]`)同样可行。
+
+### Sass / Less {#sass--less}
+
+这是**与官方 Next.js Storybook 行为不同**的唯一一项样式特性。上游继承了 Next.js 内置的 Sass 支持,零配置即可;而这里因为 Rsbuild 负责 CSS 管线,Sass 和 Less 需**通过一个 Rsbuild 插件手动开启**,且 `next.config` 里的 Sass 选项**不会**生效。如果你在没有配置 Sass loader 的情况下导入 `.scss`/`.sass` 文件,framework 会发出一条一次性 warning 指回这里。
+
+安装插件并通过 `rsbuildFinal` 合并:
+
+<PackageManagerTabs command="install @rsbuild/plugin-sass -D" />
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import { mergeRsbuildConfig } from '@rsbuild/core'
+import { pluginSass } from '@rsbuild/plugin-sass'
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-next-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  // Rsbuild owns the CSS pipeline — extend it the Rsbuild way.
+  rsbuildFinal: (config) =>
+    mergeRsbuildConfig(config, { plugins: [pluginSass()] }),
+}
+
+export default config
+```
+
+选择与你[版本矩阵](#version-matrix)那一行所 pin 的 `@rsbuild/core` 兼容的 `@rsbuild/plugin-sass` 版本。Less 的方式相同,使用 `@rsbuild/plugin-less`。
+
+### CSS-in-JS(styled-components 走 SWC,Emotion 运行时) {#css-in-js-styled-components-via-swc-emotion-at-runtime}
+
+它们是 Next.js 的 compiler transforms,所以你按 Next.js 的方式 —— 在 `next.config.ts` 里 —— 启用它们,stories 会以与应用相同的方式编译。无需 Storybook 侧接线:
+
+```ts twoslash title="next.config.ts"
+// @noErrors
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  compiler: {
+    styledComponents: true,
+  },
+}
+
+export default nextConfig
+```
+
+Emotion 不需要任何特殊 transform —— 它是运行时 CSS-in-JS,原样工作。(Next.js 的 `compiler.emotion` transform 是可选的,启用后同样会生效。)
+
+## 编译与模块解析 {#compilation--module-resolution}
+
+### SWC transforms、`transpilePackages`、`optimizePackageImports` {#swc-transforms-transpilepackages-optimizepackageimports}
+
+stories 用 Next.js 自己的编译器(SWC)编译,所以构建行为与你的应用一致:
+
+- `'use client'` 指令的行为与在 Next.js 中一致,`server-only` 模块也像真实构建一样解析。
+- `next.config.ts` 中的 `transpilePackages` 条目会自动应用到 stories。
+- `optimizePackageImports`(Next 15+ 默认开启)被支持,包括发布产物为 TypeScript 源码的 package。
+- JSX runtime 的选择跟随你的 `next.config.ts`。
+
+这些都是 Next.js 拥有的关注点:在 `next.config.ts` 里配置,即自动应用到 stories。(TypeScript 行为与上游一致 —— **见 [Typescript](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#typescript)**。)
+
+### 导入、aliases 与 tsconfig paths {#imports-aliases--tsconfig-paths}
+
+根相对的绝对导入、模块 aliases(`@/...`)、Node 标准的 subpath imports(来自 `package.json#imports` 的 `#...`),以及 `tsconfig.json` 的 `baseUrl`/`paths` 都能解析,因为 framework 应用了 Next.js 已解析的 aliases。其行为 —— 以及「绝对导入无法被 mock」这一注意点 —— 都与上游一致。**见 [Imports](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#imports)。**
+
+### 环境变量 {#environment-variables}
+
+`NEXT_PUBLIC_*` 变量与 `next.config.ts` 的 `env` 键会自动抵达你的 stories —— 它们在构建时被 inline,与 `next dev` / `next build` 完全一致。`.env*` 文件里的值也会以匹配的构建模式被读取:`storybook dev` 读取 `.env.development[.local]`,`storybook build` 读取 `.env.production[.local]`(两者也都会读取基础的 `.env` / `.env.local`)。无需再用 `rsbuildFinal` 的 `source.define` 重新定义。
+
+有一处限制与真实构建一致:**server-only** 环境变量 —— 即*不带* `NEXT_PUBLIC_` 前缀的那些 —— 不会被 inline 进 client bundle,因此在 stories 中读到的是 `undefined`,这与 `next build` 下 client 组件的行为完全相同。
+
+### `node:` 协议与 Node 内置模块 {#node-protocol--node-builtins}
+
+在面向浏览器的代码中导入 Node 内置模块不会让 Storybook 构建崩溃。裸内置模块(`fs`、`path`、`querystring` 等)和带 `node:` 前缀的导入(`node:path`,甚至 `node:sqlite`)都会解析到浏览器安全的替身 —— 一个空模块,或 Next.js 提供的 polyfill(如有)。部分库依赖的 `Buffer` / `process` 全局对象(如 `next-auth`、`openid-client`)也会被提供。无需任何配置。
+
+### 自定义 loaders(SVGR) {#custom-loaders-svgr}
+
+少数场景需要同时改动**两个**配置文件,因为 Next.js 的构建配置和 Storybook 的 preview 配置各管一段。SVGR 是典型例子:你在 `next.config.ts` 里添加 loader 规则(这样 `next dev` 和 Storybook 都能用上),同时还要通过 `webpackFinal` 把 `.svg` 从 Rsbuild 默认的 asset 规则里夺走 —— 这是 Storybook 侧的事。你的 `webpackFinal` 作用于完全组装好的配置,所以可以查看和改写已有规则。(如果 `webpackFinal` 添加的规则与来自 `next.config.ts` 的某条规则匹配相同的文件,framework 只保留 Storybook 侧那条并记录日志,避免文件被处理两遍;通过 `include`/`exclude`/`resourceQuery`/`issuer` 收窄到不同文件范围的规则则两条都保留。)
+
+```ts twoslash title="next.config.ts"
+// @noErrors
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  webpack: (config) => {
+    config.module?.rules?.push({ test: /\.svg$/, use: ['@svgr/webpack'] })
+    return config
+  },
+}
+
+export default nextConfig
+```
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-next-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-next-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  // Exclude .svg from Rsbuild's default asset rule so the SVGR rule added in
+  // next.config.webpack() is the one that processes them.
+  webpackFinal: async (config) => {
+    for (const rule of config.module?.rules ?? []) {
+      // Match ONLY Rsbuild's default asset rule — it carries a `oneOf`. The
+      // @svgr/webpack rule from next.config also has `test: /\.svg$/i` but no
+      // `oneOf`; excluding .svg from it too would disable SVGR and every
+      // `*.svg` would be parsed as raw JS.
+      if (
+        rule &&
+        typeof rule === 'object' &&
+        rule.test instanceof RegExp &&
+        rule.test.test('probe.svg') &&
+        Array.isArray(rule.oneOf)
+      ) {
+        const prev = (rule as any).exclude
+        ;(rule as any).exclude = Array.isArray(prev)
+          ? [...prev, /\.svg$/]
+          : prev
+            ? [prev, /\.svg$/]
+            : /\.svg$/
+      }
+    }
+    return config
+  },
+}
+
+export default config
+```
+
+## 在 stories 中 mock Next.js 的 API {#mocking-nextjs-apis-in-stories}
+
+为了交互测试和手动覆盖,framework 提供了一组与 `@storybook/nextjs-vite` 对应的 subpath 导出。每个入口都 re-export 真实的 Next.js 模块,并用来自 `storybook/test` 的可 spy 的 [`fn()`](https://storybook.js.org/docs/writing-tests/interaction-testing) mock 包裹部分 API。**只有 package 名不同** —— API 表面与行为都是原样移植的,所以上游参考同样适用(下表每行已给出链接)。
+
+<div style={{ width: '100%', maxWidth: '820px' }}>
+
+| Import | 用于 | 上游参考 |
+| :--- | :--- | :--- |
+| `storybook-next-rsbuild/navigation.mock` | App Router —— `useRouter`、`usePathname`、`useSearchParams`、`redirect`、`notFound`、`useParams` 等 + `getRouter()` | [`navigation.mock`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#storybooknextjs-vitenavigationmock) |
+| `storybook-next-rsbuild/router.mock` | Pages Router —— `useRouter`、`withRouter`、单例 router + `getRouter()` | [`router.mock`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#storybooknextjs-viteroutermock) |
+| `storybook-next-rsbuild/cache.mock` | `revalidatePath`、`revalidateTag`、`unstable_cache`、`unstable_noStore` | [`cache.mock`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#storybooknextjs-vitecachemock) |
+| `storybook-next-rsbuild/headers.mock` | `headers`、`cookies`、`draftMode`(可写:`headers().set(...)`、`cookies().set(...)`) | [`headers.mock`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#storybooknextjs-viteheadersmock) |
+
+</div>
+
+在 `play` 函数里调用 `getRouter()` 来断言 router 的交互。App Router 的 stories 用 `navigation.mock`,Pages Router 的 stories 用 `router.mock`:
+
+```tsx twoslash title="Navigation.stories.tsx"
+// @noErrors
+import { expect, userEvent, within } from 'storybook/test'
+import { getRouter } from 'storybook-next-rsbuild/navigation.mock'
+import type { StoryObj } from 'storybook-next-rsbuild'
+
+export const Default: StoryObj = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const router = getRouter()
+
+    await userEvent.click(canvas.getByRole('button'))
+    await expect(router.push).toHaveBeenCalledWith('/next')
+  },
+}
+```
+
+要 mock 你**自己的**(非 Next.js)模块,使用 Storybook 的 [module mocking](https://storybook.js.org/docs/writing-stories/mocking-data-and-modules/mocking-modules) 指南。
+
+注意事项:
+
+- **单例状态。** `getRouter()` 返回的是最近一次 story 渲染所注入的实例。不要跨 story 持有这个引用 —— 在每个 `play` 里都重新读取。
+- **仅限 client-side。** Storybook 不运行 Next.js 服务器,所以当 client 组件在 stories 中导入 server-only 的 API 时,`cache.mock` 和 `headers.mock` 是它们唯一能解析的途径。
+- **耦合 Next.js 内部实现。** `next` 升级可能移动这些入口所包裹的模块 —— 请让 `storybook-next-rsbuild` 与 `next` 一起升级。
+
+## Runtime config {#runtime-config}
+
+`getConfig()` 和 `publicRuntimeConfig` 原则上可用 —— 因为 Storybook 不做服务端渲染,组件看到的是 `publicRuntimeConfig`(而非 `serverRuntimeConfig`),与上游一致(**见 [Runtime config](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#runtime-config)**)。
+
+有一处差异:对 `next/config` 的旧式 import **不可用**。Next.js 16 把 `next/config` 从其 package exports 中移除了,因此在所支持的 Next 16 线上,从 `next/config` 导入的 `getConfig()` 已无法解析。
+
+## 已知限制 {#known-limitations}
+
+- **无 Server Components 运行时。** 标记了 `'use client'` 的组件会渲染;纯 Server Components 不会执行。注意本 framework **不**提供 [`@storybook/nextjs-vite` 所记录](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc)的 `experimentalRSC` Suspense 包裹路径 —— 只有 client 组件会渲染。
+- **无 API routes、middleware 或 server actions。** Storybook 不运行 Next.js 服务器 —— `route.ts`、`middleware.ts` 和 `'use server'` 入口都不会执行。(与 `@storybook/nextjs-vite` 相同。)
+- **无 `/_next/image` 优化。** `next/image`(以及 `next/legacy/image`)直接提供图片;运行时行为与生产环境(图片即时优化)不同。
+- **`turbopack.*` 配置键会被忽略。** Storybook 使用的是 Next.js webpack 侧的配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及旧式的 `experimental.turbo`)不会生效 —— framework 发现它们时会记录一条 warning。请通过 [`webpack()` 片段](#custom-loaders-svgr)镜像 Turbopack 的 loader 规则。
+- **Sass/Less 需要一个 Rsbuild 插件。** 预处理器支持需通过 `rsbuildFinal` 手动开启,而非从 Next.js 继承(见 [Sass / Less](#sass--less))。
+- **Next 16+ 不再支持 runtime config**(见 [Runtime config](#runtime-config))。
+- **部署/输出类配置大多不影响服务。** `output`(`export`/`standalone`)、`assetPrefix`、`trailingSlash` 以及 `rewrites`/`redirects`/`headers` 在 Storybook 中无任何作用 —— preview 在根路径下提供服务,所以 story 的资源路径(`staticDirs`、`next/image` 的 `src`)**无需**加 `basePath` 前缀。**`basePath` 是例外:** 它的值仍会编译进 client 代码,因此 `next/link` 与 router 的 href 在运行时*确实*会带上 `basePath` 前缀 —— 与 `@storybook/nextjs-vite` 一致。
+- **版本耦合。** framework 依赖 Next.js 内部实现。任何 `next` 的 patch 或 minor 发布都可能破坏兼容性 —— 请让 `storybook-next-rsbuild` 与 `next` 一起升级。
+
+## 后续步骤 {#next-steps}
+
+- **[编写 Stories](https://storybook.js.org/docs/writing-stories)**:了解 Component Story Format(CSF)的基础知识。
+- **[交互测试](https://storybook.js.org/docs/writing-tests/interaction-testing)**:断言上文的 router mocks。
+- **[配置指南](/guide/configuration)**:`rsbuildFinal`、builder 选项以及 TypeScript 设置。
+
+仓库中 [`sandboxes/nextjs`](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/nextjs) 提供了一份完整、可运行的参考,覆盖 App Router、Pages Router、`next/font`、`next/image`、CSS Modules、Tailwind、Sass、styled-components、Emotion、`optimizePackageImports`、`transpilePackages`、SVGR,以及自定义的 `next.config.webpack()` 配置。

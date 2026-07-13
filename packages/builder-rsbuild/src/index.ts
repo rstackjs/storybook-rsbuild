@@ -58,12 +58,44 @@ function nonNullables<T>(value: T): value is NonNullable<T> {
   return value !== undefined
 }
 
-const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
+/**
+ * A neutral empty rspack config used as the base a `webpackAddons` chain's
+ * `webpackFinal` runs against. Built fresh per call so no run mutates a shared
+ * object.
+ *
+ * TODO: using empty webpack config as base for now. It's better to using the
+ * composed rspack config in `iframe-rsbuild.config.ts` as base config. But when
+ * `tools.rspack` is an async function, the following `tools.rspack` raise an
+ * `Promises are not supported` error.
+ */
+const makeEmptyWebpackAddonsBase = (): rsbuildReal.Rspack.Configuration => ({
+  output: {},
+  module: {},
+  plugins: [],
+  resolve: {},
+  // https://github.com/web-infra-dev/rsbuild/blob/8dc35dc1d1500d2f119875d46b6a07e27986d532/packages/core/src/provider/rspackConfig.ts#L167
+  devServer: undefined,
+  optimization: {},
+  performance: {},
+  externals: {},
+  experiments: {},
+  node: {},
+  stats: {},
+  entry: {},
+})
+
+/**
+ * Resolve the `webpackAddons`-registered presets to their addon entries (the
+ * same resolution the builder uses for its own `webpackFinal` pass). Exported so
+ * a framework that OWNS the `webpackFinal` chain (see `webpackFinalOwnership`)
+ * can apply those hooks itself — against the real, fully-assembled rspack config
+ * instead of the builder's dummy base — without re-implementing the resolution.
+ */
+export async function resolveWebpackAddonPresets(options: Options) {
   const { presets } = options
-  // #region webpack addons
   const webpackAddons =
     await presets.apply<StorybookConfigRaw['addons']>('webpackAddons')
-  const resolvedWebpackAddons = (webpackAddons ?? [])
+  return (webpackAddons ?? [])
     .map((preset: Preset) => {
       const addonOptions = isObject(preset)
         ? preset.options || undefined
@@ -73,29 +105,64 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
       return resolveAddonName(options.configDir, name, addonOptions)
     })
     .filter(nonNullables)
-  const { apply } = await getPresets(resolvedWebpackAddons, options)
-  const webpackAddonsConfig: rsbuildReal.Rspack.Configuration = await apply(
-    'webpackFinal',
-    // TODO: using empty webpack config as base for now. It's better to using the composed rspack
-    // config in `iframe-rsbuild.config.ts` as base config. But when `tools.rspack` is an async function,
-    // the following `tools.rspack` raise an `Promises are not supported` error.
-    {
-      output: {},
-      module: {},
-      plugins: [],
-      resolve: {},
-      // https://github.com/web-infra-dev/rsbuild/blob/8dc35dc1d1500d2f119875d46b6a07e27986d532/packages/core/src/provider/rspackConfig.ts#L167
-      devServer: undefined,
-      optimization: {},
-      performance: {},
-      externals: {},
-      experiments: {},
-      node: {},
-      stats: {},
-      entry: {},
-    },
-    options,
+}
+
+/**
+ * Apply the `webpackAddons` chain's `webpackFinal` against a REAL base config,
+ * for a framework that owns the `webpackFinal` chain. Presets whose resolved
+ * `name` is already in `mainChainPresetNames` are skipped (they run in the
+ * framework's main-chain apply) so an addon listed in both `addons` and
+ * `webpackAddons` runs exactly once; the skipped names are returned so the
+ * caller can warn. Returns the (possibly new) config and the skipped names.
+ */
+export async function applyWebpackAddonsWebpackFinal(
+  options: Options,
+  baseConfig: rsbuildReal.Rspack.Configuration,
+  mainChainPresetNames: ReadonlySet<string>,
+): Promise<{
+  config: rsbuildReal.Rspack.Configuration
+  skipped: string[]
+}> {
+  const resolved = await resolveWebpackAddonPresets(options)
+  const skipped: string[] = []
+  const toApply = resolved.filter((entry: any) => {
+    if (entry?.name && mainChainPresetNames.has(entry.name)) {
+      skipped.push(entry.name)
+      return false
+    }
+    return true
+  })
+  if (toApply.length === 0) return { config: baseConfig, skipped }
+  const { apply } = await getPresets(toApply as any, options)
+  const config = await apply('webpackFinal', baseConfig, options)
+  return { config, skipped }
+}
+
+const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
+  const { presets } = options
+  // #region webpack addons
+  // A framework can declare it will run the `webpackFinal` chain itself (against
+  // the fully-assembled rspack config) by exporting `webpackFinalOwnership`. When
+  // it does, skip this dummy-config pass entirely so addon `webpackFinal` hooks
+  // don't run twice (once here against an empty base, once in the framework's
+  // own apply). Default `false` preserves the exact behavior for every other
+  // framework.
+  const ownsWebpackFinal = await presets.apply<boolean>(
+    'webpackFinalOwnership',
+    false,
   )
+  let webpackAddonsConfig: rsbuildReal.Rspack.Configuration =
+    makeEmptyWebpackAddonsBase()
+  if (!ownsWebpackFinal) {
+    // No main chain runs here, so there's nothing to skip — apply every
+    // `webpackAddons` preset against the empty base (same helper the
+    // framework-owned path uses, with an empty skip set).
+    ;({ config: webpackAddonsConfig } = await applyWebpackAddonsWebpackFinal(
+      options,
+      webpackAddonsConfig,
+      new Set(),
+    ))
+  }
   // #endregion
 
   let intrinsicRsbuildConfig = await rsbuildConfig(options, webpackAddonsConfig)
