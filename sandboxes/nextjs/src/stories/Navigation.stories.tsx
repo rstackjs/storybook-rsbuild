@@ -6,6 +6,7 @@ import {
   useSelectedLayoutSegment,
   useSelectedLayoutSegments,
 } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import type { Meta, StoryObj } from 'storybook-next-rsbuild'
 import { getRouter } from 'storybook-next-rsbuild/navigation.mock'
@@ -115,10 +116,69 @@ export const WithRouteParams: Story = {
       navigation: {
         pathname: '/safes/[address]',
         // Tuple form: app-router-provider reads `[name, value]` pairs and
-        // surfaces them via `useParams()`. Object form crashes the tree
-        // builder because it spreads `segments` as an iterable.
+        // surfaces them via `useParams()`.
         segments: [['address', '0xdeadbeef']],
       },
     },
   },
 }
+
+// Regression guard: the documented plain-object route-param form must render.
+// It previously threw `segments is not iterable` in the layout-tree builder
+// before the object branch in app-router-provider could handle it.
+export const WithObjectRouteParams: Story = {
+  parameters: {
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/safes/[address]',
+        segments: { address: '0xdeadbeef' },
+      },
+    },
+  },
+}
+
+// Regression guard: an App Router action override supplied via the documented
+// `navigation` parameter must reach the `next/navigation` mock. It was ignored
+// while the loader seeded `createNavigation` from the Pages Router `router`.
+//
+// The override forwards its argument to a React state setter so the effect is
+// DOM-observable: when the override is NOT wired (the bug), clicking push hits
+// the default mock and the readout stays `none`; when wired, it shows the arg.
+// Asserted end-to-end by nextjs.spec.ts (the Playwright regression gate).
+let overrideListener: ((arg: string) => void) | null = null
+const pushOverride = (arg: string) => overrideListener?.(arg)
+
+function NavigationOverrideProbe() {
+  const router = useRouter()
+  const [pushedArg, setPushedArg] = useState<string>('none')
+
+  useEffect(() => {
+    overrideListener = setPushedArg
+    return () => {
+      overrideListener = null
+    }
+  }, [])
+
+  return (
+    <div>
+      <div>pushed-arg: {pushedArg}</div>
+      <button type="button" onClick={() => router.push('/push-html')}>
+        Push HTML
+      </button>
+    </div>
+  )
+}
+
+export const WithNavigationOverride: StoryObj<typeof NavigationOverrideProbe> =
+  {
+    render: () => <NavigationOverrideProbe />,
+    parameters: {
+      nextjs: {
+        appDirectory: true,
+        navigation: {
+          push: pushOverride,
+        },
+      },
+    },
+  }
