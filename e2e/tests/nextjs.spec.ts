@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
+import { assertInjectedBuilderFresh } from '../../scripts/check-injected-artifact.ts'
 import { sandboxes } from '../sandboxes'
 import { previewFrame, waitForPreviewReady } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
@@ -23,6 +24,9 @@ test.describe(sandbox.name, () => {
   }
 
   test.beforeAll(async () => {
+    // Fail fast if framework-next's pnpm-injected builder artifact is stale.
+    // Scoped to the Next.js spec so unrelated sandboxes never hit this guard.
+    assertInjectedBuilderFresh()
     server = await launchSandbox(sandbox)
   })
 
