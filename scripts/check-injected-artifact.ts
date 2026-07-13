@@ -9,8 +9,10 @@
 // builder. This guard hashes a cheap `{relPath,size,mtime}` manifest of both
 // dist trees and fails fast when they diverge.
 //
-// Dependency-free on purpose (node builtins only): it runs as a Playwright
-// `globalSetup` and an Rstest `globalSetup` before any test spins up.
+// Dependency-free on purpose (node builtins only). Called directly from the
+// Next.js e2e spec's `beforeAll` (the only path that boots Storybook against the
+// injected builder) — deliberately NOT wired as a global Playwright/Rstest
+// setup, so unrelated sandboxes and pure-utility unit tests never hit it.
 
 import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, statSync } from 'node:fs'
@@ -89,14 +91,4 @@ export function assertInjectedBuilderFresh(
         `with packages/builder-rsbuild/dist (a builder rebuild severed the hard-links).`,
     )
   }
-}
-
-// Rstest `globalSetup` entry (named `setup`).
-export function setup(): void {
-  assertInjectedBuilderFresh()
-}
-
-// Playwright `globalSetup` entry (default export).
-export default function globalSetup(): void {
-  assertInjectedBuilderFresh()
 }
