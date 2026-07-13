@@ -9,10 +9,10 @@ Check out [rstackjs/storybook-rsbuild](https://github.com/rstackjs/storybook-rsb
 
 ## Installation
 
-Install `next-rspack` alongside `storybook-next-rsbuild` in the consuming Next.js project:
+Install `storybook-next-rsbuild` alongside `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from the [version matrix](https://storybook.rsbuild.rs/guide/framework/next#version-matrix). For example, on `next@16.2.3`:
 
 ```bash
-pnpm add -D storybook-next-rsbuild next-rspack
+pnpm add -D storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14
 ```
 
 `next-rspack` must be resolvable from Next.js itself because Next internally calls `require('next-rspack/rspack-core')` while generating the bridged Rspack config. Keep the `next-rspack` version aligned with your `next` version.
