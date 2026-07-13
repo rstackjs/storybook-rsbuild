@@ -357,6 +357,34 @@ test.describe(sandbox.name, () => {
     await expect(frame.getByText('address: 0xdeadbeef')).toBeVisible()
   })
 
+  test('next/navigation object route params render without crashing the tree', async ({
+    page,
+  }) => {
+    // Regression: object-form `segments` ({ address }) used to throw
+    // `segments is not iterable` in the layout-tree builder before rendering.
+    const frame = await openStory(
+      page,
+      'stories-navigation--with-object-route-params',
+    )
+    await expect(frame.getByText('address: 0xdeadbeef')).toBeVisible()
+  })
+
+  test('next/navigation push override from the navigation parameter is wired', async ({
+    page,
+  }) => {
+    // Regression: the App Router action override supplied via
+    // `parameters.nextjs.navigation` was ignored (loader seeded from `router`),
+    // so the override never fired and the readout stayed `none`. The story's
+    // play fn clicks push on load; the readout only reflects the pushed arg when
+    // the override is actually wired.
+    const frame = await openStory(
+      page,
+      'stories-navigation--with-navigation-override',
+    )
+    await frame.getByRole('button', { name: 'Push HTML' }).click()
+    await expect(frame.getByText('pushed-arg: /push-html')).toBeVisible()
+  })
+
   test('next.config.webpack() rule with bare @svgr/webpack loader resolves and runs', async ({
     page,
   }) => {

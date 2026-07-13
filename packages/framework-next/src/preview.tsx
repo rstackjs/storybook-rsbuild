@@ -79,8 +79,11 @@ export const loaders: LoaderFunction<ReactRenderer> = async ({
   globals,
   parameters,
 }) => {
-  const { router } = parameters.nextjs ?? {}
-  createNavigation(router)
+  const { router, navigation } = parameters.nextjs ?? {}
+  // App Router (`next/navigation`) reads its overrides from `navigation`;
+  // Pages Router (`next/router`) from `router`. Seeding both from `router` would
+  // ignore the documented App Router parameter and cross-wire the two mocks.
+  createNavigation(navigation)
   createRouter({
     locale: globals.locale,
     ...(router as Record<string, unknown>),

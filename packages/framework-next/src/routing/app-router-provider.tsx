@@ -73,7 +73,18 @@ export const AppRouterProvider: React.FC<
   const { pathname, query, segments = [] } = routeParams
 
   const tree: FlightRouterState = useMemo(
-    () => [pathname, { children: getParallelRoutes([...segments]) }],
+    // The layout tree is built only from the array (segment-tuple) form.
+    // `segments` may also be the documented plain-object route-param form
+    // (`{ address: '0x…' }`), handled by `pathParams` below — spreading it here
+    // would throw `segments is not iterable` before that branch is reached.
+    () => [
+      pathname,
+      {
+        children: getParallelRoutes(
+          Array.isArray(segments) ? [...segments] : [],
+        ),
+      },
+    ],
     [pathname, segments],
   )
 
