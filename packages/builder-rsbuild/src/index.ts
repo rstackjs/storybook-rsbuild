@@ -11,6 +11,7 @@ import type {
   Preset,
   StorybookConfigRaw,
 } from 'storybook/internal/types'
+import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
 import rsbuildConfig, {
@@ -127,9 +128,30 @@ export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
 }
 
 let server: RsbuildDevServer
+let activeCompiler: rsbuildReal.Rspack.Compiler | undefined
 
 export async function bail(): Promise<void> {
+  activeCompiler = undefined
   return server?.close()
+}
+
+/**
+ * Returns a {@link ChangeDetectionAdapter} bound to the Rspack compiler created by `start()`.
+ *
+ * Storybook core only invokes this after `start()` has resolved, so `activeCompiler` is populated
+ * in practice. The guard is defensive: it fails loudly on an unexpected call-before-start rather
+ * than silently binding to an undefined compiler.
+ */
+export const changeDetectionAdapter: NonNullable<
+  RsbuildBuilder['changeDetectionAdapter']
+> = () => {
+  if (!activeCompiler) {
+    // eslint-disable-next-line local-rules/no-uncategorized-errors
+    throw new Error(
+      'builder-rsbuild: changeDetectionAdapter() called before start(); the Rspack compiler is not ready yet.',
+    )
+  }
+  return createRspackChangeDetectionAdapter(activeCompiler)
 }
 
 export const start: RsbuildBuilder['start'] = async ({
@@ -153,6 +175,12 @@ export const start: RsbuildBuilder['start'] = async ({
         printUrls: false,
       },
     },
+  })
+
+  rsbuildBuild.onAfterCreateCompiler(({ compiler }) => {
+    // Rsbuild yields a MultiCompiler when several environments are built; the preview iframe is
+    // a single environment, so pick the first child compiler for change detection.
+    activeCompiler = 'compilers' in compiler ? compiler.compilers[0] : compiler
   })
 
   const rsbuildServer = await rsbuildBuild.createDevServer()
