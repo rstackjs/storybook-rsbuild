@@ -1,5 +1,8 @@
 import { describe, expect, it } from '@rstest/core'
-import { describeRspackMismatch } from './check-rspack-invariant'
+import {
+  describeNextRspackPairingMismatch,
+  describeRspackMismatch,
+} from './check-rspack-invariant'
 
 const makeSide = (
   over: Partial<{ source: string; pkgPath: string; version: string }> = {},
@@ -74,5 +77,27 @@ describe('describeRspackMismatch', () => {
     expect(out).toContain('dedupe')
     expect(out).toContain('/__virtual__/A/')
     expect(out).toContain('/__virtual__/B/')
+  })
+})
+
+describe('describeNextRspackPairingMismatch', () => {
+  it('returns null when either version is unresolved', () => {
+    expect(describeNextRspackPairingMismatch(undefined, '16.2.3')).toBeNull()
+    expect(describeNextRspackPairingMismatch('16.2.3', undefined)).toBeNull()
+    expect(describeNextRspackPairingMismatch(undefined, undefined)).toBeNull()
+  })
+
+  it('returns null when next and next-rspack are the exact same version', () => {
+    expect(describeNextRspackPairingMismatch('16.2.3', '16.2.3')).toBeNull()
+  })
+
+  it('flags a mismatch even when the two share an @rspack/core row', () => {
+    // 16.1/16.2 both map to the same @rspack/core row, so the rspack-copy check
+    // passes — but Next loads next-rspack internals directly, so this must fail.
+    const out = describeNextRspackPairingMismatch('16.2.3', '16.1.0')
+    expect(out).toContain('16.2.3')
+    expect(out).toContain('16.1.0')
+    expect(out).toContain('next-rspack must match next exactly')
+    expect(out).toContain('Install next-rspack@16.2.3')
   })
 })

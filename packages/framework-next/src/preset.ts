@@ -285,8 +285,6 @@ class ReactRefreshInitPlugin {
 export const rsbuildFinal: NonNullable<
   StorybookConfig['rsbuildFinal']
 > = async (config, options) => {
-  checkRspackInvariant(options.configDir ?? process.cwd())
-
   const {
     nextConfigPath,
     forwardNextConfigPlugins = false,
@@ -302,6 +300,17 @@ export const rsbuildFinal: NonNullable<
       : resolvePath(options.configDir ?? process.cwd(), nextConfigPath)
     : undefined
 
+  // The dir Next's config is extracted from: the dir holding the resolved
+  // `next.config`, else `undefined` (extraction then defaults to `process.cwd()`,
+  // Next's own default). The invariant resolves `next` / `next-rspack` from the
+  // SAME install — not `configDir`, which diverges from the Next app in a
+  // monorepo (`.storybook` living outside the bridged project).
+  const nextConfigDir = resolvedNextConfigPath
+    ? dirname(resolvedNextConfigPath)
+    : undefined
+
+  checkRspackInvariant(nextConfigDir ?? process.cwd())
+
   // Storybook builds in two modes: dev server (`storybook dev`) and static
   // build (`build-storybook`). We extract Next.js's config in the MATCHING mode
   // (`getBaseWebpackConfig({ dev })`), so the emitted loaders/plugins/defines
@@ -309,10 +318,10 @@ export const rsbuildFinal: NonNullable<
   // `NODE_ENV` define, or `next-swc-loader.dev` is needed.
   const isDev = options.configType !== 'PRODUCTION'
 
-  const extraction = await extractNextRspackConfig(
-    resolvedNextConfigPath ? dirname(resolvedNextConfigPath) : undefined,
-    { dev: isDev, allowMissingNextBridge },
-  )
+  const extraction = await extractNextRspackConfig(nextConfigDir, {
+    dev: isDev,
+    allowMissingNextBridge,
+  })
 
   // Layering: Storybook overrides (next/image mock, styled-jsx singleton) →
   // Next.js base aliases (filtered) → user delta. `buildAliasLayers` owns the

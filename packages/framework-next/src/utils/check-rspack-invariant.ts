@@ -153,7 +153,47 @@ function resolveFromNextRspack(cwd: string): ResolvedRspack | undefined {
   return { source: 'next-rspack', pkgPath, version }
 }
 
+/**
+ * Exported for unit testing — a shared `@rspack/core` row is necessary but not
+ * sufficient: Next.js loads `next-rspack` internals directly, so `next` and
+ * `next-rspack` must be installed at the *exact* same version (a 16.1/16.2 mix
+ * that happens to share an `@rspack/core` row still breaks). Returns the error
+ * message (or `null` for OK / unresolved).
+ */
+export function describeNextRspackPairingMismatch(
+  nextVersion: string | undefined,
+  nextRspackVersion: string | undefined,
+): string | null {
+  if (!nextVersion || !nextRspackVersion) return null
+  if (nextVersion === nextRspackVersion) return null
+  return [
+    '[storybook-next-rsbuild] next-rspack must match next exactly.',
+    '',
+    `  next:        ${nextVersion}`,
+    `  next-rspack: ${nextRspackVersion}`,
+    '',
+    'Next.js loads next-rspack internals directly, so the two must be installed',
+    `at the same version. Install next-rspack@${nextVersion}.`,
+    '',
+    `See ${MATRIX_URL}`,
+  ].join('\n')
+}
+
+function resolvePackageVersion(cwd: string, pkg: string): string | undefined {
+  const pkgPath = resolvePkgJson(`${cwd}/`, pkg)
+  if (!pkgPath) return
+  return readVersion(pkgPath)
+}
+
 export function checkRspackInvariant(cwd: string = process.cwd()): void {
+  // Exact next / next-rspack pairing, checked from the target project. Silent
+  // when either package can't be resolved — downstream throws more specifically.
+  const pairingMessage = describeNextRspackPairingMismatch(
+    resolvePackageVersion(cwd, 'next'),
+    resolvePackageVersion(cwd, 'next-rspack'),
+  )
+  if (pairingMessage) throw new Error(pairingMessage)
+
   // Silent when either side can't be resolved — downstream code paths already
   // throw with more specific diagnostics (missing peer, missing next-rspack, etc.).
   const message = describeRspackMismatch(
