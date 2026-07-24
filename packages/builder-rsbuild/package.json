@@ -70,7 +70,7 @@
     "util-deprecate": "^1.0.2"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.1.5",
+    "@rsbuild/core": "^2.1.8",
     "@storybook/core-webpack": "10.5.3",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",

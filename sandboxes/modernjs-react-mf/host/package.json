@@ -23,7 +23,7 @@
     "@modern-js/app-tools": "^3.6.0",
     "@modern-js/tsconfig": "3.6.0",
     "@module-federation/storybook-addon": "^6.0.15",
-    "@rsbuild/core": "^2.1.5",
+    "@rsbuild/core": "^2.1.8",
     "@storybook/addon-docs": "10.5.3",
     "@storybook/addon-onboarding": "10.5.3",
     "@storybook/react": "10.5.3",
