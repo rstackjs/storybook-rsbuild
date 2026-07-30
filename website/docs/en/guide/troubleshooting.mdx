@@ -33,33 +33,6 @@ The preview template correctly handles absolute URLs, so JS/CSS bundles will be 
 > [!NOTE]
 > This is an improvement over the [official webpack5 builder](https://github.com/storybookjs/storybook/issues/23481), which does not support CDN asset hosting due to its template always prepending `./` to import paths.
 
-## CSS `url()` references to static assets
-
-> In v3.3.2 and earlier, CSS `url()` worked correctly when served from the root path because the default `assetPrefix` was `'/'`. Since v3.3.3, the default changed to `''` (relative) for subdirectory support, which introduces this limitation.
-
-When CSS files reference other assets via `url()` (e.g., `background: url('./image.png')`), the generated paths may resolve incorrectly in the production build. This happens because Rspack emits `url()` paths relative to the output root, but the browser resolves them relative to the CSS file's location. This is a known trade-off of using relative paths, and the [official Storybook builders have the same limitation](https://github.com/storybookjs/storybook/issues/23447).
-
-If your stories rely on CSS `url()` references, you can switch to absolute paths via [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix):
-
-```js
-import { mergeRsbuildConfig } from '@rsbuild/core'
-
-const config: StorybookConfig = {
-  // --snip--
-  rsbuildFinal: (config) => {
-    return mergeRsbuildConfig(config, {
-      output: {
-        assetPrefix: '/',
-      },
-    })
-  },
-  // --snip--
-}
-```
-
-> [!NOTE]
-> Setting `assetPrefix: '/'` fixes CSS `url()` references when served from the root path, but breaks subdirectory deployment. Choose the option that fits your deployment scenario.
-
 ## `Template.toString()` shows compiled code in Docs source snippet
 
 When using the CSF 2 `Template.bind({})` pattern and `Template.toString()` to display source code in the Docs addon, the snippet shows bundler-compiled output instead of your original source.

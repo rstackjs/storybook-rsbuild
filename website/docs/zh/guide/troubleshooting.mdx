@@ -33,33 +33,6 @@ preview 模板能够正确处理绝对 URL，因此 JS/CSS 产物会从 CDN 加�
 > [!NOTE]
 > 相较于[官方 webpack5 builder](https://github.com/storybookjs/storybook/issues/23481)，这是一项改进 —— 后者因模板始终在 import 路径前加上 `./`，并不支持 CDN 资源托管。
 
-## CSS `url()` 对静态资源的引用
-
-> 在 v3.3.2 及更早版本中，从根路径提供服务时 CSS `url()` 能正常工作，因为默认的 `assetPrefix` 为 `'/'`。自 v3.3.3 起，默认值改为 `''`（相对路径）以支持子目录，从而引入了这一限制。
-
-当 CSS 文件通过 `url()` 引用其他资源时（例如 `background: url('./image.png')`），生成的路径在生产构建中可能解析错误。这是因为 Rspack 输出的 `url()` 路径相对于输出根目录，而浏览器却相对于 CSS 文件所在位置进行解析。这是使用相对路径的一项已知权衡，[官方 Storybook builder 也存在同样的限制](https://github.com/storybookjs/storybook/issues/23447)。
-
-如果你的 story 依赖 CSS `url()` 引用，可以通过 [`output.assetPrefix`](https://rsbuild.rs/config/output/asset-prefix) 切换为绝对路径：
-
-```js
-import { mergeRsbuildConfig } from '@rsbuild/core'
-
-const config: StorybookConfig = {
-  // --snip--
-  rsbuildFinal: (config) => {
-    return mergeRsbuildConfig(config, {
-      output: {
-        assetPrefix: '/',
-      },
-    })
-  },
-  // --snip--
-}
-```
-
-> [!NOTE]
-> 设置 `assetPrefix: '/'` 可以修复从根路径提供服务时的 CSS `url()` 引用，但会破坏子目录部署。请根据你的部署场景选择合适的方案。
-
 ## `Template.toString()` 在 Docs 源码片段中显示编译后的代码
 
 当使用 CSF 2 的 `Template.bind({})` 模式，并通过 `Template.toString()` 在 Docs addon 中展示源码时，片段显示的是 bundler 编译后的输出，而非你的原始源码。

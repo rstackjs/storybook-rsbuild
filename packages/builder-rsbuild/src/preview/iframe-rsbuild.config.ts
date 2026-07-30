@@ -263,6 +263,25 @@ export default async (
       },
       distPath: {
         root: resolve(process.cwd(), outputDir),
+        // Flat output, matching the official webpack5 builder. With
+        // `assetPrefix: ''` every context resolves relative URLs against
+        // itself, so nesting breaks worker chunks and CSS url(). See the
+        // "Preview Output Layout" docs section (#522).
+        //
+        // Load-bearing — these four carry the relative URLs that break:
+        js: '',
+        jsAsync: '', // does not inherit `js`, must be explicit
+        css: '',
+        cssAsync: '', // does not inherit `css`, must be explicit
+        // Parity with the webpack5 builder's flat layout. `filename` stacks on
+        // top of `distPath`, so image/font/media still land under the
+        // `static/media/` prefix set below.
+        svg: '',
+        font: '',
+        image: '',
+        media: '',
+        wasm: '',
+        assets: '',
       },
       filename: {
         js: isProd

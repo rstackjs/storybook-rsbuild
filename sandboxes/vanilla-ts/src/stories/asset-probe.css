@@ -1,0 +1,9 @@
+/* The `url()` here is rewritten by Rspack relative to the output root, but the
+   browser resolves it relative to this CSS file. Both only agree when the CSS
+   is emitted at the dist root. */
+#asset-probe-background {
+  width: 96px;
+  height: 96px;
+  background-image: url("./assets/accessibility.png");
+  background-size: cover;
+}

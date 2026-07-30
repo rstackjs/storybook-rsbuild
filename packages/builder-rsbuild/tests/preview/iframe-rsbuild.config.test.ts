@@ -201,7 +201,8 @@ describe('iframe-rsbuild.config', () => {
   // The default assetPrefix must be '' (empty string) to produce relative paths,
   // enabling subpath/CDN deployment without manual config (#224).
   // Using '/' caused absolute paths that break non-root deployments.
-  // See HANDOFF.md "Failed Approaches" for the full regression chain.
+  // '' only works with a flat output layout, which the distPath tests below
+  // lock in (#522).
   describe('assetPrefix defaults to empty string for subpath deployment (#224)', () => {
     it('sets output.assetPrefix to empty string in dev mode (#72)', async () => {
       const { options } = createOptions(false, 'DEVELOPMENT')
@@ -226,6 +227,39 @@ describe('iframe-rsbuild.config', () => {
       )
       expect(config.output?.assetPrefix).toBe('')
     })
+  })
+
+  // Regression tests for the flat output layout — guards against #522 (and #28).
+  // Restoring Rsbuild's nested defaults (static/js, static/js/async, static/css)
+  // reintroduces #522: relative chunk URLs get resolved against the worker script
+  // or the CSS file instead of the document, producing paths such as
+  // /static/js/async/static/js/async/<id>.iframe.bundle.js. Asserted as a whole
+  // object so a newly added nesting key fails the test instead of slipping past.
+  describe('flattens output.distPath so assetPrefix "" resolves everywhere (#522)', () => {
+    const flatDistPath = {
+      root: resolve(process.cwd(), 'storybook-static'),
+      js: '',
+      jsAsync: '',
+      css: '',
+      cssAsync: '',
+      svg: '',
+      font: '',
+      image: '',
+      media: '',
+      wasm: '',
+      assets: '',
+    }
+
+    for (const configType of ['DEVELOPMENT', 'PRODUCTION'] as const) {
+      it(`sets every output.distPath key to '' in ${configType.toLowerCase()} mode`, async () => {
+        const { options } = createOptions(false, configType)
+        const config = await createIframeRsbuildConfig(
+          options as RsbuildBuilderOptions,
+        )
+
+        expect(config.output?.distPath).toEqual(flatDistPath)
+      })
+    }
   })
 
   // Regression test for preview.ejs template — guards against #75 and #23481 (webpack5).

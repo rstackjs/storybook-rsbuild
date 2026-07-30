@@ -183,3 +183,19 @@ export default config;
 ```
 
 See [Storybook TypeScript Docs](https://storybook.js.org/docs/configure/integration/typescript) for general TypeScript configuration.
+
+## Preview Output Layout
+
+`storybook build` emits the preview with a flat layout — bundled JS and CSS land directly in the output directory (`storybook-static` by default), the same as the official webpack5 builder:
+
+```text
+storybook-static/
+├── iframe.html
+├── main.<hash>.iframe.bundle.js
+├── <chunk-id>.<hash>.iframe.bundle.js
+├── <entry>.<hash>.css
+├── <name>.<hash>.svg      # imported SVGs and WebAssembly also land at the root
+└── static/media/          # imported images, fonts, and media
+```
+
+Versions before v3.4.0 nested these files under `static/js/`, `static/js/async/`, and `static/css/`.

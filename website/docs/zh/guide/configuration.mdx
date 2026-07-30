@@ -183,3 +183,19 @@ export default config;
 ```
 
 通用的 TypeScript 配置请参阅 [Storybook TypeScript 文档](https://storybook.js.org/docs/configure/integration/typescript)。
+
+## Preview 产物目录结构
+
+`storybook build` 输出的 preview 产物采用扁平结构 —— 打包后的 JS 与 CSS 直接产出到输出目录（默认为 `storybook-static`），与官方 webpack5 builder 一致：
+
+```text
+storybook-static/
+├── iframe.html
+├── main.<hash>.iframe.bundle.js
+├── <chunk-id>.<hash>.iframe.bundle.js
+├── <entry>.<hash>.css
+├── <name>.<hash>.svg      # 被引入的 SVG 与 WebAssembly 同样位于根目录
+└── static/media/          # 被引入的图片、字体与媒体资源
+```
+
+v3.4.0 之前的版本会将这些文件嵌套在 `static/js/`、`static/js/async/` 和 `static/css/` 下。

@@ -37,13 +37,7 @@ describe.each(SANDBOX_CASES)('$sandbox config snapshots', ({
   for (const target of targets) {
     it(`matches ${target.id}`, async () => {
       const inspectResult = await inspectResultPromise
-      const asyncChunkDir = join(
-        inspectResult.outputDir,
-        'static',
-        'js',
-        'async',
-      )
-      const matchedFile = (await readdir(asyncChunkDir)).find(
+      const matchedFile = (await readdir(inspectResult.outputDir)).find(
         target.fileMatcher,
       )
 
@@ -53,7 +47,7 @@ describe.each(SANDBOX_CASES)('$sandbox config snapshots', ({
         )
       }
 
-      const filePath = join(asyncChunkDir, matchedFile)
+      const filePath = join(inspectResult.outputDir, matchedFile)
       const content = await readFile(filePath, 'utf8')
       const gfmRuntimeMarkers = target.extract(content)
 
