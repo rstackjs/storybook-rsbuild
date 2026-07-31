@@ -72,6 +72,14 @@ export class RspackMockPlugin {
           [normalizePath(mock.absolutePath.replace(/\.[^.]+$/, '')), mock],
         ]),
       )
+      // TODO: `mock.path` is not the specifier the user wrote. `extractMockCalls`
+      // strips the extension when the declared specifier's basename matches the
+      // resolved file's basename, so `sb.mock('pkg/dist/index.js')` is stored as
+      // `pkg/dist/index` while `resource.request` keeps the `.js`. The pre-filter
+      // below then misses that request and silently skips a mock it was never meant
+      // to drop. Register the extension-bearing form here as well.
+      // (builder-webpack5 has the same bug: webpack-mock-plugin.ts:86 on `next`.)
+      // See https://github.com/rstackjs/storybook-rsbuild/pull/524#discussion_r3688976092
       this.candidateSpecifiers = new Set(resolved.map((mock) => mock.path))
       this.lastPreviewMtime = mTimePreviewConfig
 
