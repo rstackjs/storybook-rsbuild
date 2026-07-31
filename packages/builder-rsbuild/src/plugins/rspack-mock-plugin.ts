@@ -58,9 +58,9 @@ export class RspackMockPlugin {
     const updateMocks = () => {
       const mTimePreviewConfig = this.getPreviewConfigMtime(compiler)
       if (
-        this.lastPreviewMtime &&
-        mTimePreviewConfig &&
-        mTimePreviewConfig <= this.lastPreviewMtime
+        this.lastPreviewMtime !== undefined &&
+        mTimePreviewConfig !== undefined &&
+        mTimePreviewConfig === this.lastPreviewMtime
       ) {
         return // unchanged
       }
