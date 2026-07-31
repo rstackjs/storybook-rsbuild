@@ -41,19 +41,19 @@ function normalizePathSeparators(value: string): string {
   return value.replaceAll('\\', '/')
 }
 
-describe.each(CASES)('$name core preset', ({
-  modulePath,
-  expectedRendererSegment,
-}) => {
-  it('preserves incoming core config while applying builder settings', async () => {
-    const result = await runCorePreset(resolve(workspaceRoot, modulePath))
+describe.each(CASES)(
+  '$name core preset',
+  ({ modulePath, expectedRendererSegment }) => {
+    it('preserves incoming core config while applying builder settings', async () => {
+      const result = await runCorePreset(resolve(workspaceRoot, modulePath))
 
-    expect(result.channelOptions).toEqual({ wsToken: 'test-token' })
-    expect(result.disableTelemetry).toBe(true)
-    expect(result.builderOptions).toEqual({ lazyCompilation: true })
-    expect(result.builderName).toBeTruthy()
-    expect(normalizePathSeparators(result.renderer)).toContain(
-      expectedRendererSegment,
-    )
-  })
-})
+      expect(result.channelOptions).toEqual({ wsToken: 'test-token' })
+      expect(result.disableTelemetry).toBe(true)
+      expect(result.builderOptions).toEqual({ lazyCompilation: true })
+      expect(result.builderName).toBeTruthy()
+      expect(normalizePathSeparators(result.renderer)).toContain(
+        expectedRendererSegment,
+      )
+    })
+  },
+)

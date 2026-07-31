@@ -28,37 +28,37 @@ const SANDBOX_CASES: SandboxSnapshotCase[] = [
   },
 ]
 
-describe.each(SANDBOX_CASES)('$sandbox config snapshots', ({
-  sandbox,
-  targets,
-}) => {
-  const inspectResultPromise = runSandboxInspect(sandbox)
+describe.each(SANDBOX_CASES)(
+  '$sandbox config snapshots',
+  ({ sandbox, targets }) => {
+    const inspectResultPromise = runSandboxInspect(sandbox)
 
-  for (const target of targets) {
-    it(`matches ${target.id}`, async () => {
-      const inspectResult = await inspectResultPromise
-      const matchedFile = (await readdir(inspectResult.outputDir)).find(
-        target.fileMatcher,
-      )
-
-      if (!matchedFile) {
-        throw new Error(
-          `No built file matched "${target.id}" for sandbox "${sandbox}"`,
+    for (const target of targets) {
+      it(`matches ${target.id}`, async () => {
+        const inspectResult = await inspectResultPromise
+        const matchedFile = (await readdir(inspectResult.outputDir)).find(
+          target.fileMatcher,
         )
-      }
 
-      const filePath = join(inspectResult.outputDir, matchedFile)
-      const content = await readFile(filePath, 'utf8')
-      const gfmRuntimeMarkers = target.extract(content)
+        if (!matchedFile) {
+          throw new Error(
+            `No built file matched "${target.id}" for sandbox "${sandbox}"`,
+          )
+        }
 
-      // These markers only appear when remark-gfm transformed the MDX content.
-      expect(gfmRuntimeMarkers).toContain('mailto:contact@example.com')
-      expect(gfmRuntimeMarkers).toContain('data-footnote-ref')
-      expect(gfmRuntimeMarkers).toContain('contains-task-list')
-      expect(gfmRuntimeMarkers).toContain('textAlign: "center"')
-    })
-  }
-})
+        const filePath = join(inspectResult.outputDir, matchedFile)
+        const content = await readFile(filePath, 'utf8')
+        const gfmRuntimeMarkers = target.extract(content)
+
+        // These markers only appear when remark-gfm transformed the MDX content.
+        expect(gfmRuntimeMarkers).toContain('mailto:contact@example.com')
+        expect(gfmRuntimeMarkers).toContain('data-footnote-ref')
+        expect(gfmRuntimeMarkers).toContain('contains-task-list')
+        expect(gfmRuntimeMarkers).toContain('textAlign: "center"')
+      })
+    }
+  },
+)
 
 function extractGfmRuntimeMarkers(bundleCode: string): string {
   return bundleCode
