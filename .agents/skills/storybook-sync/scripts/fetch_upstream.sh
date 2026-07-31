@@ -21,6 +21,8 @@ PATHS=(
   "code/frameworks/react-webpack5"
   "code/frameworks/vue3-vite"
   "code/frameworks/web-components-vite"
+  "code/frameworks/html-vite"
+  "code/presets/react-webpack"
   "code/lib/core-webpack"
 )
 

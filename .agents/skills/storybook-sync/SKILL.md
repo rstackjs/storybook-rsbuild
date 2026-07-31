@@ -20,11 +20,15 @@ Analyze recent changes in the official `storybookjs/storybook` repository and id
 | code/frameworks/react-webpack5         | packages/framework-react             |
 | code/frameworks/vue3-vite              | packages/framework-vue3              |
 | code/frameworks/web-components-vite    | packages/framework-web-components    |
+| code/frameworks/html-vite              | packages/framework-html              |
+| code/presets/react-webpack             | packages/framework-react             |
 | code/lib/core-webpack                  | packages/builder-rsbuild (prebundled)|
 +----------------------------------------+--------------------------------------+
 ```
 
 Both webpack5 and vite upstream variants are monitored because this repo borrows patterns from both.
+
+This table defines **watch scope** — which upstream directories are scanned for commits. Counterpart questions ("does this file have a local port?") are answered at file granularity by `.agents/skills/storybook-check/manifest.json` (`mappings`), which also records each file's accepted intentional divergences. Packages listed here but absent from the manifest (builder-vite, core-webpack) are pattern sources rather than ports: triage judges their commits case by case for semantic relevance, and the manifest intentionally carries no entries for them — file-level mappings only make sense where a real port exists.
 
 ## Upstream Commit History is Noisy
 
@@ -33,6 +37,8 @@ The Storybook repo uses a non-linear branching model with frequent merge commits
 **Always judge from the actual diff.** Storybook does not consistently follow conventional commits, so commit messages are unreliable for triage decisions.
 
 ## Sync Priority Criteria
+
+A wrong skip is the most expensive mistake this workflow can make: the next run starts after this range, so a skipped commit is never seen again, and the miss stays invisible until it resurfaces as a user-facing bug. When torn between two priorities, take the higher one.
 
 **High** — sync soon:
 - Bug fixes in logic that was adapted into storybook-rsbuild
@@ -51,7 +57,7 @@ The Storybook repo uses a non-linear branching model with frequent merge commits
 - Test changes that reveal expected behavioral contracts
 
 **Skip**:
-- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals)
+- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals). This label makes a factual claim — that no local counterpart exists — so earn it before using it: look up every touched file in `.agents/skills/storybook-check/manifest.json` (`mappings`), and for files the manifest doesn't list, check for a same-purpose local file. If any touched file has a counterpart, the claim is false and the commit is at least medium (high for bug fixes). Commit messages and file paths are not evidence here: files under `builder-webpack5/src/plugins/` and `src/loaders/` read as webpack-specific by path, yet are ported 1:1 into this repo.
 - Documentation-only changes
 - CI/tooling changes internal to the Storybook repo
 - Changes to `storybook/internal/*` APIs (these arrive via the `storybook` npm dependency, not by manual sync)
@@ -92,7 +98,7 @@ Determine the commit range.
 - **Absolute date range**: "since 2025-12-01", "Dec 1 to Dec 20" → use `--since` / `--until`
 - **Version tags**: "between v8.4.0 and v8.5.0" → use `--from` / `--to`
 
-**Important**: For relative date ranges, always use `--days N`. The script reads the system clock to compute exact dates, avoiding date miscalculation.
+For relative date ranges, always use `--days N` — the script reads the system clock to compute exact dates, avoiding date miscalculation.
 
 ### 2. Get commit summary and decide strategy
 
@@ -120,7 +126,7 @@ bash <skill-dir>/scripts/fetch_upstream.sh --diff-all --days <N>
 
 For each commit in the output:
 1. **Read the diff** — this is the ground truth. Never skip a commit based on its message or file list alone.
-2. **Read the corresponding local source file** using the package mapping table above.
+2. **Read the corresponding local source file** — resolve it at file granularity via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package table only for files the manifest doesn't list. Open the file rather than inferring from its name: a skip verdict of "no Rsbuild parallel" is only as good as the search that failed to find one.
 3. **Classify** using the sync priority criteria above.
 4. **Check for revert chains** — if a commit and its revert both appear, check if the net effect is zero. If so, classify both as skip.
 
@@ -134,7 +140,7 @@ Then proceed to step 4.
 2. Target 3–5 subagents. Calculate: `target_lines_per_batch = total_lines / batch_count`.
 3. Walk through the commit list in order. Accumulate commits into the current batch. When the accumulated lines exceed the target, start a new batch. Keep adjacent commits together when possible — they are often related.
 
-**Spawn subagents** — one per batch. Launch all Agent calls in a single message without `run_in_background` so they execute in parallel as foreground calls. You will receive all results at once when they complete. Do NOT use `run_in_background`, do NOT `sleep` or poll.
+**Spawn subagents** — one per batch. Launch all Agent calls in a single message without `run_in_background`, so they execute in parallel as foreground calls and their results all arrive together — no sleeping or polling needed.
 
 Use this prompt template for each subagent (note `--no-fetch` — the primary agent already fetched in step 2):
 
@@ -152,13 +158,18 @@ Package mapping (upstream → local):
   code/frameworks/react-webpack5      → packages/framework-react
   code/frameworks/vue3-vite           → packages/framework-vue3
   code/frameworks/web-components-vite → packages/framework-web-components
+  code/frameworks/html-vite           → packages/framework-html
+  code/presets/react-webpack          → packages/framework-react
   code/lib/core-webpack               → packages/builder-rsbuild (prebundled)
 
 Steps:
 1. Run: bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --diff-all --hashes <COMMA_SEPARATED_HASHES>
 2. For each commit, read its diff carefully — this is the ground truth.
    Commit messages are often inaccurate; always judge from the actual diff.
-3. Read the corresponding local source file in storybook-rsbuild for comparison.
+3. Resolve each touched upstream file to its local counterpart using
+   .agents/skills/storybook-check/manifest.json (mappings array, file-level),
+   falling back to the package mapping above. Read the local file —
+   classification is a comparison, not a guess.
 4. Classify each commit and return the results in the exact format below.
 
 Priority criteria:
@@ -166,6 +177,13 @@ Priority criteria:
   medium — new feature worth adopting, significant refactoring of adapted patterns
   low    — minor improvement, added error handling, test revealing behavioral contract
   skip   — Vite/webpack internals with no Rsbuild parallel, docs, CI, storybook/internal API changes
+
+A skipped commit is never revisited by this workflow, so "no Rsbuild parallel"
+must be earned: it is only valid if none of the commit's touched files has a
+local counterpart — in the manifest or by same-purpose inspection. If any
+touched file maps to a local file, the commit is at least medium (high for bug
+fixes). Commit messages and file paths are not evidence; plugin and loader
+files that read as webpack-specific by path are ported 1:1 into this repo.
 
 Return format (one block per commit, separated by ---):
 
@@ -234,7 +252,7 @@ Save to `$REPORT_NAME` in the project root.
 
 1. **Re-verify** — this report is a snapshot, never act on it alone:
    - Upstream diff: `gh api repos/storybookjs/storybook/commits/<sha>`
-   - Local file(s): read the package mapped from the commit's upstream path (mapping table is in the `storybook-sync` skill)
+   - Local file(s): resolve each touched upstream file via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package mapping table in the `storybook-sync` skill, and read them
 2. **Pick exactly one outcome** and post it as a comment on this issue:
 
 | Outcome | When to choose | Comment body must contain |
@@ -252,12 +270,12 @@ _Generated by the [`storybook-sync`](https://github.com/rstackjs/storybook-rsbui
 
 Commits within each priority section should be in chronological order (oldest first).
 
-**Do not add a "Next sync" / how-to-rerun section to the report body.** Re-running the skill is its own concern (see Workflow step 1, which finds the previous endpoint automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
+Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous endpoint automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
 
 **Range line**: always pin both ends to precise linked SHAs — never leave "HEAD" or a bare date. Use `START_SHA` and `END_SHA` from step 2 (the first and last hashes of the `--summary` output). The `<range-label>` is a human-readable description of how the user specified the range:
 - **Default (continue from #N)** → `since #N ([\`<PREV_END_SHA_SHORT>\`](...) → [\`<END_SHA_SHORT>\`](...))`
   - Example: `since #480 ([b9549a6e](...) → [363433bc](...))`
-  - **Do NOT** use `START_SHA`'s author date as the lower bound here. The `--from PREV_END_SHA^` range filters by **reachability**, not by date. Commits authored on long-lived feature branches and merged into `next` after the previous report will appear in the new range with author dates that predate the previous report's endpoint — labeling the start with that author date falsely suggests we're re-scanning a period already covered. The previous report's issue number is the only honest lower bound.
+  - Don't use `START_SHA`'s author date as the lower bound here. The `--from PREV_END_SHA^` range filters by **reachability**, not by date. Commits authored on long-lived feature branches and merged into `next` after the previous report will appear in the new range with author dates that predate the previous report's endpoint — labeling the start with that author date falsely suggests we're re-scanning a period already covered. The previous report's issue number is the only honest lower bound.
 - `--from v10.0.0 --to v10.1.0` → `v10.0.0..v10.1.0 ([\`abc1234\`](...) → [\`def5678\`](...))`
 - `--from v10.0.0` (open end) → `v10.0.0..next ([\`abc1234\`](...) → [\`def5678\`](...))`
 - `--since 2026-03-12 --until 2026-04-11` → `2026-03-12..2026-04-11 ([\`abc1234\`](...) → [\`def5678\`](...))`

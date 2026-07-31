@@ -1,0 +1,297 @@
+{
+  "$comment": "File-level counterpart manifest, shared by the storybook-check skill (drift audits) and the storybook-sync skill (triage counterpart lookups). Each mapping ties one upstream file (storybookjs/storybook, branch `next`) to its ported local counterpart. `intentionalDivergences` records accepted, deliberate differences so audits don't re-report them — keep it current: an undocumented divergence is indistinguishable from a bug. Entries with `local: null` have no direct counterpart; their `note` says what to review when the upstream file changes. Packages sync watches only as loose pattern sources (builder-vite, core-webpack) deliberately have no entries here — file-level mappings only make sense where a real port exists.",
+  "upstreamRepo": "storybookjs/storybook",
+  "upstreamBranch": "next",
+  "mappings": [
+    {
+      "upstream": "code/builders/builder-webpack5/src/plugins/webpack-mock-plugin.ts",
+      "local": "packages/builder-rsbuild/src/plugins/rspack-mock-plugin.ts",
+      "intentionalDivergences": [
+        "normalizePath() applied to mockMap keys and resolved requests — pathe and require.resolve disagree on Windows path separators",
+        "optional `configDir` plugin option not present upstream",
+        "uses compiler.getInfrastructureLogger instead of storybook/internal/node-logger"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/plugins/webpack-inject-mocker-runtime-plugin.ts",
+      "local": "packages/builder-rsbuild/src/plugins/rspack-inject-mocker-runtime-plugin.ts",
+      "intentionalDivergences": [
+        "resolves the HTML plugin from compiler.options.plugins by constructor name (HtmlRspackPlugin/HtmlWebpackPlugin) instead of importing html-webpack-plugin directly"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/loaders/storybook-mock-transform-loader.ts",
+      "local": "packages/builder-rsbuild/src/loaders/storybook-mock-transform-loader.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/loaders/webpack-automock-loader.ts",
+      "local": "packages/builder-rsbuild/src/loaders/rsbuild-automock-loader.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/loaders/export-order-loader.ts",
+      "local": "packages/builder-rsbuild/src/loaders/export-order-loader.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/change-detection-adapter/index.ts",
+      "local": "packages/builder-rsbuild/src/change-detection-adapter/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/index.ts",
+      "local": "packages/builder-rsbuild/src/index.ts",
+      "intentionalDivergences": [
+        "builder entry drives Rsbuild's createRsbuild/dev-server lifecycle instead of webpack compiler + webpack-dev-middleware; compare behavior (start/build/bail/corePresets contract), not structure"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/presets/preview-preset.ts",
+      "local": "packages/builder-rsbuild/src/preview-preset.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/preview/iframe-webpack.config.ts",
+      "local": "packages/builder-rsbuild/src/preview/iframe-rsbuild.config.ts",
+      "intentionalDivergences": [
+        "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/preview/base-webpack.config.ts",
+      "local": "packages/builder-rsbuild/src/preview/iframe-rsbuild.config.ts",
+      "intentionalDivergences": [
+        "no standalone base config locally — upstream base-webpack.config.ts behaviors (env define, docs/react handling) must surface inside iframe-rsbuild.config.ts"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts",
+      "local": null,
+      "reviewWith": "packages/builder-rsbuild",
+      "note": "No direct counterpart: user customization flows through Rsbuild config loading instead of a custom-webpack preset. Review whether the behavior (user config merge order, babel handling) has a semantic parallel that belongs in iframe-rsbuild.config.ts or preview-preset.ts.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/preview/virtual-module-mapping.ts",
+      "local": "packages/builder-rsbuild/src/preview/virtual-module-mapping.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/src/types.ts",
+      "local": "packages/builder-rsbuild/src/types.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/presets/react-webpack/src/loaders/react-docgen-loader.ts",
+      "local": "packages/framework-react/src/loaders/react-docgen-loader.ts",
+      "intentionalDivergences": [
+        "LoaderContext type imported from webpack via @ts-expect-error because @rsbuild/core does not reexport it"
+      ]
+    },
+    {
+      "upstream": "code/presets/react-webpack/src/loaders/docgen-resolver.ts",
+      "local": "packages/framework-react/src/loaders/docgen-resolver.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/presets/react-webpack/src/framework-preset-react-docs.ts",
+      "local": "packages/framework-react/src/react-docs.ts",
+      "intentionalDivergences": [
+        "webpack config mutation expressed as rsbuildFinalDocs via mergeRsbuildConfig; docgen loader wiring adapted to Rsbuild tools API"
+      ]
+    },
+    {
+      "upstream": "code/presets/react-webpack/src/index.ts",
+      "local": null,
+      "reviewWith": "packages/framework-react",
+      "note": "Preset glue for the webpack react preset; its responsibilities are distributed across framework-react/src/preset.ts and react-docs.ts. Review changes for behaviors those files should mirror.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/presets/react-webpack/src/types.ts",
+      "local": null,
+      "reviewWith": "packages/framework-react",
+      "note": "Docgen option types; the local parallels live in framework-react/src/types.ts. Review type/option changes for anything the local types should carry.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-webpack5/src/index.ts",
+      "local": "packages/framework-react/src/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-webpack5/src/node/index.ts",
+      "local": "packages/framework-react/src/node/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-webpack5/src/preset.ts",
+      "local": "packages/framework-react/src/preset.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-webpack5/src/types.ts",
+      "local": "packages/framework-react/src/types.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/index.ts",
+      "local": "packages/framework-react/src/index.ts",
+      "intentionalDivergences": [
+        "local package is a single framework serving as the Rsbuild analogue of both react-webpack5 and react-vite; audit for behaviors present in the vite variant but missing from both the webpack5 variant and the local file"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/node/index.ts",
+      "local": "packages/framework-react/src/node/index.ts",
+      "intentionalDivergences": [
+        "local package is a single framework serving as the Rsbuild analogue of both react-webpack5 and react-vite; audit for behaviors present in the vite variant but missing from both the webpack5 variant and the local file"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/preset.ts",
+      "local": "packages/framework-react/src/preset.ts",
+      "intentionalDivergences": [
+        "local package is a single framework serving as the Rsbuild analogue of both react-webpack5 and react-vite; audit for behaviors present in the vite variant but missing from both the webpack5 variant and the local file"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/types.ts",
+      "local": "packages/framework-react/src/types.ts",
+      "intentionalDivergences": [
+        "local package is a single framework serving as the Rsbuild analogue of both react-webpack5 and react-vite; audit for behaviors present in the vite variant but missing from both the webpack5 variant and the local file"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/plugins/react-docgen.ts",
+      "local": null,
+      "reviewWith": "packages/framework-react",
+      "note": "Vite twin of the react-docgen port; the port source is code/presets/react-webpack/src/loaders/react-docgen-loader.ts. Review only for docgen behaviors the webpack twin lacks.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/plugins/docgen-resolver.ts",
+      "local": null,
+      "reviewWith": "packages/framework-react",
+      "note": "Vite twin of code/presets/react-webpack/src/loaders/docgen-resolver.ts, which is the port source for framework-react/src/loaders/docgen-resolver.ts. Review only for behaviors the webpack twin lacks.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/react-vite/src/plugins/docgen-handlers/actualNameHandler.ts",
+      "local": null,
+      "reviewWith": "packages/framework-react",
+      "note": "Docgen handler used by the vite docgen plugin. framework-react/src/loaders/react-docgen-loader.ts carries the equivalent handler logic; review changes against it.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/index.ts",
+      "local": "packages/framework-vue3/src/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/node/index.ts",
+      "local": "packages/framework-vue3/src/node/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/preset.ts",
+      "local": "packages/framework-vue3/src/preset.ts",
+      "intentionalDivergences": [
+        "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/types.ts",
+      "local": "packages/framework-vue3/src/types.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/plugins/vue-docgen.ts",
+      "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
+      "intentionalDivergences": [
+        "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics"
+      ]
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/plugins/vue-component-meta.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Alternative docgen backend (vue-component-meta) with a vite-specific implementation. Review whether the capability or its options should have an Rsbuild parallel in framework-vue3.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/plugins/vue-template.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Vite-specific template handling. Review for behaviors (e.g. source-of-truth for story templates) that framework-vue3 should mirror.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/vite-plugin.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Vite plugin entry with no Rsbuild parallel. Review only for framework behaviors embedded in it, not plugin mechanics.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/web-components-vite/src/index.ts",
+      "local": "packages/framework-web-components/src/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/web-components-vite/src/node/index.ts",
+      "local": "packages/framework-web-components/src/node/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/web-components-vite/src/preset.ts",
+      "local": "packages/framework-web-components/src/preset.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/web-components-vite/src/types.ts",
+      "local": "packages/framework-web-components/src/types.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/html-vite/src/index.ts",
+      "local": "packages/framework-html/src/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/html-vite/src/node/index.ts",
+      "local": "packages/framework-html/src/node/index.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/html-vite/src/preset.ts",
+      "local": "packages/framework-html/src/preset.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/html-vite/src/types.ts",
+      "local": "packages/framework-html/src/types.ts",
+      "intentionalDivergences": []
+    }
+  ],
+  "ignoredUpstreamFiles": [
+    "code/presets/react-webpack/src/cra-config.ts",
+    "code/presets/react-webpack/src/framework-preset-cra.ts"
+  ],
+  "localOnlyFiles": {
+    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild.",
+    "files": [
+      "packages/builder-rsbuild/src/chromatic-stats.ts",
+      "packages/builder-rsbuild/src/logger.ts",
+      "packages/builder-rsbuild/src/preview/detect-msw.ts",
+      "packages/builder-rsbuild/src/react-shims.ts",
+      "packages/framework-react/src/requirer.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/index.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/utils/generate.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/utils/options.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/utils/typescript.ts"
+    ]
+  }
+}
