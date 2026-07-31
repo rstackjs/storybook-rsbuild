@@ -4,6 +4,8 @@ import { getMockerRuntime } from 'storybook/internal/mocking-utils'
 const PLUGIN_NAME = 'RspackInjectMockerRuntimePlugin'
 
 export class RspackInjectMockerRuntimePlugin {
+  private cachedRuntime: string | null = null
+
   private getHtmlPlugin(
     compiler: Rspack.Compiler,
   ): typeof HtmlRspackPlugin | null {
@@ -39,7 +41,8 @@ export class RspackInjectMockerRuntimePlugin {
         PLUGIN_NAME,
         (data, cb) => {
           try {
-            const runtimeScriptContent = getMockerRuntime()
+            const runtimeScriptContent =
+              this.cachedRuntime ?? (this.cachedRuntime = getMockerRuntime())
             const runtimeAssetName = 'mocker-runtime-injected.js'
 
             const Sources = compiler.webpack?.sources
@@ -48,12 +51,18 @@ export class RspackInjectMockerRuntimePlugin {
                 'rspack sources is not available on compiler.webpack',
               )
             }
-            compilation.emitAsset(
-              runtimeAssetName,
-              new Sources.RawSource(runtimeScriptContent),
-            )
 
-            data.assets.js.unshift(runtimeAssetName)
+            // Emit and reference the runtime once per compilation. Re-emitting an
+            // identical asset on every rebuild triggers spurious rebuild loops in dev.
+            // See https://github.com/storybookjs/storybook/pull/33169.
+            if (!compilation.getAsset(runtimeAssetName)) {
+              compilation.emitAsset(
+                runtimeAssetName,
+                new Sources.RawSource(runtimeScriptContent),
+              )
+              data.assets.js.unshift(runtimeAssetName)
+            }
+
             cb(null, data)
           } catch (error) {
             cb(error as Error)
