@@ -37,7 +37,9 @@
     {
       "upstream": "code/builders/builder-webpack5/src/change-detection-adapter/index.ts",
       "local": "packages/builder-rsbuild/src/change-detection-adapter/index.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "add-vs-change is classified from the built module graph (compilation.fileDependencies) instead of upstream's firstRun heuristic, which misclassifies the first edit of a pre-existing file as `add` when the cold-start watchRun reports no initial file set"
+      ]
     },
     {
       "upstream": "code/builders/builder-webpack5/src/index.ts",

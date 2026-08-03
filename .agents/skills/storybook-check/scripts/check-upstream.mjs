@@ -11,7 +11,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
@@ -214,7 +214,11 @@ function listLocalSources(repoRoot, dir) {
     .filter((entry) => entry.isFile() && /\.(ts|tsx|js)$/.test(entry.name))
     .map((entry) => {
       const nested = entry.parentPath ?? entry.path
-      return join(nested, entry.name).slice(repoRoot.length + 1)
+      // Manifest paths are slash-separated; join() uses the platform separator.
+      return join(nested, entry.name)
+        .slice(repoRoot.length + 1)
+        .split(sep)
+        .join('/')
     })
     .sort()
 }
