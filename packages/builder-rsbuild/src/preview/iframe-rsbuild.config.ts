@@ -194,9 +194,9 @@ export default async (
 
   const externals: Record<string, string> = globalsNameReferenceMap
 
-  // TODO: remove in v3 (SB10)
   if (build?.test?.disableBlocks) {
-    externals['@storybook/blocks'] = '__STORYBOOK_BLOCKS_EMPTY_MODULE__'
+    externals['@storybook/addon-docs/blocks'] =
+      '__STORYBOOK_BLOCKS_EMPTY_MODULE__'
   }
 
   const { virtualModules: virtualModuleMapping, entries: dynamicEntries } =
@@ -381,6 +381,16 @@ export default async (
             ...builtInResolveExtensions,
           ]),
         )
+        // `'...'` is Rspack's sentinel for "keep the default conditions" — without it the
+        // defaults are replaced rather than extended.
+        // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/builders/builder-webpack5/src/preview/base-webpack.config.ts#L98-L104
+        config.resolve.conditionNames = [
+          ...(config.resolve.conditionNames ?? []),
+          'storybook',
+          'stories',
+          'test',
+          '...',
+        ]
 
         config.watchOptions = {
           ignored: /node_modules/,
