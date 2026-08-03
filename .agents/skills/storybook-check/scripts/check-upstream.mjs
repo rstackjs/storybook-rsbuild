@@ -223,10 +223,15 @@ function reportCoverage(manifest, repoRoot) {
   const mappings = manifest.mappings
   const findings = validateManifest(manifest, repoRoot)
 
+  // Entries with no upstream path are already reported as INVALID-MANIFEST;
+  // keep them out of the sweep so one malformed entry can't crash the very
+  // report that diagnoses it.
+  const swept = mappings.filter((entry) => entry.upstream)
+
   // One ls-tree per mapped source dir answers both upstream questions: which
   // mapped files have disappeared, and which tracked files nobody has mapped.
   const tracked = new Set(
-    uniq(mappings.map((entry) => srcDir(entry.upstream))).flatMap((dir) =>
+    uniq(swept.map((entry) => srcDir(entry.upstream))).flatMap((dir) =>
       gitLines([
         '-C',
         CACHE_DIR,
@@ -239,14 +244,14 @@ function reportCoverage(manifest, repoRoot) {
     ),
   )
 
-  for (const entry of mappings) {
-    if (entry.upstream && !tracked.has(entry.upstream)) {
+  for (const entry of swept) {
+    if (!tracked.has(entry.upstream)) {
       findings.push(`MISSING-UPSTREAM|${entry.upstream}`)
     }
   }
 
   const upstreamKnown = new Set([
-    ...mappings.map((entry) => entry.upstream),
+    ...swept.map((entry) => entry.upstream),
     ...(manifest.ignoredUpstreamFiles ?? []),
   ])
   for (const file of [...tracked].sort()) {
@@ -292,7 +297,11 @@ function main() {
   switch (options.mode) {
     case 'groups': {
       const rows = manifest.mappings
-        .map((entry) => [groupOf(entry), entry.upstream, entry.local ?? '-'])
+        .map((entry) => [
+          groupOf(entry),
+          entry.upstream ?? '-',
+          entry.local ?? '-',
+        ])
         .sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]))
       process.stdout.write(`${rows.map((row) => row.join('|')).join('\n')}\n`)
       break
