@@ -23,34 +23,19 @@ export const rsbuildFinalDocs: NonNullable<
     return config
   }
 
-  //#region react-docgen
-  if (reactDocgen !== 'react-docgen-typescript') {
-    return mergeRsbuildConfig(config, {
-      tools: {
-        rspack: {
-          module: {
-            rules: [
-              {
-                test: /\.(cjs|mjs|tsx?|jsx?)$/,
-                enforce: 'pre',
-                loader: requirer(
-                  require.resolve,
-                  'storybook-react-rsbuild/loaders/react-docgen-loader',
-                ),
-                options: {
-                  debug,
-                },
-                exclude: /(\.(stories|story)\.(js|jsx|ts|tsx))|(node_modules)/,
-              },
-            ],
-          },
-        },
-      },
-    })
-  }
-  //#endregion
+  const reactDocgenLoaderRule = (test: RegExp) => ({
+    test,
+    enforce: 'pre' as const,
+    loader: requirer(
+      require.resolve,
+      'storybook-react-rsbuild/loaders/react-docgen-loader',
+    ),
+    options: {
+      debug,
+    },
+    exclude: /(\.(stories|story)\.(js|jsx|ts|tsx))|(node_modules)/,
+  })
 
-  //#region react-docgen-typescript
   let typescriptPresent: boolean
   try {
     require.resolve('typescript')
@@ -59,14 +44,42 @@ export const rsbuildFinalDocs: NonNullable<
     typescriptPresent = false
   }
 
-  if (reactDocgen === 'react-docgen-typescript' && typescriptPresent) {
-  }
+  // `typescript` is an optional peerDependency here and the vendored plugin imports it
+  // dynamically, so a JS-only project must degrade rather than crash.
+  // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/frameworks/react-vite/src/preset.ts#L26-L45
+  const useReactDocgenTypescript =
+    reactDocgen === 'react-docgen-typescript' && typescriptPresent
 
+  //#region react-docgen
+  if (!useReactDocgenTypescript) {
+    return mergeRsbuildConfig(config, {
+      tools: {
+        rspack: {
+          module: {
+            rules: [reactDocgenLoaderRule(/\.(cjs|mjs|tsx?|jsx?)$/)],
+          },
+        },
+      },
+    })
+  }
+  //#endregion
+
+  //#region react-docgen-typescript
   const reactDocGenTsPlugin = await import('./plugins/react-docgen-typescript')
 
   // TODO: Rspack doesn't support the hooks `react-docgen-typescript`' required.
   // Currently, using `transform` hook to implement the same behavior.
   return mergeRsbuildConfig(config, {
+    tools: {
+      rspack: {
+        module: {
+          // The vendored react-docgen-typescript plugin only matches `**/**.tsx`, so non-TS
+          // files still need plain react-docgen.
+          // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/presets/react-webpack/src/framework-preset-react-docs.ts#L60
+          rules: [reactDocgenLoaderRule(/\.(cjs|mjs|jsx?)$/)],
+        },
+      },
+    },
     plugins: [
       await reactDocGenTsPlugin.default({
         ...reactDocgenTypescriptOptions,

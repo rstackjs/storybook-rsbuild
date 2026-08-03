@@ -101,6 +101,28 @@ const finishInitialization = () => {
 
 let matchPath: TsconfigPaths.MatchPath | undefined
 
+/**
+ * Tsconfig filenames to try, in order.
+ *
+ * @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/presets/react-webpack/src/loaders/react-docgen-loader.ts#L86-L89
+ */
+const TSCONFIG_CANDIDATES = [
+  'tsconfig.json',
+  'tsconfig.base.json',
+  'tsconfig.app.json',
+] as const
+
+const findTsconfigPath = async (cwd: string): Promise<string | undefined> => {
+  for (const candidate of TSCONFIG_CANDIDATES) {
+    const found = await findUp(candidate, { cwd })
+    if (found) {
+      return found
+    }
+  }
+
+  return undefined
+}
+
 export default async function reactDocgenLoader(
   this: LoaderContext<{ debug: boolean }>,
   source: string,
@@ -113,7 +135,7 @@ export default async function reactDocgenLoader(
 
   if (tsconfigPathsInitializeStatus === 'uninitialized') {
     tsconfigPathsInitializeStatus = 'initializing'
-    const tsconfigPath = await findUp('tsconfig.json', { cwd: process.cwd() })
+    const tsconfigPath = await findTsconfigPath(process.cwd())
     const tsconfig = TsconfigPaths.loadConfig(tsconfigPath)
 
     if (tsconfig.resultType === 'success') {
