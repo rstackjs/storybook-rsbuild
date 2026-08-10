@@ -25,7 +25,13 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     path: configPath,
   })
 
-  const libConfig = libIndex === false ? {} : content.lib[libIndex]
+  const libConfigs = content.lib === undefined ? [{}] : content.lib
+  const libConfig =
+    libIndex === false
+      ? {}
+      : Array.isArray(libConfigs)
+        ? libConfigs[libIndex]
+        : undefined
   if (!libConfig) {
     throw new Error(
       `Lib config not found at index ${libIndex}, expect a lib config but got ${libConfig}`,
