@@ -29,6 +29,10 @@ export class RspackInjectMockerRuntimePlugin {
 
   apply(compiler: Rspack.Compiler) {
     const HtmlPlugin = this.getHtmlPlugin(compiler)
+    // DIVERGES FROM UPSTREAM — upstream only reads `getHooks`, which is enough for
+    // html-webpack-plugin but not here: rspack's native `HtmlRspackPlugin` dropped that
+    // deprecated alias in v2 and offers `getCompilationHooks` alone, so `html.implementation:
+    // 'native'` would leave the hook untapped. Both are plain statics that ignore `this`.
     const getHtmlHooks = HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks
     if (typeof getHtmlHooks !== 'function') {
       compiler
@@ -65,6 +69,14 @@ export class RspackInjectMockerRuntimePlugin {
 
             // Reference it from every page though. This hook runs once per HTML page, each
             // with its own asset list, and each page needs the runtime before its scripts.
+            //
+            // DIVERGES FROM UPSTREAM — do not "sync" this back by copying webpack5's
+            // webpack-inject-mocker-runtime-plugin.ts. Upstream still keeps this `unshift`
+            // inside the emit guard above, so only its first HTML page references the runtime
+            // and `sb.mock()` silently does nothing on every later page. The bug is invisible
+            // upstream because its preview emits a single `iframe.html`. See #531, and the
+            // upstream commit that introduced it:
+            // https://github.com/storybookjs/storybook/commit/5c0c2779
             data.assets.js.unshift(runtimeAssetName)
 
             cb(null, data)

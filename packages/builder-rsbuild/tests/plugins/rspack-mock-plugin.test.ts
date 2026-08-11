@@ -1,12 +1,14 @@
 import { resolve } from 'node:path'
 import type { Rspack } from '@rsbuild/core'
-import { rspack } from '@rsbuild/core'
 import { describe, expect, it } from '@rstest/core'
 import { resolve as resolvePosix } from 'pathe'
 import { RspackMockPlugin } from '../../src/plugins/rspack-mock-plugin'
 
-// extractMockCalls sends telemetry when it finds mocks.
-process.env.STORYBOOK_DISABLE_TELEMETRY = 'true'
+// `extractMockCalls` calls `telemetry('mocking', ...)` whenever it finds mocks, but nothing
+// leaves this process: `telemetry()` gates on `globalThis.SB_TELEMETRY_STATE`, which only the
+// CLI and the common preset ever set. Undefined here means every event is parked on
+// `globalThis.SB_TELEMETRY_QUEUE` and never flushed. Setting `STORYBOOK_DISABLE_TELEMETRY`
+// would not help either — `telemetry()` never reads it.
 
 const fixtureDir = resolve(__dirname, '../fixtures/mock-plugin')
 
@@ -60,27 +62,25 @@ function applyPlugin(
         warn: (message: string) => warnMessages.push(message),
         debug: (message: string) => debugMessages.push(message),
       }) as unknown as InfrastructureLogger,
+    // The plugin reads `NormalModuleReplacementPlugin` off the compiler, so the stub can hand
+    // it a recorder and keep hold of the replacement callback. Nothing global is touched.
+    webpack: {
+      NormalModuleReplacementPlugin: class {
+        constructor(_test: RegExp, callback: (resource: Resource) => void) {
+          replaceResource = callback
+        }
+        apply() {}
+      },
+    } as unknown as Rspack.Compiler['webpack'],
   } satisfies Partial<Rspack.Compiler>
 
   // `Rspack.Compiler` declares a private field, so it is nominally typed and no object literal
   // can be asserted to it directly. The `satisfies` above is what type-checks the stub.
   const compiler = compilerStub as unknown as Rspack.Compiler
 
-  const OriginalPlugin = rspack.NormalModuleReplacementPlugin
-  ;(rspack as any).NormalModuleReplacementPlugin = class {
-    constructor(_test: RegExp, callback: (resource: Resource) => void) {
-      replaceResource = callback
-    }
-    apply() {}
-  }
-
-  try {
-    new RspackMockPlugin({
-      previewConfigPath: resolve(fixtureDir, previewConfig),
-    }).apply(compiler)
-  } finally {
-    ;(rspack as any).NormalModuleReplacementPlugin = OriginalPlugin
-  }
+  new RspackMockPlugin({
+    previewConfigPath: resolve(fixtureDir, previewConfig),
+  }).apply(compiler)
 
   if (!replaceResource || !refreshMocks) {
     throw new Error('plugin did not register its replacement callback')
