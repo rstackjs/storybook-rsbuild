@@ -1,7 +1,7 @@
 import type { RsbuildConfig } from '@rsbuild/core'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { rsbuildFinal } from '../src/preset'
-import type { AddonOptions } from '../src/types'
+import { rsbuildFinal } from '../src/preset.ts'
+import type { AddonOptions } from '../src/types.ts'
 
 type RsbuildFinalOptions = Parameters<NonNullable<typeof rsbuildFinal>>[1]
 

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rstest/core'
-import { rstestCommonConfig } from '../../rstest.config'
+import { rstestCommonConfig } from '../../rstest.config.ts'
 
 export default defineConfig({
   ...rstestCommonConfig,
