@@ -1,7 +1,6 @@
 import { dirname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Rspack } from '@rsbuild/core'
-import { rspack } from '@rsbuild/core'
 import { findMockRedirect } from '@vitest/mocker/redirect'
 import {
   babelParser,
@@ -91,7 +90,10 @@ export class RspackMockPlugin {
     compiler.hooks.beforeRun.tap(PLUGIN_NAME, updateMocks)
     compiler.hooks.watchRun.tap(PLUGIN_NAME, updateMocks)
 
-    new rspack.NormalModuleReplacementPlugin(/.*/, (resource) => {
+    // Taken from the compiler rather than the module-level `rspack` namespace, matching
+    // upstream's webpack5 builder. It keeps the plugin bound to the compiler that is actually
+    // running it, and lets tests supply the constructor instead of patching a shared export.
+    new compiler.webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
       try {
         // Skip the resolution probe entirely when no `sb.mock()` calls are declared —
         // otherwise every request in the module graph pays for a `require.resolve`-style
