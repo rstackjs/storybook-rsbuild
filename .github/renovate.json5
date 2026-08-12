@@ -68,12 +68,7 @@
 		// changelogithub omits chore commits, so surface peer dependency range updates
 		// as bug fixes in release notes.
 		{
-			"matchPackageNames": [
-				"storybook",
-				"@storybook/**",
-				"@rsbuild/**",
-				"@rslib/**"
-			],
+			"matchPackageNames": ["storybook"],
 			"matchDepTypes": ["peerDependencies"],
 			"semanticCommitType": "fix"
 		},
