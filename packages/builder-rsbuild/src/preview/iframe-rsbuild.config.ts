@@ -82,6 +82,42 @@ export type RsbuildBuilderOptions = Options & {
   typescriptOptions: TypescriptOptions
 }
 
+const resolveLazyCompilation = async (
+  options: RsbuildBuilderOptions,
+  builderOptions: BuilderOptions,
+  isProd: boolean,
+  shouldDisableDevFeatures: boolean,
+) => {
+  let lazyCompilationConfig: Rspack.Configuration['lazyCompilation']
+
+  if (!isProd) {
+    if (shouldDisableDevFeatures) {
+      lazyCompilationConfig = false
+    } else if (builderOptions.lazyCompilation !== undefined) {
+      lazyCompilationConfig = builderOptions.lazyCompilation
+    } else if (await isMswActive(options)) {
+      // https://storybook.rsbuild.rs/guide/troubleshooting#msw-integration-and-lazy-compilation
+      lazyCompilationConfig = false
+      logger.warn(dedent`
+        Detected mockServiceWorker.js in staticDirs. Lazy compilation has been disabled
+        automatically to avoid a Service Worker race that can leave the preview iframe
+        blank on cold story loads. Set \`lazyCompilation\` explicitly in your builder
+        options to override.
+      `)
+    } else {
+      lazyCompilationConfig = {
+        entries: false,
+      }
+    }
+  }
+
+  return {
+    lazyCompilationConfig,
+    isLazyCompilationActive:
+      lazyCompilationConfig !== undefined && lazyCompilationConfig !== false,
+  }
+}
+
 export default async (
   options: RsbuildBuilderOptions,
   extraWebpackConfig?: Rspack.Configuration,
@@ -158,28 +194,13 @@ export default async (
   const shouldDisableDevFeatures =
     process.env.SB_RSBUILD_TEST_MINIMAL_DEV === 'true'
 
-  let lazyCompilationConfig: Rspack.Configuration['lazyCompilation']
-
-  if (!isProd) {
-    if (shouldDisableDevFeatures) {
-      lazyCompilationConfig = false
-    } else if (builderOptions.lazyCompilation !== undefined) {
-      lazyCompilationConfig = builderOptions.lazyCompilation
-    } else if (await isMswActive(options)) {
-      // https://storybook.rsbuild.rs/guide/troubleshooting#msw-integration-and-lazy-compilation
-      lazyCompilationConfig = false
-      logger.warn(dedent`
-        Detected mockServiceWorker.js in staticDirs. Lazy compilation has been disabled
-        automatically to avoid a Service Worker race that can leave the preview iframe
-        blank on cold story loads. Set \`lazyCompilation\` explicitly in your builder
-        options to override.
-      `)
-    } else {
-      lazyCompilationConfig = {
-        entries: false,
-      }
-    }
-  }
+  const { lazyCompilationConfig, isLazyCompilationActive } =
+    await resolveLazyCompilation(
+      options,
+      builderOptions,
+      isProd,
+      shouldDisableDevFeatures,
+    )
 
   const shouldDisableHmr = shouldDisableDevFeatures
 
@@ -200,7 +221,7 @@ export default async (
   }
 
   const { virtualModules: virtualModuleMapping, entries: dynamicEntries } =
-    await getVirtualModules(options)
+    await getVirtualModules(options, isLazyCompilationActive)
 
   let contentFromConfig: RsbuildConfig = {}
   const { content } = await loadConfig({

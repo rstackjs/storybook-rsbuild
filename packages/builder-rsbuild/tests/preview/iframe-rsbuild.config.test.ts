@@ -22,6 +22,7 @@ type LazyCompilationOption = Rspack.Configuration['lazyCompilation']
 const createOptions = (
   lazyCompilation: LazyCompilationOption | 'unset' = false,
   configType: 'DEVELOPMENT' | 'PRODUCTION' = 'DEVELOPMENT',
+  staticDirs: unknown = [],
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
@@ -56,6 +57,7 @@ const createOptions = (
     ['tags', {}],
     ['build', { test: {} }],
     ['previewAnnotations', []],
+    ['staticDirs', staticDirs],
   ])
 
   const apply = rs.fn(
@@ -139,8 +141,13 @@ describe('iframe-rsbuild.config', () => {
 
   const runRspackTool = async (
     lazyCompilation: LazyCompilationOption | 'unset',
+    staticDirs: unknown = [],
   ) => {
-    const { options } = createOptions(lazyCompilation)
+    const { options } = createOptions(
+      lazyCompilation,
+      'DEVELOPMENT',
+      staticDirs,
+    )
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
     )
@@ -151,20 +158,25 @@ describe('iframe-rsbuild.config', () => {
     const baseConfig = {} as any
     const addRules = rs.fn()
     const appendRules = rs.fn()
+    let virtualModules: Record<string, string> = {}
 
     const result = (rspackTool as any)(baseConfig, {
       addRules,
       appendRules,
       rspack: {
         experiments: {
-          VirtualModulesPlugin: class VirtualModulesPlugin {},
+          VirtualModulesPlugin: class VirtualModulesPlugin {
+            constructor(modules: Record<string, string>) {
+              virtualModules = modules
+            }
+          },
         },
         ProvidePlugin: class ProvidePlugin {},
       },
       mergeConfig: (c: any) => c,
     }) as any
 
-    return { rspackConfig: result, addRules, appendRules }
+    return { rspackConfig: result, addRules, appendRules, virtualModules }
   }
 
   it('uses entries:false when lazyCompilation is unset', async () => {
@@ -185,6 +197,19 @@ describe('iframe-rsbuild.config', () => {
   it('passes through lazyCompilation options object', async () => {
     const { rspackConfig } = await runRspackTool({ entries: true })
     expect(rspackConfig.lazyCompilation).toEqual({ entries: true })
+  })
+
+  it('disables pipelined imports when MSW disables default lazyCompilation', async () => {
+    const mswStaticDir = resolve(fixtureDir, 'msw-active/public')
+    const { rspackConfig, virtualModules } = await runRspackTool('unset', [
+      mswStaticDir,
+    ])
+    const storiesModule =
+      virtualModules[resolve(process.cwd(), 'storybook-stories.js')]
+
+    expect(rspackConfig.lazyCompilation).toBe(false)
+    expect(storiesModule).toContain('const pipeline = (x) => x();')
+    expect(storiesModule).not.toContain('const importPipeline =')
   })
 
   it('appends raw query fallback rule for asset/source imports', async () => {

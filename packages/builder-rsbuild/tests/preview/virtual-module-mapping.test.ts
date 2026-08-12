@@ -33,7 +33,10 @@ const createOptions = (
 }
 
 const getStoriesModule = async (options: Options) => {
-  const { virtualModules } = await getVirtualModules(options)
+  const { virtualModules } = await getVirtualModules(
+    options,
+    options.configType === 'DEVELOPMENT',
+  )
   const storiesPath = resolve(process.cwd(), 'storybook-stories.js')
   return virtualModules[storiesPath]
 }
