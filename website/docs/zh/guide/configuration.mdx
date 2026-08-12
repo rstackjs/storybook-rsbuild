@@ -94,7 +94,7 @@ export default config;
 | `lazyCompilation` | `boolean` \| [`LazyCompilationOptions`](https://rspack.rs/config/lazy-compilation) | `{ entries: false }`（development）；`false`（production） | 配置 Rspack 的 lazy compilation。 |
 | `environment` | `string` | `undefined` | 从 Rsbuild 配置中选择特定的 [environment](https://rsbuild.rs/config/environments)。 |
 
-在 development 中，默认值 `{ entries: false }` 会立即编译 entry chunk，同时对 dynamically imported story module 使用 lazy compilation。production 始终禁用 lazy compilation。在 development 中，自动检测到 MSW 也会将默认值改为 `false`，除非你显式配置此选项。这与 Storybook webpack builder 不同，后者的 lazy compilation 是 opt-in，除非显式启用，否则保持关闭。
+在 development 中，默认值 `{ entries: false }` 会立即编译 entry chunk，同时对 dynamically imported story module 使用 lazy compilation。在 production 中，此 builder option 不会应用，因此 lazy compilation 默认保持关闭；底层 Rsbuild 或 Rspack 配置仍可覆盖该行为。在 development 中，自动检测到 MSW 也会将默认值改为 `false`，除非你显式配置此选项。这与 Storybook webpack builder 不同，后者的 lazy compilation 是 opt-in，除非显式启用，否则保持关闭。
 
 ## Webpack Addons 兼容性
 
