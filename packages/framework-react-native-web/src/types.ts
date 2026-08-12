@@ -1,5 +1,6 @@
 import type { PluginReactNativeWebOptions } from 'rsbuild-plugin-react-native-web'
 import type {
+  CompatibleString,
   StorybookConfig as StorybookConfigBase,
   TypescriptOptions as TypescriptOptionsBase,
 } from 'storybook/internal/types'
@@ -9,8 +10,8 @@ import type {
   TypescriptOptions as TypescriptOptionsBuilder,
 } from 'storybook-builder-rsbuild'
 
-type FrameworkName = 'storybook-react-native-web-rsbuild'
-type BuilderName = 'storybook-builder-rsbuild'
+type FrameworkName = CompatibleString<'storybook-react-native-web-rsbuild'>
+type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
 
 export type FrameworkOptions = {
   builder?: BuilderOptions
