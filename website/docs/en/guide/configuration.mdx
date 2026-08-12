@@ -72,7 +72,7 @@ const config: StorybookConfig = {
         // Default: false
         fsCache: true,
         
-        // Enable lazy compilation (experimental)
+        // Lazy-compile entries as well as dynamic imports
         // lazyCompilation: true,
 
         // Specify Rsbuild environment to use (for multi-environment configs)
@@ -91,8 +91,10 @@ export default config;
 | :--- | :--- | :--- | :--- |
 | `rsbuildConfigPath` | `string` | `cwd/rsbuild.config.ts` | Path to an existing Rsbuild config file to merge. |
 | `fsCache` | `boolean` | `false` | Enables Rspack's persistent filesystem cache. |
-| `lazyCompilation` | `boolean` | `false` | Enables lazy compilation for faster dev startup. |
+| `lazyCompilation` | `boolean` \| [`LazyCompilationOptions`](https://rspack.rs/config/lazy-compilation) | `{ entries: false }` (development); `false` (production) | Configures Rspack's lazy compilation. |
 | `environment` | `string` | `undefined` | Selects a specific [environment](https://rsbuild.rs/config/environments) from Rsbuild config. |
+
+In development, the default `{ entries: false }` compiles entry chunks eagerly while lazily compiling dynamically imported story modules. Lazy compilation is always disabled in production. In development, automatic MSW detection also changes the default to `false` unless you explicitly configure this option. This differs from the Storybook webpack builder, where lazy compilation is opt-in and remains off unless enabled.
 
 ## Webpack Addons Compatibility
 
