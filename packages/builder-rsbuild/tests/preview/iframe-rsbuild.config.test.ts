@@ -1,12 +1,21 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import type { Rspack } from '@rsbuild/core'
+import {
+  mergeRsbuildConfig,
+  type RsbuildConfig,
+  type Rspack,
+} from '@rsbuild/core'
 import { describe, expect, it, rs } from '@rstest/core'
+import { getConfig } from '../../src/index'
 import type { RsbuildBuilderOptions } from '../../src/preview/iframe-rsbuild.config'
 import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'
 
 const fixtureDir = resolve(__dirname, '../fixtures')
 const fixtureRsbuildConfig = resolve(fixtureDir, 'rsbuild.config.ts')
+const inheritanceBoundaryRsbuildConfig = resolve(
+  fixtureDir,
+  'inheritance-boundary-rsbuild.config.ts',
+)
 
 const storybookEntries = ['storybook-entry.js']
 const storiesConfig = [
@@ -23,12 +32,15 @@ const createOptions = (
   lazyCompilation: LazyCompilationOption | 'unset' = false,
   configType: 'DEVELOPMENT' | 'PRODUCTION' = 'DEVELOPMENT',
   staticDirs: unknown = [],
+  builderOptionOverrides: Record<string, unknown> = {},
+  rsbuildFinal?: (config: RsbuildConfig) => RsbuildConfig,
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
     addonDocs: {},
     fsCache: false,
     ...(lazyCompilation === 'unset' ? {} : { lazyCompilation }),
+    ...builderOptionOverrides,
   }
 
   const presetValues = new Map<string, unknown>([
@@ -42,7 +54,7 @@ const createOptions = (
       },
     ],
     ['framework', {}],
-    ['frameworkOptions', { renderer: '@storybook/react' }],
+    ['frameworkOptions', { renderer: '@storybook/react', legacyRootApi: true }],
     ['env', { STORYBOOK_ENV: 'development' }],
     ['logLevel', 'info'],
     ['previewHead', '<!-- head -->'],
@@ -58,10 +70,15 @@ const createOptions = (
     ['build', { test: {} }],
     ['previewAnnotations', []],
     ['staticDirs', staticDirs],
+    ['typescript', { check: false, skipCompiler: true }],
   ])
 
   const apply = rs.fn(
     async (name: string, defaultValue?: unknown): Promise<unknown> => {
+      if (name === 'rsbuildFinal' && rsbuildFinal) {
+        return rsbuildFinal(defaultValue as RsbuildConfig)
+      }
+
       if (name === 'mdxLoaderOptions') {
         return defaultValue
       }
@@ -137,6 +154,66 @@ describe('iframe-rsbuild.config', () => {
     )
 
     expect(config.source?.entry).toBeDefined()
+  })
+
+  it('strips library output fields that are incompatible with the preview build', async () => {
+    const { options } = createOptions(false, 'DEVELOPMENT', [], {
+      rsbuildConfigPath: inheritanceBoundaryRsbuildConfig,
+    })
+
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+    const rspackConfigs = Array.isArray(config.tools?.rspack)
+      ? config.tools.rspack
+      : [config.tools?.rspack]
+    const inheritedRspackConfig = rspackConfigs.find(
+      (item) => typeof item === 'object' && item.output?.uniqueName,
+    )
+
+    expect(inheritedRspackConfig).toBeDefined()
+    expect(inheritedRspackConfig).not.toHaveProperty('output.library')
+    expect(inheritedRspackConfig).not.toHaveProperty('output.globalObject')
+    expect(inheritedRspackConfig).not.toHaveProperty('output.umdNamedDefine')
+    expect(config.tools?.htmlPlugin).not.toBe(false)
+    expect(config.dev?.writeToDisk).toBeUndefined()
+  })
+
+  it('inherits plugins from the loaded Rsbuild config', async () => {
+    const { options } = createOptions(false, 'DEVELOPMENT', [], {
+      rsbuildConfigPath: inheritanceBoundaryRsbuildConfig,
+    })
+
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+
+    expect(config.plugins).toContainEqual(
+      expect.objectContaining({ name: 'write-build-id' }),
+    )
+    expect(config.plugins).toContainEqual(
+      expect.objectContaining({ name: 'keep-for-storybook' }),
+    )
+  })
+
+  it('preserves config explicitly restored by rsbuildFinal', async () => {
+    const explicitPlugin = { name: 'explicit-plugin', setup() {} }
+    const { options } = createOptions(
+      false,
+      'DEVELOPMENT',
+      [],
+      { rsbuildConfigPath: inheritanceBoundaryRsbuildConfig },
+      (config) =>
+        mergeRsbuildConfig(config, {
+          output: { externals: ['explicit-external'] },
+          plugins: [explicitPlugin],
+        }),
+    )
+
+    const config = await getConfig(options as RsbuildBuilderOptions)
+
+    expect(config.output?.externals).toContain('explicit-external')
+    expect(config.plugins).toContain(explicitPlugin)
   })
 
   const runRspackTool = async (

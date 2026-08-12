@@ -17,6 +17,7 @@ import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import type { Options } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
+import { stripInheritedConfig } from '../inherited-config'
 import type { BuilderOptions, TypescriptOptions } from '../types'
 import { isMswActive } from './detect-msw'
 import { getVirtualModules } from './virtual-module-mapping'
@@ -264,6 +265,8 @@ export default async (
   } else {
     contentFromConfig = content
   }
+
+  stripInheritedConfig(contentFromConfig, 'the loaded Rsbuild config')
 
   const resourceFilename = isProd
     ? 'static/media/[name].[contenthash:8][ext]'

@@ -20,6 +20,7 @@ import rsbuildConfig, {
 import { applyReactShims } from './react-shims'
 import type { RsbuildBuilder } from './types'
 
+export { stripInheritedConfig } from './inherited-config'
 export * from './preview/virtual-module-mapping'
 export * from './types'
 
@@ -106,6 +107,8 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
     shimsConfig,
   ) as rsbuildReal.RsbuildConfig
 
+  // Preset hooks run in order with the user's main.ts last. Inherited configs have already
+  // been stripped, so an explicit rsbuildFinal hook is the escape hatch for restoring fields.
   const finalConfig = await presets.apply(
     'rsbuildFinal',
     intrinsicRsbuildConfig,

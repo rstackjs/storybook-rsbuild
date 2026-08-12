@@ -59,7 +59,7 @@
     "@modern-js/plugin": "^3.0.0",
     "@modern-js/plugin-v2": "^2.70.4",
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
-    "storybook-builder-rsbuild": "*"
+    "storybook-builder-rsbuild": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@modern-js/plugin": {

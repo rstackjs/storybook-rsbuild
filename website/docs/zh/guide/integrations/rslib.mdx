@@ -2,7 +2,7 @@ import { PackageManagerTabs } from '@theme'
 
 # Rslib
 
-该 addon 会从你的 Rslib 配置文件中加载一份可复用的 Rsbuild config，使 `storybook-builder-rsbuild` 与你的库构建所使用的配置保持一致。
+该 addon 会从你的 Rslib 配置文件中加载 Rsbuild config 的可复用部分，同时避免仅用于 library build 的设置进入 Storybook preview build。
 
 它还允许你在 Storybook 内开发 `mf` [(Module Federation)](https://rslib.rs/guide/basic/output-format#mf) 格式。
 
@@ -24,6 +24,8 @@ export default {
   addons: ['storybook-addon-rslib'],
 }
 ```
+
+选中的 Rslib 配置在合并到 Storybook 之前，会经过 [Builder 选项](/guide/configuration#builder-选项) 中记录的同一 inherited-config 边界。Plugin 会继续继承；可以使用 Storybook CLI 的 `process.env.STORYBOOK` 标志，有条件地排除仅供应用使用的 side-effect plugin。可以使用 `modifyLibRsbuildConfig` 为 Storybook 显式恢复已剥离的字段，也可以使用 Storybook 的 `rsbuildFinal` 进行最终配置。这两个 hook 都在继承字段被剥离后执行。
 
 或者手动配置该 addon：
 
@@ -75,8 +77,9 @@ export interface AddonOptions {
      */
     modifyLibConfig?: (config: LibConfig) => void
     /**
-     * Modify the Rsbuild config transformed from lib config before merging with Storybook
-     * config. You can modify the configuration in the config parameters in place.
+     * Modify the Rsbuild config transformed from lib config after inherited fields are stripped
+     * and before merging with Storybook config. You can modify the configuration in the config
+     * parameters in place, including explicitly restoring stripped fields.
      * @experimental subject to change at any time
      * @default undefined
      */

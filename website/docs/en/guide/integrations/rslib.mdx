@@ -2,7 +2,7 @@ import { PackageManagerTabs } from '@theme'
 
 # Rslib
 
-This addon loads a reusable Rsbuild config from your Rslib configuration file so `storybook-builder-rsbuild` mirrors the same setup used by your library build.
+This addon loads the reusable parts of the Rsbuild config from your Rslib configuration file while keeping library-only settings out of the Storybook preview build.
 
 It also lets you develop the `mf` [(Module Federation)](https://rslib.rs/guide/basic/output-format#mf) format inside Storybook.
 
@@ -24,6 +24,8 @@ export default {
   addons: ['storybook-addon-rslib'],
 }
 ```
+
+Before the selected Rslib config is merged into Storybook, it passes through the same inherited-config boundary documented in [Builder Options](/guide/configuration#builder-options). Plugins remain inherited; use the Storybook CLI's `process.env.STORYBOOK` flag to conditionally omit an app-only side-effect plugin. Use `modifyLibRsbuildConfig` to restore a stripped field explicitly for Storybook, or use Storybook's `rsbuildFinal` for final configuration. Both hooks run after inherited fields are stripped.
 
 Or configure the addon manually:
 
@@ -75,8 +77,9 @@ export interface AddonOptions {
      */
     modifyLibConfig?: (config: LibConfig) => void
     /**
-     * Modify the Rsbuild config transformed from lib config before merging with Storybook
-     * config. You can modify the configuration in the config parameters in place.
+     * Modify the Rsbuild config transformed from lib config after inherited fields are stripped
+     * and before merging with Storybook config. You can modify the configuration in the config
+     * parameters in place, including explicitly restoring stripped fields.
      * @experimental subject to change at any time
      * @default undefined
      */
