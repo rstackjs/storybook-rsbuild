@@ -65,8 +65,8 @@
 			"separateMultipleMajor": false,
 			"enabled": true
 		},
-		// changelogithub omits chore commits, so surface runtime dependency updates
-		// (including enabled peer dependency updates) as bug fixes in release notes.
+		// changelogithub omits chore commits, so surface peer dependency range updates
+		// as bug fixes in release notes.
 		{
 			"matchPackageNames": [
 				"storybook",
@@ -74,6 +74,7 @@
 				"@rsbuild/**",
 				"@rslib/**"
 			],
+			"matchDepTypes": ["peerDependencies"],
 			"semanticCommitType": "fix"
 		},
 		// tsx 4.23.1 appends `?tsx-namespace=<id>` to every specifier resolved by
