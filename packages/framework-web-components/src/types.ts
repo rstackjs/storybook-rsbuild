@@ -1,4 +1,5 @@
 import type {
+  CompatibleString,
   StorybookConfig as StorybookConfigBase,
   TypescriptOptions as TypescriptOptionsWebComponents,
 } from 'storybook/internal/types'
@@ -8,8 +9,8 @@ import type {
   TypescriptOptions as TypescriptOptionsBuilder,
 } from 'storybook-builder-rsbuild'
 
-type FrameworkName = 'storybook-web-components-rsbuild'
-type BuilderName = 'storybook-builder-rsbuild'
+type FrameworkName = CompatibleString<'storybook-web-components-rsbuild'>
+type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
 
 export type FrameworkOptions = {
   builder?: BuilderOptions
