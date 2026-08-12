@@ -65,6 +65,17 @@
 			"separateMultipleMajor": false,
 			"enabled": true
 		},
+		// changelogithub omits chore commits, so surface runtime dependency updates
+		// (including enabled peer dependency updates) as bug fixes in release notes.
+		{
+			"matchPackageNames": [
+				"storybook",
+				"@storybook/**",
+				"@rsbuild/**",
+				"@rslib/**"
+			],
+			"semanticCommitType": "fix"
+		},
 		// tsx 4.23.1 appends `?tsx-namespace=<id>` to every specifier resolved by
 		// `tsImport`, including `node:` builtins. Under Rstest's module runner that
 		// specifier is treated as a file path, so `tests/helpers/runCorePreset.ts`
