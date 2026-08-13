@@ -69,6 +69,10 @@ Storybook will detect Rsbuild and automatically configure `storybook-builder-rsb
 
 If you are migrating an existing Storybook project to Rsbuild, install the relevant framework package and update your `.storybook/main.ts`.
 
+:::tip Reuse your existing Rsbuild config
+If the project already has an `rsbuild.config.ts` in the directory where Storybook runs, Storybook Rsbuild detects and merges it into the preview build automatically. You do not need to duplicate its plugins or aliases in `rsbuildFinal`; for a config elsewhere, set the builder option `rsbuildConfigPath`.
+:::
+
 See the **[Frameworks](/guide/framework/react)** section for detailed migration guides.
 
 ## Packages

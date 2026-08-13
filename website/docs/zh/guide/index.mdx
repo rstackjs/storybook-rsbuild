@@ -69,6 +69,10 @@ Storybook 会检测到 Rsbuild 并自动为你配置 `storybook-builder-rsbuild`
 
 如果你正在将一个已有的 Storybook 项目迁移到 Rsbuild，请安装相应的 framework 包并更新你的 `.storybook/main.ts`。
 
+:::tip 复用现有的 Rsbuild 配置
+如果项目在 Storybook 运行目录中已有 `rsbuild.config.ts`，Storybook Rsbuild 会自动检测它并合并到 preview build 中。你无需在 `rsbuildFinal` 中重复配置其中的 plugins 或 aliases；如果配置位于其他位置，请设置 builder option `rsbuildConfigPath`。
+:::
+
 详细的迁移指南请参阅 **[Frameworks](/guide/framework/react)** 章节。
 
 ## 包
