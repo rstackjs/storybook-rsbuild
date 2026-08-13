@@ -53,6 +53,12 @@ const stripConfigField = (
   return stripConfigField(target[field], segments, segmentIndex + 1)
 }
 
+/**
+ * Strips fields that are unsafe to inherit into the Storybook preview build.
+ *
+ * @internal For use by official Storybook Rsbuild packages only. This API is subject to change at
+ * any time and should not be used in user configuration.
+ */
 export const stripInheritedConfig = (
   config: RsbuildConfig,
   source: string,
