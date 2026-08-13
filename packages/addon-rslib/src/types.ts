@@ -28,8 +28,9 @@ export interface AddonOptions {
      */
     modifyLibConfig?: (config: LibConfig) => void
     /**
-     * Modify the Rsbuild config transformed from lib config before merging with Storybook
-     * config. You can modify the configuration in the config parameters in place.
+     * Modify the Rsbuild config transformed from lib config after inherited fields are stripped
+     * and before merging with Storybook config. You can modify the configuration in the config
+     * parameters in place, including explicitly restoring stripped fields.
      * @experimental subject to change at any time
      * @default undefined
      */

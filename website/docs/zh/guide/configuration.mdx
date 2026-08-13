@@ -85,6 +85,21 @@ const config: StorybookConfig = {
 export default config;
 ```
 
+### 继承的 Rsbuild 配置
+
+`rsbuildConfigPath` 选中的配置会自动合并到 Storybook preview 构建中。仅用于生产环境的设置可能影响或破坏 preview，因此不会继承以下字段：
+
+- `source.entry`
+- `output.distPath`、`output.filename`、`output.cleanDistPath`、`output.externals` 和 `output.assetPrefix`
+- `server.publicDir`
+- `dev.progressBar`、`dev.assetPrefix` 和 `dev.writeToDisk`
+- `tools.htmlPlugin`
+- `tools.rspack.output.library`、`tools.rspack.output.globalObject` 和 `tools.rspack.output.umdNamedDefine`
+
+此边界也适用于从 `storybook-addon-rslib` 和 `storybook-addon-modernjs` 继承的配置。`tools.rspack` 如果使用函数形式，内部字段将无法被检查和剥离。建议通过 `environment` 选择专用于 Storybook 的 [Rsbuild environment](https://rsbuild.rs/config/environments)。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承配置被剥离后执行。
+
+Plugin 会继续继承，因为它们通常提供 preview build 所需的 transform。Storybook CLI 会在加载项目配置前将 `process.env.STORYBOOK` 设置为 `'true'`，可以用这个条件排除不应在 Storybook 中运行、仅供应用使用的 plugin。
+
 ### 选项参考
 
 | Option | Type | Default | Description |

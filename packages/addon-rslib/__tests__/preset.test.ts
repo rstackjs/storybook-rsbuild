@@ -92,4 +92,69 @@ describe('rsbuildFinal', () => {
     expect(result.output?.target).toBe('web')
     expect(result.source?.define).toEqual({ TOP_LEVEL: 'true' })
   })
+
+  it('strips inherited Rslib config before merging it into Storybook', async () => {
+    const result = await runRsbuildFinal({
+      source: { entry: { shared: './src/shared.ts' } },
+      output: {
+        externals: ['shared-external'],
+        assetPrefix: '/shared/',
+      },
+      plugins: [{ name: 'shared-plugin', setup() {} }],
+      lib: [
+        {
+          source: { entry: { index: './src/index.ts' } },
+          output: {
+            distPath: { root: 'dist' },
+            filename: { js: '[name].js' },
+            cleanDistPath: true,
+          },
+          dev: { writeToDisk: true },
+          tools: {
+            htmlPlugin: false,
+            rspack: {
+              output: {
+                library: { name: 'Library', type: 'umd' },
+                globalObject: 'this',
+                umdNamedDefine: true,
+              },
+            },
+          },
+        },
+      ],
+    })
+
+    expect(result.source?.entry).toBeUndefined()
+    expect(result.output?.distPath).toBeUndefined()
+    expect(result.output?.filename).toBeUndefined()
+    expect(result.output?.cleanDistPath).toBeUndefined()
+    expect(result.output?.externals).toBeUndefined()
+    expect(result.output?.assetPrefix).toBeUndefined()
+    expect(result.plugins).toEqual([
+      expect.objectContaining({ name: 'shared-plugin' }),
+    ])
+    expect(result.tools?.htmlPlugin).toBeUndefined()
+    expect(result.tools?.rspack).toEqual({ output: {} })
+    expect(result.dev?.writeToDisk).toBeUndefined()
+  })
+
+  it('preserves explicit Storybook config applied after stripping', async () => {
+    const explicitPlugin = { name: 'explicit-plugin', setup() {} }
+    const result = await runRsbuildFinal(
+      {
+        output: { externals: ['inherited-external'] },
+        plugins: [{ name: 'inherited-plugin', setup() {} }],
+      },
+      {
+        modifyLibRsbuildConfig(config) {
+          config.output ??= {}
+          config.output.externals = ['explicit-external']
+          config.plugins = [explicitPlugin]
+        },
+      },
+    )
+
+    expect(result.output?.externals).toEqual(['explicit-external'])
+    expect(result.plugins).toContain(explicitPlugin)
+  })
 })

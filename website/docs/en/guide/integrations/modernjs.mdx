@@ -30,6 +30,8 @@ const config: StorybookConfig = {
 export default config
 ```
 
+Before the resolved Modern.js config is merged into Storybook, it passes through the inherited-config boundary documented in [Builder Options](/guide/configuration#builder-options). To restore a stripped field intentionally, add it in Storybook's `rsbuildFinal`; explicit configuration runs after inherited fields are stripped.
+
 ## With Module Federation
 
 Review the [Module Federation example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/modernjs-react-mf) for a full walkthrough.
@@ -93,7 +95,7 @@ export default defineConfig({
     appTools({
       bundler: 'rspack',
     }),
-    ...(process.env.STORYBOOK ? [] : [moduleFederationPlugin()]),
+    ...(process.env.STORYBOOK === 'true' ? [] : [moduleFederationPlugin()]),
   ],
 })
 ```

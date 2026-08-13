@@ -85,6 +85,21 @@ const config: StorybookConfig = {
 export default config;
 ```
 
+### Inherited Rsbuild Configuration
+
+The config selected by `rsbuildConfigPath` is automatically merged into the Storybook preview build. Production-only settings can affect or break the preview, so the following fields are not inherited:
+
+- `source.entry`
+- `output.distPath`, `output.filename`, `output.cleanDistPath`, `output.externals`, and `output.assetPrefix`
+- `server.publicDir`
+- `dev.progressBar`, `dev.assetPrefix`, and `dev.writeToDisk`
+- `tools.htmlPlugin`
+- `tools.rspack.output.library`, `tools.rspack.output.globalObject`, and `tools.rspack.output.umdNamedDefine`
+
+This boundary also applies to configuration inherited by `storybook-addon-rslib` and `storybook-addon-modernjs`. Function-form `tools.rspack` values are opaque and cannot be stripped. Prefer a dedicated [Rsbuild environment](https://rsbuild.rs/config/environments) selected with `environment` to isolate Storybook-safe settings. To restore a stripped field intentionally, add it explicitly in Storybook's `rsbuildFinal`; explicit configuration runs after inherited configuration is stripped.
+
+Plugins remain inherited because they commonly provide transforms required by the preview build. The Storybook CLI sets `process.env.STORYBOOK` to `'true'` before loading project configuration, so use that condition to omit an app-only plugin that should not run in Storybook.
+
 ### Option Reference
 
 | Option | Type | Default | Description |

@@ -1,8 +1,9 @@
 import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import { loadConfig } from '@rslib/core'
-import type {
-  RsbuildFinal,
-  StorybookConfigRsbuild,
+import {
+  type RsbuildFinal,
+  type StorybookConfigRsbuild,
+  stripInheritedConfig,
 } from 'storybook-builder-rsbuild'
 import type { AddonOptions } from './types'
 
@@ -48,23 +49,9 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     libConfig as RsbuildConfig,
   )
 
-  // TODO: Add more unapplicable fields.
+  stripInheritedConfig(mergedLibConfig, 'the loaded Rslib config')
 
-  // #region Remove unapplicable fields.
-  delete mergedLibConfig.source?.entry
-  delete mergedLibConfig.output?.distPath
-  delete mergedLibConfig.output?.filename
-  delete mergedLibConfig.output?.cleanDistPath
-  delete mergedLibConfig.output?.externals
-  delete mergedLibConfig.server?.publicDir
-  delete mergedLibConfig.dev?.progressBar
-  // #endregion
-
-  // #region Critical in the MF library, but it is appropriate to remove it for all library formats.
-  delete mergedLibConfig.output?.assetPrefix
-  delete mergedLibConfig.dev?.assetPrefix
-  // #endregion
-
+  // Explicit Storybook configuration is applied after inherited fields are stripped.
   if (typeof modifyLibRsbuildConfig === 'function') {
     modifyLibRsbuildConfig(mergedLibConfig)
   }

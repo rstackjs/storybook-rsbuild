@@ -8,9 +8,10 @@ import {
 import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import findUp from 'find-up'
 import { logger } from 'rslog'
-import type {
-  RsbuildFinal,
-  StorybookConfigRsbuild,
+import {
+  type RsbuildFinal,
+  type StorybookConfigRsbuild,
+  stripInheritedConfig,
 } from 'storybook-builder-rsbuild'
 import type { AddonOptions } from './types'
 
@@ -116,7 +117,13 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     normalizedConfig: resolveConfig as AppNormalizedConfig,
   }
 
-  // Inject the extra rsbuild plugins
+  // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
+  stripInheritedConfig(
+    rsbuildConfig as RsbuildConfig,
+    'the loaded Modern.js config',
+  )
+
+  // Add the integration's required plugins after inherited config is stripped.
   rsbuildConfig.plugins = [
     ...rsbuildPlugins,
     ...(rsbuildConfig.plugins || []),
@@ -124,27 +131,6 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     builderPluginAdapterHooks(adapterParams),
   ]
 
-  // Strip output fields that Storybook's preview iframe owns. builder-rsbuild
-  // hardcodes these in iframe-rsbuild.config.ts as defensive defaults, but that
-  // merge runs *before* the rsbuildFinal hook below — so any value Modern.js
-  // produced silently overrides them via mergeRsbuildConfig. Concrete leaks:
-  //   - distPath:      iframe lands in the host's `dist/`, clobbering `modern build`,
-  //                    and nested asset dirs break relative chunk/url() resolution (#522)
-  //   - assetPrefix:   iframe.html script srcs gain the host CDN prefix (#66/#72/#224)
-  //   - cleanDistPath: Modern.js's default `true` overrides Storybook's explicit `false`
-  //   - filename:      host chunk naming overrides `[name].iframe.bundle.js`
-  if (rsbuildConfig.output) {
-    for (const key of [
-      'distPath',
-      'assetPrefix',
-      'cleanDistPath',
-      'filename',
-    ] as const) {
-      delete rsbuildConfig.output[key]
-    }
-  }
-
-  // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
   const finalConfig = mergeRsbuildConfig(config, rsbuildConfig as RsbuildConfig)
   return finalConfig
 }
