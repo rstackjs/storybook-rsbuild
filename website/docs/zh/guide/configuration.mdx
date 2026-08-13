@@ -98,22 +98,7 @@ export default config;
 
 此边界也适用于从 `storybook-addon-rslib` 和 `storybook-addon-modernjs` 继承的配置。`tools.rspack` 如果使用函数形式，内部字段将无法被检查和剥离。建议通过 `environment` 选择专用于 Storybook 的 [Rsbuild environment](https://rsbuild.rs/config/environments)。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承配置被剥离后执行。
 
-Plugin 会继续继承，因为它们通常提供 preview build 所需的 transform。Storybook CLI 会在加载项目配置前将 `process.env.STORYBOOK` 设置为 `'true'`，因此可以按以下方式有条件地排除不应在 Storybook 中运行、仅供应用使用的 plugin：
-
-```ts title="rsbuild.config.ts"
-import { defineConfig } from '@rsbuild/core';
-
-const writeBuildIdPlugin = () => ({
-  name: 'write-build-id',
-  setup() {},
-});
-
-export default defineConfig({
-  plugins: [
-    ...(process.env.STORYBOOK === 'true' ? [] : [writeBuildIdPlugin()]),
-  ],
-});
-```
+Plugin 会继续继承，因为它们通常提供 preview build 所需的 transform。Storybook CLI 会在加载项目配置前将 `process.env.STORYBOOK` 设置为 `'true'`，可以用这个条件排除不应在 Storybook 中运行、仅供应用使用的 plugin。
 
 ### 选项参考
 

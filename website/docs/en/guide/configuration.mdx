@@ -98,22 +98,7 @@ The config selected by `rsbuildConfigPath` is automatically merged into the Stor
 
 This boundary also applies to configuration inherited by `storybook-addon-rslib` and `storybook-addon-modernjs`. Function-form `tools.rspack` values are opaque and cannot be stripped. Prefer a dedicated [Rsbuild environment](https://rsbuild.rs/config/environments) selected with `environment` to isolate Storybook-safe settings. To restore a stripped field intentionally, add it explicitly in Storybook's `rsbuildFinal`; explicit configuration runs after inherited configuration is stripped.
 
-Plugins remain inherited because they commonly provide transforms required by the preview build. The Storybook CLI sets `process.env.STORYBOOK` to `'true'` before loading project configuration, so conditionally omit an app-only plugin that should not run in Storybook:
-
-```ts title="rsbuild.config.ts"
-import { defineConfig } from '@rsbuild/core';
-
-const writeBuildIdPlugin = () => ({
-  name: 'write-build-id',
-  setup() {},
-});
-
-export default defineConfig({
-  plugins: [
-    ...(process.env.STORYBOOK === 'true' ? [] : [writeBuildIdPlugin()]),
-  ],
-});
-```
+Plugins remain inherited because they commonly provide transforms required by the preview build. The Storybook CLI sets `process.env.STORYBOOK` to `'true'` before loading project configuration, so use that condition to omit an app-only plugin that should not run in Storybook.
 
 ### Option Reference
 
