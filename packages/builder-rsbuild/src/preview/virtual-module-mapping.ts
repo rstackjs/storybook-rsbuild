@@ -1,7 +1,6 @@
 import { join, resolve } from 'node:path'
 import slash from 'slash'
 import {
-  getBuilderOptions,
   loadPreviewOrConfigFile,
   normalizeStories,
   readTemplate,
@@ -12,7 +11,6 @@ import type {
   PreviewAnnotation,
 } from 'storybook/internal/types'
 import { toImportFn } from '../../compiled/@storybook/core-webpack'
-import type { BuilderOptions } from '../types'
 
 /**
  * Matches `node_modules` only as a complete path segment OR a complete
@@ -82,11 +80,12 @@ export const excludeNodeModulesFromStoryContext = (
     .join('\n')
 }
 
-export const getVirtualModules = async (options: Options) => {
+export const getVirtualModules = async (
+  options: Options,
+  isLazyCompilationActive: boolean,
+) => {
   const virtualModules: Record<string, string> = {}
-  const builderOptions = await getBuilderOptions<BuilderOptions>(options)
   const workingDir = process.cwd()
-  const isProd = options.configType === 'PRODUCTION'
   const nonNormalizedStories = await options.presets.apply('stories', [])
   const entries = []
 
@@ -118,11 +117,11 @@ export const getVirtualModules = async (options: Options) => {
   const storiesFilename = 'storybook-stories.js'
   const storiesPath = resolve(join(workingDir, storiesFilename))
 
-  const needPipelinedImport =
-    builderOptions.lazyCompilation !== false && !isProd
+  // TODO: Add the upstream builder-webpack5 semver gate for webpack issue #15541
+  // once the Rspack version containing the equivalent fix is identified.
   virtualModules[storiesPath] = excludeNodeModulesFromStoryContext(
     toImportFn(stories, {
-      needPipelinedImport,
+      needPipelinedImport: isLazyCompilationActive,
     }),
     stories,
   )
