@@ -21,7 +21,7 @@
     "@module-federation/enhanced": "^2.8.2",
     "@module-federation/rsbuild-plugin": "^2.8.2",
     "@module-federation/storybook-addon": "^6.0.18",
-    "@rsbuild/core": "^2.1.10",
+    "@rsbuild/core": "^2.1.13",
     "@rsbuild/plugin-react": "^2.1.0",
     "@rsbuild/plugin-sass": "^1.5.3",
     "@rslib/core": "^0.23.2",
