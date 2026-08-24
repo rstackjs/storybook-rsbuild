@@ -2,16 +2,6 @@ import { createRequire } from 'node:module'
 import { logger } from 'storybook/internal/node-logger'
 import { readProvidedMap, walkRules } from './preset-helpers'
 
-/**
- * The RSPACK_CONFIG_VALIDATE mode to use: a user-supplied value always wins;
- * otherwise the non-silent 'loose' default (see the assignment above). Extracted
- * so the "respect override, default when unset" contract is unit-testable
- * without wrestling the module-load side effect.
- */
-export function resolveRspackValidateMode(current: string | undefined): string {
-  return current ?? 'loose'
-}
-
 export interface NextRspackExtraction {
   /** resolve.alias from getBaseWebpackConfig (absolute paths) */
   alias: Record<string, string | string[] | false>
@@ -136,28 +126,21 @@ export const DUMMY_NEXT_ARGS = {
 
 /**
  * Build the `getBaseWebpackConfig` options for the detected Next.js version.
- * Signature drift: 15.x uses `edgePreviewProps`; 16.0+ renamed to
- * `previewProps` (now required).
+ * Next.js 16.3+ requires `previewProps`; older versions are unsupported but
+ * receive the current shape so the bridge can emit an actionable warning.
  */
-function buildWebpackConfigParams(
+export function buildWebpackConfigParams(
   version: [number, number] | null,
   base: Record<string, any>,
 ): Record<string, any> {
-  const params: Record<string, any> = { ...base }
-
-  if (!version || version[0] >= 16) {
-    params.previewProps = PREVIEW_KEYS
-  } else if (version[0] === 15) {
-    params.edgePreviewProps = PREVIEW_KEYS
-  } else {
+  if (version && (version[0] < 16 || (version[0] === 16 && version[1] < 3))) {
     logger.warn(
-      `Next.js ${version.join('.')} is below the supported range (15.3+). ` +
+      `Next.js ${version.join('.')} is below the supported range (16.3+). ` +
         'Bridge may fail or produce incorrect config.',
     )
-    params.edgePreviewProps = PREVIEW_KEYS
   }
 
-  return params
+  return { ...base, previewProps: PREVIEW_KEYS }
 }
 
 const EMPTY_EXTRACTION: NextRspackExtraction = {
@@ -356,31 +339,10 @@ export async function extractNextRspackConfig(
     allowMissingNextBridge = false,
   }: { dev?: boolean; allowMissingNextBridge?: boolean } = {},
 ): Promise<NextRspackExtraction> {
-  // Set at extraction time (not module load): all Next.js/rspack reads below are
-  // call-time — `doExtract` reaches Next internals only via dynamic `import()`,
-  // and @rspack/core reads RSPACK_CONFIG_VALIDATE at compile time — so setting
-  // here still lands before every reader. These are NOT unset afterward:
-  // NEXT_RSPACK is read at loader-run time during the Storybook compile, and
-  // RSPACK_CONFIG_VALIDATE governs the final compile too. See AGENTS.md Shim
-  // Catalogue.
-  //
-  // Must be set before any Next.js internal imports so that
+  // Set at extraction time (not module load) before any Next.js internal
+  // imports so that
   // getBaseWebpackConfig() emits rspack-compatible config.
   process.env.NEXT_RSPACK = 'true'
-  // This var is process-wide and is ALSO read by @rspack/core when Rsbuild calls
-  // `rspack(finalConfig)` at compile time, so it governs validation of the whole
-  // final Storybook build — including the user's own webpackFinal/tools.rspack
-  // mutations. Next.js emits webpack-only keys that @rspack/core 1.5.0's schema
-  // rejects, so 'strict' can't be used; but 'loose-silent' would suppress a typo
-  // in the user's config too. Default to the loosest NON-silent mode ('loose':
-  // prints validation issues as warnings, never throws) so config typos still
-  // surface. Only default when unset so a user can override (e.g.
-  // RSPACK_CONFIG_VALIDATE=strict to debug, or 'loose-silent' to restore the old
-  // behavior). Read only by @rspack/core <= 1.5.x (Next 15 rows); rspack 1.6.0
-  // removed JS-side validation, so it is vestigial on Next 16 rows.
-  process.env.RSPACK_CONFIG_VALIDATE = resolveRspackValidateMode(
-    process.env.RSPACK_CONFIG_VALIDATE,
-  )
   // Setting this var makes Next.js's loadConfig() SKIP loadWebpackHook(), which
   // would otherwise install ~40 process-wide require-hook aliases remapping
   // 'webpack', 'webpack-sources', '@babel/runtime', etc. to next/dist/compiled/*

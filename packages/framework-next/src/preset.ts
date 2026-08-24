@@ -418,7 +418,7 @@ export const rsbuildFinal: NonNullable<
   // rule chain. See `makeFontRule` and `loaders/storybook-nextjs-font-loader.cjs`.
   const nextFontRule = makeFontRule(FONT_LOADER)
 
-  // `optimizePackageImports` (default-on for many libs in Next 15+, e.g.
+  // `optimizePackageImports` (default-on for many libs in Next.js, e.g.
   // lucide-react, @mui/material) makes `next-swc` rewrite barrel imports into
   // `__barrel_optimize__?names=…!=!<pkg>` requests that bypass Rsbuild's
   // `.tsx?`/`.js` rule; `makeBarrelRule` routes them through the SWC shim chain

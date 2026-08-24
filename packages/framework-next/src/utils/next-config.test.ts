@@ -8,6 +8,7 @@ import {
 } from '@rstest/core'
 import { logger } from 'storybook/internal/node-logger'
 import {
+  buildWebpackConfigParams,
   configLoadPhase,
   DUMMY_NEXT_ARGS,
   describeRequireHookRegression,
@@ -15,7 +16,6 @@ import {
   instrumentUserWebpack,
   isStorybookClaimedRule,
   resolveBridgeFailure,
-  resolveRspackValidateMode,
   ruleTestMatchesAny,
   selectBridgeFailureHint,
 } from './next-config'
@@ -504,14 +504,32 @@ describe('configLoadPhase (F1 — extract in the matching mode)', () => {
   })
 })
 
-describe('resolveRspackValidateMode (F13 — non-silent default, respect override)', () => {
-  it('defaults to the non-silent "loose" mode when unset', () => {
-    expect(resolveRspackValidateMode(undefined)).toBe('loose')
+describe('buildWebpackConfigParams', () => {
+  it('always sets the Next.js 16.3+ previewProps shape', () => {
+    expect(buildWebpackConfigParams([16, 3], { dev: true })).toEqual({
+      dev: true,
+      previewProps: {
+        previewModeId: 'storybook-preview',
+        previewModeSigningKey: 'storybook-signing-key',
+        previewModeEncryptionKey: 'storybook-encryption-key',
+      },
+    })
+
+    const unresolved = buildWebpackConfigParams(null, {})
+    expect(unresolved).toHaveProperty('previewProps')
+    expect(unresolved).not.toHaveProperty('edgePreviewProps')
   })
 
-  it('respects a user-supplied value (e.g. strict to debug)', () => {
-    expect(resolveRspackValidateMode('strict')).toBe('strict')
-    expect(resolveRspackValidateMode('loose-silent')).toBe('loose-silent')
+  it('warns when Next.js is below the supported 16.3 range', () => {
+    const warnSpy = rstest.spyOn(logger, 'warn').mockImplementation(() => {})
+    try {
+      buildWebpackConfigParams([16, 2], {})
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('below the supported range (16.3+)'),
+      )
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })
 
@@ -621,7 +639,7 @@ describe('selectBridgeFailureHint (F9 — attributed remediation hint)', () => {
 })
 
 describe('resolveBridgeFailure (F9 — dev degrades, prod fails)', () => {
-  const nextVersion: [number, number] = [15, 3]
+  const nextVersion: [number, number] = [16, 3]
 
   // Suppress (and inspect) the attributed error logging.
   let errorSpy: ReturnType<typeof rstest.spyOn>

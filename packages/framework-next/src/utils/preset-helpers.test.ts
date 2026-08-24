@@ -633,7 +633,7 @@ describe('SWC rule selection against real Next.js oneOf order (WI-4)', () => {
   const SHIM = '/shim/swc-loader-shim.cjs'
 
   // Transcribed from a REAL production extraction — `getBaseWebpackConfig({
-  // dev: false })` against `sandboxes/nextjs` (next@16.2.9, next-rspack). The
+  // dev: false })` against `sandboxes/nextjs` (next@16.3.2, next-rspack). The
   // SWC-bearing rules are reproduced in emitted order with their `issuerLayer` /
   // `resourceQuery` narrowing and their `serverComponents` swc option; only the
   // pages catch-all (last) has neither a layer nor a query. First-match-wins
@@ -892,7 +892,7 @@ describe('replaceSwcRules', () => {
     expect(replaceSwcRules(rules, [{ loader: '/shim.cjs' }])).toBe(false)
   })
 
-  // streamshub/console (Next 15) regression: Rsbuild's `mimetype` rule for
+  // streamshub/console regression: Rsbuild's `mimetype` rule for
   // inline text/javascript also matches html-rspack-plugin's synthetic
   // `data:…__webpack_public_path__…` child-compiler entry, which is evaluated
   // in a Node `vm`. Keeping `builtin:react-refresh-loader` there crashes

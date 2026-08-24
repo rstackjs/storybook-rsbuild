@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
  * Storybook's rsbuild compilation uses `@rspack/core` resolved through
  * `@rsbuild/core`; Next.js's extracted config is produced by `next-rspack` and
  * carries plugin instances bound to the `@rspack/core` resolved through
- * `next-rspack` (directly on 15.x, via `@next/rspack-core` on 16.x).
+ * `next-rspack` via `@next/rspack-core`.
  *
  * When the two resolve to different copies, plugin hooks bind to one
  * `NormalModule` identity while the compilation runs on another — taps never
@@ -40,16 +40,13 @@ export function describeRspackMismatch(
     return null
   }
 
-  // Third failure shape, checked first: the two @rspack/core majors differ. This
-  // is the next 16.3+ wall — next-rspack@16.3 moved to @rspack/core 2.x while
-  // @rsbuild/core still ships 1.x. No @rsbuild/core release pairs with it, so
-  // realigning versions from the matrix can't help; the only fixes are to pin
-  // back to a supported release or wait for rspack-2 support. Reporting this as a
-  // plain "version mismatch" would send triage down the dead-end of matrix-hunting
-  // for a row that doesn't exist.
+  // Third failure shape, checked first: the two @rspack/core majors differ.
+  // storybook-next-rsbuild supports the Rspack 2 line used by Next.js 16.3+;
+  // Next.js <=16.2 remains on Rspack 1 and must be upgraded rather than paired
+  // with an older @rsbuild/core.
   if (parseInt(rsbuildSide.version, 10) !== parseInt(nextSide.version, 10)) {
     return [
-      '[storybook-next-rsbuild] no compatible @rspack/core pairing exists for this next / next-rspack release.',
+      '[storybook-next-rsbuild] unsupported @rspack/core major detected.',
       '',
       `  via ${rsbuildSide.source}:`,
       `    ${rsbuildSide.version}  (${rsbuildSide.pkgPath})`,
@@ -57,10 +54,10 @@ export function describeRspackMismatch(
       `    ${nextSide.version}  (${nextSide.pkgPath})`,
       '',
       'The two sides resolve @rspack/core copies with different majors, which',
-      'cannot interoperate. This happens on next 16.3+, where next-rspack moved to',
-      '@rspack/core 2.x while storybook-next-rsbuild is still on @rspack/core 1.x.',
-      'Pin `next` and `next-rspack` to <=16.2.x (see the version matrix:',
-      `${MATRIX_URL}), or wait for @rspack/core 2 support in storybook-next-rsbuild.`,
+      'cannot interoperate. storybook-next-rsbuild supports next 16.3+ and',
+      '@rspack/core 2.x only; next <=16.2 uses @rspack/core 1.x and is unsupported.',
+      'Upgrade `next` and `next-rspack` together to >=16.3.0 and install the',
+      `matching @rsbuild/core configuration from ${MATRIX_URL}`,
     ].join('\n')
   }
 
@@ -133,32 +130,21 @@ function resolveFromNextRspack(cwd: string): ResolvedRspack | undefined {
   const nextRspackPkg = resolvePkgJson(`${cwd}/`, 'next-rspack')
   if (!nextRspackPkg) return
 
-  // Next 16.x routes through `@next/rspack-core` (which pins `@rspack/core`).
+  // Next 16.3+ routes through `@next/rspack-core` (which pins `@rspack/core`).
   const nextCorePkg = resolvePkgJson(nextRspackPkg, '@next/rspack-core')
-  if (nextCorePkg) {
-    const pkgPath = resolvePkgJson(nextCorePkg, '@rspack/core')
-    if (pkgPath) {
-      const version = readVersion(pkgPath)
-      if (version) {
-        return { source: 'next-rspack → @next/rspack-core', pkgPath, version }
-      }
-    }
-  }
-
-  // Next 15.x — `next-rspack` depends on `@rspack/core` directly.
-  const pkgPath = resolvePkgJson(nextRspackPkg, '@rspack/core')
+  if (!nextCorePkg) return
+  const pkgPath = resolvePkgJson(nextCorePkg, '@rspack/core')
   if (!pkgPath) return
   const version = readVersion(pkgPath)
   if (!version) return
-  return { source: 'next-rspack', pkgPath, version }
+  return { source: 'next-rspack → @next/rspack-core', pkgPath, version }
 }
 
 /**
  * Exported for unit testing — a shared `@rspack/core` row is necessary but not
  * sufficient: Next.js loads `next-rspack` internals directly, so `next` and
- * `next-rspack` must be installed at the *exact* same version (a 16.1/16.2 mix
- * that happens to share an `@rspack/core` row still breaks). Returns the error
- * message (or `null` for OK / unresolved).
+ * `next-rspack` must be installed at the *exact* same version. Returns the
+ * error message (or `null` for OK / unresolved).
  */
 export function describeNextRspackPairingMismatch(
   nextVersion: string | undefined,
