@@ -49,6 +49,18 @@ overrides:
   '@rsbuild/core@2.0.7>@rspack/core': '2.0.4'
 ```
 
+npm (`package.json`):
+
+```json title="package.json"
+{
+  "overrides": {
+    "@rsbuild/core@2.0.7": {
+      "@rspack/core": "2.0.4"
+    }
+  }
+}
+```
+
 yarn (`package.json`):
 
 ```json title="package.json"
@@ -65,7 +77,7 @@ Notes:
 - `next-rspack` must be installed at the exact same version as `next`.
 - Install exactly `@rsbuild/core@2.0.7` and keep the scoped `@rspack/core@2.0.4` override. A newer `@rsbuild/core`, even within the same major, shifts its Rspack dependency and fails the startup check.
 - If startup aborts with an `@rspack/core` mismatch error, compare the two versions and paths it prints (the check is strict — any difference aborts startup):
-  - **Different versions** — realign using this table and verify the required pnpm [`overrides`](https://pnpm.io/10.x/settings#overrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) entry is present at the project root.
+  - **Different versions** — realign using this table and verify the required pnpm [`overrides`](https://pnpm.io/10.x/settings#overrides), npm `overrides`, or yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) entry is present at the project root.
   - **Same version, different paths** (the error reads _"duplicate physical copies"_) — your package manager installed two copies of the same version (yarn Berry is the known offender, splitting on `@rspack/core`'s optional `@swc/helpers` peer). Pin the splitting peer (e.g. add `@swc/helpers` to `resolutions`/`overrides`) or run `yarn dedupe` / `pnpm dedupe` — changing the `@rspack/core` version won't help, because it already matches.
 
 ## Getting started

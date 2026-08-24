@@ -272,10 +272,8 @@ class StylePreflightPlugin {
 class ReactRefreshInitPlugin {
   constructor(private entryPath: string) {}
   apply(compiler: any) {
-    // `name: undefined` is rspack/webpack's "global entry" semantic — attaches
-    // the bootstrap to every entry rather than a named one. Not a publicly
-    // documented contract; if rspack breaks this, pass an explicit name and
-    // add the entry to each Storybook chunk via compilation.addEntry.
+    // `name: undefined` is Rspack's documented global-entry semantic: inject
+    // the bootstrap into every regular and async entry rather than a named one.
     new compiler.webpack.EntryPlugin(compiler.context, this.entryPath, {
       name: undefined,
     }).apply(compiler)
