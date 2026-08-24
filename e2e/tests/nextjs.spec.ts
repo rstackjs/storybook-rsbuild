@@ -15,11 +15,22 @@ if (!sandbox) {
 test.describe(sandbox.name, () => {
   let server: Awaited<ReturnType<typeof launchSandbox>>
 
-  async function openStory(page: Page, storyId: string) {
+  async function openStory(
+    page: Page,
+    storyId: string,
+    { waitForNetworkIdle = true }: { waitForNetworkIdle?: boolean } = {},
+  ) {
     await page.goto(`${server.url}?path=/story/${storyId}`, {
       waitUntil: 'domcontentloaded',
     })
     await waitForPreviewReady(page)
+    // Rsbuild lazy compilation can trigger one iframe reload after the first
+    // render. Wait for that network cycle, then re-check the preview before
+    // tests start interacting with stateful stories.
+    if (waitForNetworkIdle) {
+      await page.waitForLoadState('networkidle')
+      await waitForPreviewReady(page)
+    }
     return previewFrame(page)
   }
 
@@ -322,7 +333,11 @@ test.describe(sandbox.name, () => {
       })
     })
 
-    const frame = await openStory(page, 'stories-image--with-blur-placeholder')
+    const frame = await openStory(
+      page,
+      'stories-image--with-blur-placeholder',
+      { waitForNetworkIdle: false },
+    )
     const img = frame.getByRole('img', { name: 'Blur Probe' })
     await expect(img).toBeVisible()
 
