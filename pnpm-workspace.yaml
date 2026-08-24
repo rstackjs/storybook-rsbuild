@@ -5,6 +5,8 @@ packages:
   - sandboxes/**
   - scripts/**
   - website
+overrides:
+  '@rsbuild/core@2.0.7>@rspack/core': '2.0.4'
 # Re-sync pnpm-injected deps (framework-next's storybook-builder-rsbuild) after
 # these scripts so a builder rebuild doesn't leave a stale hard-linked copy.
 syncInjectedDepsAfterScripts:
