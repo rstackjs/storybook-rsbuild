@@ -17,11 +17,11 @@
     "@chromatic-com/storybook": "^5.3.0",
     "@rsbuild/core": "^2.1.13",
     "@rsbuild/plugin-vue": "1.2.9",
-    "@storybook/addon-docs": "10.5.5",
-    "@storybook/addon-onboarding": "10.5.5",
-    "@storybook/web-components": "10.5.5",
+    "@storybook/addon-docs": "10.5.10",
+    "@storybook/addon-onboarding": "10.5.10",
+    "@storybook/web-components": "10.5.10",
     "@types/node": "^22.0.0",
-    "storybook": "10.5.5",
+    "storybook": "10.5.10",
     "storybook-web-components-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
   }
