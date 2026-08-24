@@ -16,7 +16,7 @@ There is **no framework-specific build configuration to learn**: keep configurin
 
 | Package | Version |
 | :--- | :--- |
-| `next` | `>=16.0.0 <16.3.0` |
+| `next` | `>=16.3.0 <17.0.0` |
 | `next-rspack` | matches `next` (same version) |
 | `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
 | `storybook` | `^10.5.0` |
@@ -28,7 +28,7 @@ There is **no framework-specific build configuration to learn**: keep configurin
 
 ## Version matrix
 
-Storybook's build and Next.js's build tooling must share **a single copy of `@rspack/core`**. Both `@rsbuild/core` and `next-rspack` pin an exact `@rspack/core` version, so the two pins have to agree — the framework checks this at startup and refuses to start when they differ, printing a link back to this table.
+Storybook's build and Next.js's build tooling must share **a single physical copy of `@rspack/core`**. `next-rspack@16.3.x` pins `@rspack/core@2.0.4` through `@next/rspack-core`, while `@rsbuild/core@2.0.7` declares `~2.0.4`, which package managers normally resolve to a newer patch. The required override below makes both sides resolve to exactly `2.0.4`; the framework checks their versions and physical paths at startup and refuses to start when they differ.
 
 Pick the row that matches your `next` version and install the listed `@rsbuild/core`:
 
@@ -36,28 +36,45 @@ Pick the row that matches your `next` version and install the listed `@rsbuild/c
 
 | `next` | `next-rspack` | `@rspack/core` (transitive) | `@rsbuild/core` |
 | :--- | :--- | :--- | :--- |
-| `16.0.x` | same as `next` | `1.6.0` | `1.6.0` or `1.6.1` |
-| `16.1.x` | same as `next` | `1.6.7` | `1.6.14` |
-| `16.2.x` | same as `next` | `1.6.7` | `1.6.14` |
+| `16.3.x` | same as `next` | `2.0.4` | `2.0.7` + override below |
 
 </div>
 
+Add the matching override at the project root **before installing dependencies**:
+
+pnpm (`pnpm-workspace.yaml`):
+
+```yaml title="pnpm-workspace.yaml"
+overrides:
+  '@rsbuild/core@2.0.7>@rspack/core': '2.0.4'
+```
+
+yarn (`package.json`):
+
+```json title="package.json"
+{
+  "resolutions": {
+    "@rsbuild/core@npm:2.0.7/@rspack/core": "2.0.4"
+  }
+}
+```
+
 Notes:
 
-- **`next` 16.3+: not yet supported** (`next-rspack` moved to `@rspack/core` 2.x, while `storybook-next-rsbuild` is still on 1.x). Pin `next` and `next-rspack` to `16.2.x`; the startup check reports this case with the same guidance.
+- **`next` ≤16.2 is not supported** because its `next-rspack` releases use `@rspack/core` 1.x. Upgrade `next` and `next-rspack` together to 16.3 or newer.
 - `next-rspack` must be installed at the exact same version as `next`.
-- Only the `@rsbuild/core` versions listed above resolve to the matching `@rspack/core` — a newer `@rsbuild/core`, even within the same minor, usually shifts its `@rspack/core` pin and fails the startup check.
+- Install exactly `@rsbuild/core@2.0.7` and keep the scoped `@rspack/core@2.0.4` override. A newer `@rsbuild/core`, even within the same major, shifts its Rspack dependency and fails the startup check.
 - If startup aborts with an `@rspack/core` mismatch error, compare the two versions and paths it prints (the check is strict — any difference aborts startup):
-  - **Different versions** — realign using this table, or force `@rspack/core` to the target version with pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions).
+  - **Different versions** — realign using this table and verify the required pnpm [`overrides`](https://pnpm.io/10.x/settings#overrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) entry is present at the project root.
   - **Same version, different paths** (the error reads _"duplicate physical copies"_) — your package manager installed two copies of the same version (yarn Berry is the known offender, splitting on `@rspack/core`'s optional `@swc/helpers` peer). Pin the splitting peer (e.g. add `@swc/helpers` to `resolutions`/`overrides`) or run `yarn dedupe` / `pnpm dedupe` — changing the `@rspack/core` version won't help, because it already matches.
 
 ## Getting started
 
 ### Installation
 
-Install `storybook-next-rsbuild` together with `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from your [version matrix](#version-matrix) row. For example, on `next@16.2.3`:
+Install `storybook-next-rsbuild` together with `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from your [version matrix](#version-matrix) row. For example, on `next@16.3.2` (after adding the required override above):
 
-<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14 -D" />
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.3.2 @rsbuild/core@2.0.7 -D" />
 
 If the framework can't load your Next.js config (for example, `next-rspack` isn't installed), what happens depends on the build mode:
 
@@ -481,7 +498,7 @@ Stories are compiled with Next.js's own compiler (SWC), so build behavior matche
 
 - `'use client'` directives behave like they do in Next.js, and `server-only` modules resolve as in a real build.
 - `transpilePackages` entries in your `next.config.ts` apply to stories automatically.
-- `optimizePackageImports` (default-on in Next 15+) is honored, including packages whose published source is TypeScript.
+- `optimizePackageImports` is honored, including packages whose published source is TypeScript.
 - JSX runtime selection follows your `next.config.ts`.
 
 These are Next.js-owned concerns: configure them in `next.config.ts` and they apply to stories automatically. (TypeScript behavior matches upstream — **see [Typescript](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#typescript)**.)

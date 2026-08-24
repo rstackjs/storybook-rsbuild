@@ -16,7 +16,7 @@ Storybook for Next.js & Rsbuild 让你在隔离环境中开发和测试 Next.js 
 
 | Package | Version |
 | :--- | :--- |
-| `next` | `>=16.0.0 <16.3.0` |
+| `next` | `>=16.3.0 <17.0.0` |
 | `next-rspack` | 与 `next` 相同(同一版本) |
 | `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
 | `storybook` | `^10.5.0` |
@@ -28,7 +28,7 @@ Storybook for Next.js & Rsbuild 让你在隔离环境中开发和测试 Next.js 
 
 ## 版本矩阵 {#version-matrix}
 
-Storybook 的构建与 Next.js 的构建工具必须共享**同一份 `@rspack/core`**。`@rsbuild/core` 和 `next-rspack` 各自 pin 了一个确切的 `@rspack/core` 版本,两者必须一致 —— framework 会在启动时检查,不一致就拒绝启动,并打印指回本表的链接。
+Storybook 的构建与 Next.js 的构建工具必须共享**同一份物理 `@rspack/core`**。`next-rspack@16.3.x` 通过 `@next/rspack-core` 固定到 `@rspack/core@2.0.4`,而 `@rsbuild/core@2.0.7` 声明的是 `~2.0.4`,包管理器通常会将其解析到更新的 patch。下方必需的 override 会让两侧都精确解析到 `2.0.4`;framework 会在启动时检查它们的版本和物理路径,不一致就拒绝启动。
 
 请选择与你 `next` 版本匹配的那一行,并安装列出的 `@rsbuild/core`:
 
@@ -36,28 +36,45 @@ Storybook 的构建与 Next.js 的构建工具必须共享**同一份 `@rspack/c
 
 | `next` | `next-rspack` | `@rspack/core`(间接) | `@rsbuild/core` |
 | :--- | :--- | :--- | :--- |
-| `16.0.x` | 同 `next` | `1.6.0` | `1.6.0` 或 `1.6.1` |
-| `16.1.x` | 同 `next` | `1.6.7` | `1.6.14` |
-| `16.2.x` | 同 `next` | `1.6.7` | `1.6.14` |
+| `16.3.x` | 同 `next` | `2.0.4` | `2.0.7` + 下方 override |
 
 </div>
 
+请在安装依赖**之前**,把对应的 override 添加到项目根目录:
+
+pnpm (`pnpm-workspace.yaml`):
+
+```yaml title="pnpm-workspace.yaml"
+overrides:
+  '@rsbuild/core@2.0.7>@rspack/core': '2.0.4'
+```
+
+yarn (`package.json`):
+
+```json title="package.json"
+{
+  "resolutions": {
+    "@rsbuild/core@npm:2.0.7/@rspack/core": "2.0.4"
+  }
+}
+```
+
 说明:
 
-- **`next` 16.3+:暂不支持**(`next-rspack` 已切换到 `@rspack/core` 2.x,而 `storybook-next-rsbuild` 仍在 1.x)。请把 `next` 和 `next-rspack` 固定到 `16.2.x`;启动检查遇到这种情况会给出相同的指引。
+- **不支持 `next` ≤16.2**,因为对应的 `next-rspack` 使用 `@rspack/core` 1.x。请把 `next` 和 `next-rspack` 一起升级到 16.3 或更高版本。
 - `next-rspack` 必须与 `next` 安装完全相同的版本。
-- 只有上表列出的 `@rsbuild/core` 版本才会解析到匹配的 `@rspack/core` —— 更新的 `@rsbuild/core`(即使在同一 minor 内)通常会改变它的 `@rspack/core` pin,导致启动检查失败。
+- 请精确安装 `@rsbuild/core@2.0.7`,并保留 scoped `@rspack/core@2.0.4` override。更新的 `@rsbuild/core`(即使在同一 major 内)会改变它的 Rspack 依赖,导致启动检查失败。
 - 如果启动因 `@rspack/core` 不匹配而中止,请对比它打印的两个版本和路径(检查是严格的 —— 任何差异都会中止启动):
-  - **版本不同** —— 按本表重新对齐,或用 pnpm [`overrides`](https://pnpm.io/package_json#pnpmoverrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) 把 `@rspack/core` 强制到目标版本。
+  - **版本不同** —— 按本表重新对齐,并确认项目根目录存在必需的 pnpm [`overrides`](https://pnpm.io/10.x/settings#overrides) / yarn [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) 配置。
   - **版本相同但路径不同**(错误显示 _"duplicate physical copies"_)—— 包管理器安装了同一版本的两份拷贝(yarn Berry 是已知的元凶,由 `@rspack/core` 的可选 peer `@swc/helpers` 引起分裂)。请固定引起分裂的那个 peer(例如把 `@swc/helpers` 加进 `resolutions`/`overrides`),或运行 `yarn dedupe` / `pnpm dedupe` —— 改 `@rspack/core` 的版本没用,因为它本就已经匹配。
 
 ## 快速开始 {#getting-started}
 
 ### 安装 {#installation}
 
-安装 `storybook-next-rsbuild`,同时安装**固定到你确切 `next` 版本**的 `next-rspack` —— 裸装 `next-rspack` 会拉取 registry 上的最新版,与你的 `next` 不一致时会被启动检查拒绝 —— 以及[版本矩阵](#version-matrix)中你那一行对应的 `@rsbuild/core`。例如在 `next@16.2.3` 上:
+安装 `storybook-next-rsbuild`,同时安装**固定到你确切 `next` 版本**的 `next-rspack` —— 裸装 `next-rspack` 会拉取 registry 上的最新版,与你的 `next` 不一致时会被启动检查拒绝 —— 以及[版本矩阵](#version-matrix)中你那一行对应的 `@rsbuild/core`。例如在 `next@16.3.2` 上(先添加上方必需的 override):
 
-<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14 -D" />
+<PackageManagerTabs command="install storybook-next-rsbuild next-rspack@16.3.2 @rsbuild/core@2.0.7 -D" />
 
 如果 framework 无法加载你的 Next.js 配置(例如未安装 `next-rspack`),表现取决于构建模式:
 
@@ -481,7 +498,7 @@ stories 用 Next.js 自己的编译器(SWC)编译,所以构建行为与你的应
 
 - `'use client'` 指令的行为与在 Next.js 中一致,`server-only` 模块也像真实构建一样解析。
 - `next.config.ts` 中的 `transpilePackages` 条目会自动应用到 stories。
-- `optimizePackageImports`(Next 15+ 默认开启)被支持,包括发布产物为 TypeScript 源码的 package。
+- `optimizePackageImports` 被支持,包括发布产物为 TypeScript 源码的 package。
 - JSX runtime 的选择跟随你的 `next.config.ts`。
 
 这些都是 Next.js 拥有的关注点:在 `next.config.ts` 里配置,即自动应用到 stories。(TypeScript 行为与上游一致 —— **见 [Typescript](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#typescript)**。)

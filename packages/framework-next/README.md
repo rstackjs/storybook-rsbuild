@@ -9,13 +9,21 @@ Check out [rstackjs/storybook-rsbuild](https://github.com/rstackjs/storybook-rsb
 
 ## Installation
 
-Install `storybook-next-rsbuild` alongside `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from the [version matrix](https://storybook.rsbuild.rs/guide/framework/next#version-matrix). For example, on `next@16.2.3`:
+Install `storybook-next-rsbuild` alongside `next-rspack` **pinned to your exact `next` version** — a bare `next-rspack` install pulls the registry's latest, which the startup check rejects when it doesn't match your `next` — plus the `@rsbuild/core` from the [version matrix](https://storybook.rsbuild.rs/guide/framework/next#version-matrix). For `next@16.3.2`, first add the required Rspack override at the project root:
 
-```bash
-pnpm add -D storybook-next-rsbuild next-rspack@16.2.3 @rsbuild/core@1.6.14
+```yaml
+# pnpm-workspace.yaml
+overrides:
+  '@rsbuild/core@2.0.7>@rspack/core': '2.0.4'
 ```
 
-`next-rspack` must be resolvable from Next.js itself because Next internally calls `require('next-rspack/rspack-core')` while generating the bridged Rspack config. Keep the `next-rspack` version aligned with your `next` version.
+Then install the matching packages:
+
+```bash
+pnpm add -D storybook-next-rsbuild next-rspack@16.3.2 @rsbuild/core@2.0.7
+```
+
+`next-rspack` must be resolvable from Next.js itself because Next internally calls `require('next-rspack/rspack-core')` while generating the bridged Rspack config. Keep the `next-rspack` version aligned with your `next` version. See the version matrix for the equivalent yarn `resolutions` entry.
 
 ## 🤖 Agent Skills
 

@@ -3,13 +3,14 @@
  * `website/docs/en/guide/framework/next.mdx` against the live npm registry.
  *
  * The framework's invariant (see `packages/framework-next` check-rspack-invariant):
- * the `@rspack/core` that `@rsbuild/core@<x>` pins MUST equal the one
- * `next-rspack@<next>` brings in — Next 16 via `@next/rspack-core`, Next 15
- * directly. A wrong cell silently hands users a mismatched pair, so this script
- * re-derives every row from the registry and fails on drift.
+ * the `@rspack/core` that `@rsbuild/core@<x>` resolves MUST equal the one
+ * `next-rspack@<next>` pins through `@next/rspack-core`. Since Rsbuild declares
+ * a range, the workspace's scoped override is part of the matrix contract too.
+ * A wrong cell silently hands users a mismatched pair, so this script re-derives
+ * every row from the registry and fails on drift.
  *
  * Run: `pnpm tsx ./scripts/check-version-matrix.mts`  (network required).
- * Manual gate — not wired into CI (the `npm view` calls need network); run it
+ * Manual gate — not wired into CI (the registry calls need network); run it
  * locally before a version bump or after editing the matrix table.
  */
 import { execFileSync } from 'node:child_process'
@@ -22,6 +23,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // mirror carries the same table data. Fail loudly if it ever moves again
 // instead of surfacing a raw ENOENT from the reader below.
 const MDX = path.join(root, 'website/docs/en/guide/framework/next.mdx')
+const PNPM_WORKSPACE = path.join(root, 'pnpm-workspace.yaml')
 if (!fs.existsSync(MDX)) {
   console.error(
     `Version-matrix doc not found at ${MDX}. ` +
@@ -30,9 +32,9 @@ if (!fs.existsSync(MDX)) {
   process.exit(1)
 }
 
-/** `npm view <spec> <field> --json`, parsed. Returns undefined on empty. */
-function npmView(spec: string, field: string): unknown {
-  const out = execFileSync('npm', ['view', spec, field, '--json'], {
+/** `pnpm view <spec> <field> --json`, parsed. Returns undefined on empty. */
+function registryView(spec: string, field: string): unknown {
+  const out = execFileSync('pnpm', ['view', spec, field, '--json'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
   }).trim()
@@ -48,7 +50,7 @@ const cmpSemver = (a: string, b: string) => {
 
 /** Highest stable patch of a `pkg@<minor>` range. */
 function highestPatch(pkg: string, minor: string): string {
-  const raw = npmView(`${pkg}@${minor}`, 'version')
+  const raw = registryView(`${pkg}@${minor}`, 'version')
   const versions = (Array.isArray(raw) ? raw : [raw]).filter(
     (v): v is string => typeof v === 'string',
   )
@@ -63,21 +65,17 @@ function rspackCoreFor(nextRspackVersion: string): {
   chain: string
 } {
   const deps =
-    (npmView(`next-rspack@${nextRspackVersion}`, 'dependencies') as Record<
+    (registryView(`next-rspack@${nextRspackVersion}`, 'dependencies') as Record<
       string,
       string
     >) ?? {}
-  // Next 15: @rspack/core is a direct dep. Next 16: via @next/rspack-core.
-  if (deps['@rspack/core']) {
-    return { rspackCore: deps['@rspack/core'], chain: 'direct' }
-  }
   const nextCore = deps['@next/rspack-core']
   if (!nextCore) {
     throw new Error(
-      `next-rspack@${nextRspackVersion} has neither @rspack/core nor @next/rspack-core`,
+      `next-rspack@${nextRspackVersion} does not depend on @next/rspack-core`,
     )
   }
-  const rspackCore = npmView(
+  const rspackCore = registryView(
     `@next/rspack-core@${nextCore}`,
     'dependencies.@rspack/core',
   ) as string
@@ -124,6 +122,7 @@ function parseMatrix(): Row[] {
 }
 
 let failed = false
+const pnpmWorkspace = fs.readFileSync(PNPM_WORKSPACE, 'utf8')
 const fail = (msg: string) => {
   failed = true
   console.error(`  ✗ ${msg}`)
@@ -144,18 +143,25 @@ for (const row of parseMatrix()) {
     fail('no @rsbuild/core version parsed from this row')
   }
   for (const rsbuildCore of row.rsbuildCores) {
-    const pinned = npmView(
+    const declared = registryView(
       `@rsbuild/core@${rsbuildCore}`,
       'dependencies.@rspack/core',
     ) as string
-    if (pinned !== rspackCore) {
+    if (declared !== rspackCore && declared !== `~${rspackCore}`) {
       fail(
-        `@rsbuild/core@${rsbuildCore} pins @rspack/core ${pinned}, needs ${rspackCore}`,
+        `@rsbuild/core@${rsbuildCore} declares @rspack/core ${declared}, which does not target ${rspackCore}`,
       )
     } else {
       console.log(
-        `  ✓ @rsbuild/core@${rsbuildCore} pins @rspack/core ${pinned}`,
+        `  ✓ @rsbuild/core@${rsbuildCore} declares @rspack/core ${declared}`,
       )
+    }
+
+    const override = `'@rsbuild/core@${rsbuildCore}>@rspack/core': '${rspackCore}'`
+    if (!pnpmWorkspace.includes(override)) {
+      fail(`pnpm-workspace.yaml is missing override ${override}`)
+    } else {
+      console.log(`  ✓ scoped override forces @rspack/core ${rspackCore}`)
     }
   }
 }
