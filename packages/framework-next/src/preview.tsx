@@ -29,13 +29,6 @@ function isSuppressedError(error: unknown): boolean {
   )
 }
 
-if (!document.querySelector('meta[name="next-head-count"]')) {
-  const meta = document.createElement('meta')
-  meta.name = 'next-head-count'
-  meta.content = '0'
-  document.head.appendChild(meta)
-}
-
 // Anchor element that `next-style-loader` (Pages Router dev mode) inserts
 // style tags before. Next.js renders it in `_document.js`; Storybook doesn't
 // run the Next.js server, so we inject it manually.
