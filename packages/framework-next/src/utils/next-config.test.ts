@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import {
   afterEach,
   beforeEach,
@@ -13,6 +14,7 @@ import {
   DUMMY_NEXT_ARGS,
   describeRequireHookRegression,
   describeUnbridgedTurbopackConfig,
+  extractNextRspackConfig,
   instrumentUserWebpack,
   isStorybookClaimedRule,
   resolveBridgeFailure,
@@ -501,6 +503,33 @@ describe('configLoadPhase (F1 — extract in the matching mode)', () => {
     // The previously-hardcoded dev phase inlined .env.development values into a
     // production Storybook bundle — this locks the mode to match the build.
     expect(configLoadPhase(false, PHASES)).toBe('phase-production-build')
+  })
+})
+
+describe('extractNextRspackConfig', () => {
+  it('restores RSPACK_BINDING after loading next-rspack', async () => {
+    const originalRspackBinding = process.env.RSPACK_BINDING
+    const warnSpy = rstest.spyOn(console, 'warn').mockImplementation(() => {})
+    const sandboxDir = fileURLToPath(
+      new URL('../../../../sandboxes/nextjs', import.meta.url),
+    )
+    delete process.env.RSPACK_BINDING
+
+    try {
+      const extraction = await extractNextRspackConfig(sandboxDir, {
+        dev: false,
+      })
+
+      expect(extraction.rawRules.length).toBeGreaterThan(0)
+      expect(process.env.RSPACK_BINDING).toBeUndefined()
+    } finally {
+      if (originalRspackBinding === undefined) {
+        delete process.env.RSPACK_BINDING
+      } else {
+        process.env.RSPACK_BINDING = originalRspackBinding
+      }
+      warnSpy.mockRestore()
+    }
   })
 })
 

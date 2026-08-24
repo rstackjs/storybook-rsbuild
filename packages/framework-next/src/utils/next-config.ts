@@ -353,6 +353,10 @@ export async function extractNextRspackConfig(
 
   const projectDir = dir || process.cwd()
   const nextVersion = getNextVersion()
+  // next-rspack's `@next/rspack-core` sets RSPACK_BINDING while Next.js builds
+  // its config. Do not leak that process-wide override into the Rsbuild compiler,
+  // whose plugin wrappers were created against the standard @rspack/binding.
+  const savedRspackBinding = process.env.RSPACK_BINDING
 
   try {
     return await doExtract(projectDir, nextVersion, dev)
@@ -362,6 +366,12 @@ export async function extractNextRspackConfig(
       allowMissingNextBridge,
       nextVersion,
     })
+  } finally {
+    if (savedRspackBinding === undefined) {
+      delete process.env.RSPACK_BINDING
+    } else {
+      process.env.RSPACK_BINDING = savedRspackBinding
+    }
   }
 }
 
