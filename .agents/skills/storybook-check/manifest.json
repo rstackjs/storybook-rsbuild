@@ -107,7 +107,8 @@
       "upstream": "code/presets/react-webpack/src/framework-preset-react-docs.ts",
       "local": "packages/framework-react/src/react-docs.ts",
       "intentionalDivergences": [
-        "webpack config mutation expressed as rsbuildFinalDocs via mergeRsbuildConfig; docgen loader wiring adapted to Rsbuild tools API"
+        "webpack config mutation expressed as rsbuildFinalDocs via mergeRsbuildConfig; docgen loader wiring adapted to Rsbuild tools API",
+        "typescriptPresent guard (fall back to plain react-docgen when typescript cannot be resolved) grafted from react-vite's preset onto this webpack-mapped file"
       ]
     },
     {
@@ -137,7 +138,10 @@
     {
       "upstream": "code/frameworks/react-webpack5/src/preset.ts",
       "local": "packages/framework-react/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty that reads frameworkOptions and forwards frameworkOptions.builder as builder options — upstream made core a static object (PR #34260), but iframe-rsbuild.config.ts consumes builderOptions.lazyCompilation/fsCache so the function form is retained (repo-wide idiom across all framework packages)",
+        "builder/renderer specifiers wrapped in fileURLToPath — Rsbuild presets take paths, not file:// URLs (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/react-webpack5/src/types.ts",
@@ -207,7 +211,8 @@
       "upstream": "code/frameworks/vue3-vite/src/preset.ts",
       "local": "packages/framework-vue3/src/preset.ts",
       "intentionalDivergences": [
-        "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts"
+        "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts",
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
       ]
     },
     {
@@ -233,7 +238,8 @@
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-docgen.ts",
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
-        "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics"
+        "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics",
+        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics"
       ]
     },
     {
@@ -270,12 +276,16 @@
     {
       "upstream": "code/frameworks/web-components-vite/src/preset.ts",
       "local": "packages/framework-web-components/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/web-components-vite/src/types.ts",
       "local": "packages/framework-web-components/src/types.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "adds typescript?: Partial<TypescriptOptions...> to StorybookConfigFramework — the vite variant has no typescript key, the webpack5 frameworks do (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/html-vite/src/index.ts",
@@ -290,12 +300,16 @@
     {
       "upstream": "code/frameworks/html-vite/src/preset.ts",
       "local": "packages/framework-html/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/html-vite/src/types.ts",
       "local": "packages/framework-html/src/types.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "adds typescript?: Partial<TypescriptOptions...> to StorybookConfigFramework — the vite variant has no typescript key, the webpack5 frameworks do (repo-wide idiom)"
+      ]
     }
   ],
   "ignoredUpstreamFiles": [
