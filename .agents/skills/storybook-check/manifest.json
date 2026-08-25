@@ -57,7 +57,8 @@
       "upstream": "code/builders/builder-webpack5/src/preview/iframe-webpack.config.ts",
       "local": "packages/builder-rsbuild/src/preview/iframe-rsbuild.config.ts",
       "intentionalDivergences": [
-        "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities"
+        "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities",
+        "build.test.esbuildMinify branch not ported: Rsbuild's output.minify.jsOptions only exposes the built-in SWC minimizer, no clean seam to swap in esbuild (mangle:false/keep_fnames ported in PR #549)"
       ]
     },
     {
