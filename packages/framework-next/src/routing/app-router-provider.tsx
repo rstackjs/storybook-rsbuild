@@ -112,13 +112,13 @@ export const AppRouterProvider: React.FC<
 
   const cacheNode = useMemo(
     () => ({
-      lazyData: null,
       rsc: null,
       prefetchRsc: null,
-      head: null,
       prefetchHead: null,
-      parallelRoutes: new Map(),
-      loading: null,
+      head: null,
+      slots: null,
+      scrollRef: null,
+      bfcacheId: 0,
     }),
     [],
   )
@@ -131,27 +131,28 @@ export const AppRouterProvider: React.FC<
         <SearchParamsContext.Provider value={searchParams}>
           <GlobalLayoutRouterContext.Provider
             value={{
-              changeByServerResponse() {},
-              buildId: 'storybook',
               tree,
               focusAndScrollRef: {
-                apply: false,
+                scrollRef: null,
+                forceScroll: false,
                 hashFragment: null,
-                segmentPaths: [tree],
                 onlyHashChange: false,
               },
               nextUrl: pathname,
+              previousNextUrl: null,
             }}
           >
             <AppRouterContext.Provider value={getRouter()}>
               <LayoutRouterContext.Provider
                 value={{
-                  childNodes: new Map(),
-                  tree,
                   parentTree: tree,
                   parentCacheNode: cacheNode,
+                  parentSegmentPath: null,
+                  parentParams: {},
+                  parentLoadingData: null,
+                  debugNameContext: '/',
                   url: pathname,
-                  loading: null,
+                  isActive: true,
                 }}
               >
                 {children}

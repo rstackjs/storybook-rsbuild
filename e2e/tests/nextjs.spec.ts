@@ -182,6 +182,7 @@ test.describe(sandbox.name, () => {
   }) => {
     const frame = await openStory(page, 'stories-navigation--default')
     await expect(frame.getByText('pathname: /hello')).toBeVisible()
+    await expect(frame.getByText('bfcacheId: _b_0_')).toBeVisible()
     await expect(frame.getByText('foo: bar')).toBeVisible()
 
     // Router mock is asserted by the story's play fn (router.forward). Also

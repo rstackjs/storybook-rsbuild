@@ -10,6 +10,7 @@ import {
 } from '../../next-internals'
 
 let navigationAPI: {
+  bfcacheId: string
   push: Mock
   replace: Mock
   forward: Mock
@@ -40,7 +41,10 @@ export const createNavigation = (overrides: any) => {
     }
   }
 
-  navigationAPI = navigationActions
+  navigationAPI = {
+    ...navigationActions,
+    bfcacheId: '0',
+  }
   return navigationAPI
 }
 

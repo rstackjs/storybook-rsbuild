@@ -35,6 +35,7 @@ function Component() {
   return (
     <div>
       <div>pathname: {pathname}</div>
+      <div>bfcacheId: {router.bfcacheId}</div>
       <div>segment: {segment}</div>
       <div>segments: {segments.join(',')}</div>
       <div>
