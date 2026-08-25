@@ -101,7 +101,7 @@ const PREVIEW_KEYS = {
  * Dummy values fed to `getBaseWebpackConfig()` to satisfy its required params.
  * Storybook never produces a real `.next/` build or serves draft-mode pages,
  * so these code paths are dead in our case — the values are inert, not secrets.
- * Keyed separately from version-dependent params (see `buildWebpackConfigParams`).
+ * Keyed separately from `previewProps` (see `buildWebpackConfigParams`).
  * See AGENTS.md § Shim Catalogue.
  */
 export const DUMMY_NEXT_ARGS = {
@@ -124,22 +124,10 @@ export const DUMMY_NEXT_ARGS = {
   },
 }
 
-/**
- * Build the `getBaseWebpackConfig` options for the detected Next.js version.
- * Next.js 16.3+ requires `previewProps`; older versions are unsupported but
- * receive the current shape so the bridge can emit an actionable warning.
- */
+/** Build the Next.js 16.3+ `getBaseWebpackConfig` options. */
 export function buildWebpackConfigParams(
-  version: [number, number] | null,
   base: Record<string, any>,
 ): Record<string, any> {
-  if (version && (version[0] < 16 || (version[0] === 16 && version[1] < 3))) {
-    logger.warn(
-      `Next.js ${version.join('.')} is below the supported range (16.3+). ` +
-        'Bridge may fail or produce incorrect config.',
-    )
-  }
-
   return { ...base, previewProps: PREVIEW_KEYS }
 }
 
@@ -359,7 +347,7 @@ export async function extractNextRspackConfig(
   const savedRspackBinding = process.env.RSPACK_BINDING
 
   try {
-    return await doExtract(projectDir, nextVersion, dev)
+    return await doExtract(projectDir, dev)
   } catch (err) {
     return resolveBridgeFailure(err, {
       dev,
@@ -537,7 +525,6 @@ export function describeRequireHookRegression(
 
 async function doExtract(
   projectDir: string,
-  nextVersion: [number, number] | null,
   dev: boolean,
 ): Promise<NextRspackExtraction> {
   const [constantsMod, traceMod, configMod, webpackConfigMod, pagesDirMod] =
@@ -600,7 +587,7 @@ async function doExtract(
 
   const dirs = pagesDirMod?.findPagesDir(projectDir)
 
-  const params = buildWebpackConfigParams(nextVersion, {
+  const params = buildWebpackConfigParams({
     ...DUMMY_NEXT_ARGS,
     config: nextConfig,
     compilerType: COMPILER_NAMES.client,

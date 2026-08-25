@@ -30,10 +30,6 @@
       "types": "./dist/export-mocks/cache/index.d.ts",
       "default": "./dist/export-mocks/cache/index.js"
     },
-    "./config/preview": {
-      "types": "./dist/config/preview.d.ts",
-      "default": "./dist/config/preview.js"
-    },
     "./empty-module": "./loaders/empty-module.cjs",
     "./headers.mock": {
       "types": "./dist/export-mocks/headers/index.d.ts",
@@ -133,7 +129,6 @@
       "./src/index.ts",
       "./src/preset.ts",
       "./src/preview.tsx",
-      "./src/config/preview.ts",
       "./src/export-mocks/navigation/index.ts",
       "./src/export-mocks/router/index.ts",
       "./src/export-mocks/cache/index.ts",

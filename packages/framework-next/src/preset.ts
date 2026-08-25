@@ -6,7 +6,7 @@ import type { PresetProperty } from 'storybook/internal/types'
 import { applyWebpackAddonsWebpackFinal } from 'storybook-builder-rsbuild'
 import type { FrameworkOptions, StorybookConfig } from './types'
 import { checkRspackInvariant } from './utils/check-rspack-invariant'
-import { extractNextRspackConfig, getNextVersion } from './utils/next-config'
+import { extractNextRspackConfig } from './utils/next-config'
 import {
   analyzeNextLoaderChain,
   buildAliasLayers,
@@ -44,7 +44,6 @@ const swcRuleTierRank = (tier: SwcRuleTier | null): number =>
 const BUILDER_PATH = resolve('storybook-builder-rsbuild')
 const RENDERER_PATH = resolve('@storybook/react/preset')
 const PREVIEW_PATH = resolve('storybook-next-rsbuild/preview')
-const LEGACY_PREVIEW_PATH = resolve('storybook-next-rsbuild/config/preview')
 const NEXT_IMAGE_MOCK = resolve('storybook-next-rsbuild/next-image-mock')
 const NEXT_LEGACY_IMAGE_MOCK = resolve(
   'storybook-next-rsbuild/next-legacy-image-mock',
@@ -81,17 +80,7 @@ export const webpackFinalOwnership = true
 
 export const previewAnnotations: PresetProperty<'previewAnnotations'> = (
   entry = [],
-) => {
-  const annotations = [...entry, PREVIEW_PATH]
-
-  // Next.js 16 removed `next/config` from package exports; gate the legacy annotation.
-  const version = getNextVersion()
-  if (version && version[0] < 16) {
-    annotations.push(LEGACY_PREVIEW_PATH)
-  }
-
-  return annotations
-}
+) => [...entry, PREVIEW_PATH]
 
 // Every value is a module-load-time constant, so build the map once.
 const STORYBOOK_OVERRIDE_ALIASES = {

@@ -534,8 +534,8 @@ describe('extractNextRspackConfig', () => {
 })
 
 describe('buildWebpackConfigParams', () => {
-  it('always sets the Next.js 16.3+ previewProps shape', () => {
-    expect(buildWebpackConfigParams([16, 3], { dev: true })).toEqual({
+  it('sets the Next.js 16.3+ previewProps shape', () => {
+    expect(buildWebpackConfigParams({ dev: true })).toEqual({
       dev: true,
       previewProps: {
         previewModeId: 'storybook-preview',
@@ -544,21 +544,7 @@ describe('buildWebpackConfigParams', () => {
       },
     })
 
-    const unresolved = buildWebpackConfigParams(null, {})
-    expect(unresolved).toHaveProperty('previewProps')
-    expect(unresolved).not.toHaveProperty('edgePreviewProps')
-  })
-
-  it('warns when Next.js is below the supported 16.3 range', () => {
-    const warnSpy = rstest.spyOn(logger, 'warn').mockImplementation(() => {})
-    try {
-      buildWebpackConfigParams([16, 2], {})
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('below the supported range (16.3+)'),
-      )
-    } finally {
-      warnSpy.mockRestore()
-    }
+    expect(buildWebpackConfigParams({})).not.toHaveProperty('edgePreviewProps')
   })
 })
 

@@ -28,10 +28,6 @@ const config: BuildEntries = {
         entryPoint: './src/preview.tsx',
       },
       {
-        exportEntries: ['./config/preview'],
-        entryPoint: './src/config/preview.ts',
-      },
-      {
         exportEntries: ['./navigation.mock'],
         entryPoint: './src/export-mocks/navigation/index.ts',
       },
