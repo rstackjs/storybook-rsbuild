@@ -16,6 +16,10 @@ const inheritanceBoundaryRsbuildConfig = resolve(
   fixtureDir,
   'inheritance-boundary-rsbuild.config.ts',
 )
+const singleEnvironmentRsbuildConfig = resolve(
+  fixtureDir,
+  'single-environment-rsbuild.config.ts',
+)
 
 const storybookEntries = ['storybook-entry.js']
 const storiesConfig = [
@@ -194,6 +198,20 @@ describe('iframe-rsbuild.config', () => {
     expect(config.plugins).toContainEqual(
       expect.objectContaining({ name: 'keep-for-storybook' }),
     )
+  })
+
+  it('inherits config from a single named Rsbuild environment', async () => {
+    const { options } = createOptions(false, 'DEVELOPMENT', [], {
+      rsbuildConfigPath: singleEnvironmentRsbuildConfig,
+    })
+
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+
+    expect(config.resolve?.alias).toMatchObject({
+      'single-environment-alias': './single-environment-target.ts',
+    })
   })
 
   it('preserves config explicitly restored by rsbuildFinal', async () => {

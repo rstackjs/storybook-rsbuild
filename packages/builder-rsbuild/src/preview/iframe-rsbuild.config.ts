@@ -244,7 +244,7 @@ export default async (
       // Directly use the unique environment.
       contentFromConfig = mergeRsbuildConfig(
         withoutEnv,
-        content.environments[0],
+        Object.values(content.environments)[0],
       )
     } else {
       // User need to specify the environment first if more than one provided.
