@@ -12,6 +12,7 @@ import type {
   StorybookConfigRaw,
 } from 'storybook/internal/types'
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
+import { createHeadlessRsbuildChangeDetectionAdapter } from './change-detection-adapter/headless'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
 import rsbuildConfig, {
@@ -139,23 +140,28 @@ export async function bail(): Promise<void> {
 }
 
 /**
- * Returns a {@link ChangeDetectionAdapter} bound to the Rspack compiler created by `start()`.
+ * Returns a {@link ChangeDetectionAdapter} bound to the Rspack compiler created by `start()`, or —
+ * when `options` are passed by a consumer that runs without a dev server (the `storybook tools`
+ * CLI) — a headless adapter that resolves the same config serverlessly.
  *
- * Storybook core only invokes this after `start()` has resolved, so `activeCompiler` is populated
- * in practice. The guard is defensive: it fails loudly on an unexpected call-before-start rather
- * than silently binding to an undefined compiler.
+ * Throws if called without options before `start()` has resolved (i.e. before the Rspack compiler
+ * exists).
  */
-export const changeDetectionAdapter: NonNullable<
-  RsbuildBuilder['changeDetectionAdapter']
-> = () => {
-  if (!activeCompiler) {
-    // eslint-disable-next-line local-rules/no-uncategorized-errors
-    throw new Error(
-      'builder-rsbuild: changeDetectionAdapter() called before start(); the Rspack compiler is not ready yet.',
-    )
+export const changeDetectionAdapter = ((options?: Options) => {
+  if (activeCompiler) {
+    return createRspackChangeDetectionAdapter(activeCompiler)
   }
-  return createRspackChangeDetectionAdapter(activeCompiler)
-}
+  if (options) {
+    return createHeadlessRsbuildChangeDetectionAdapter(options, {
+      getConfig,
+      getRsbuild: executor.get,
+    })
+  }
+  // eslint-disable-next-line local-rules/no-uncategorized-errors
+  throw new Error(
+    'builder-rsbuild: changeDetectionAdapter() called before start(); the Rspack compiler is not ready yet.',
+  )
+}) satisfies NonNullable<RsbuildBuilder['changeDetectionAdapter']>
 
 export const start: RsbuildBuilder['start'] = async ({
   startTime,

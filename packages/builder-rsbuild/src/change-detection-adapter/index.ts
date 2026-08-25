@@ -33,12 +33,7 @@ export function createRspackChangeDetectionAdapter(
 ): ChangeDetectionAdapter {
   return {
     async getResolveConfig(): Promise<ModuleResolveConfig> {
-      const resolveOpts = compiler.options.resolve
-      return {
-        projectRoot: compiler.context,
-        alias: normaliseRspackAlias(resolveOpts.alias),
-        conditions: resolveOpts.conditionNames,
-      }
+      return getRspackResolveConfig(compiler)
     },
 
     onFileChange(handler: (event: FileChangeEvent) => void): () => void {
@@ -88,6 +83,17 @@ export function createRspackChangeDetectionAdapter(
         active = false
       }
     },
+  }
+}
+
+export function getRspackResolveConfig(
+  compiler: Rspack.Compiler,
+): ModuleResolveConfig {
+  const resolveOpts = compiler.options.resolve
+  return {
+    projectRoot: compiler.context,
+    alias: normaliseRspackAlias(resolveOpts.alias),
+    conditions: resolveOpts.conditionNames,
   }
 }
 
