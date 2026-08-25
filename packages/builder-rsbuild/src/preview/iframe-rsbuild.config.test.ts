@@ -106,7 +106,7 @@ describe('production build output', () => {
     })
   })
 
-  it('defines NODE_ENV as development only for production builds', async () => {
+  it('defines process.env.NODE_ENV only for production builds', async () => {
     const productionConfig = await createIframeRsbuildConfig(
       createOptions({
         configType: 'PRODUCTION',
@@ -114,7 +114,7 @@ describe('production build output', () => {
       }),
     )
 
-    expect(productionConfig.source?.define?.NODE_ENV).toBe(
+    expect(productionConfig.source?.define?.['process.env.NODE_ENV']).toBe(
       JSON.stringify('development'),
     )
 
@@ -125,7 +125,7 @@ describe('production build output', () => {
       }),
     )
 
-    expect(developmentConfig.source?.define?.NODE_ENV).toBe(
+    expect(developmentConfig.source?.define?.['process.env.NODE_ENV']).toBe(
       JSON.stringify(process.env.NODE_ENV),
     )
   })

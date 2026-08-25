@@ -353,7 +353,7 @@ export default async (
     source: {
       define: {
         ...stringifyProcessEnvs(envs),
-        NODE_ENV: JSON.stringify(
+        'process.env.NODE_ENV': JSON.stringify(
           features?.developmentModeForBuild && isProd
             ? 'development'
             : process.env.NODE_ENV,

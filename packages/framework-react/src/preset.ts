@@ -13,7 +13,7 @@ export const rsbuildFinal: NonNullable<
     return mergeRsbuildConfig(finalConfig, {
       source: {
         define: {
-          NODE_ENV: JSON.stringify('development'),
+          'process.env.NODE_ENV': JSON.stringify('development'),
         },
       },
     })

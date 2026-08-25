@@ -14,7 +14,7 @@ const createOptions = (developmentModeForBuild: boolean) =>
   }) as RsbuildFinalOptions
 
 describe('rsbuildFinal', () => {
-  it('defines NODE_ENV only when the feature is enabled', async () => {
+  it('defines process.env.NODE_ENV only when the feature is enabled', async () => {
     const enabledConfig: RsbuildConfig = {
       source: {
         define: {
@@ -29,7 +29,7 @@ describe('rsbuildFinal', () => {
       source: {
         define: {
           EXISTING: JSON.stringify(true),
-          NODE_ENV: JSON.stringify('development'),
+          'process.env.NODE_ENV': JSON.stringify('development'),
         },
       },
     })
@@ -37,7 +37,7 @@ describe('rsbuildFinal', () => {
     const disabledConfig: RsbuildConfig = {
       source: {
         define: {
-          NODE_ENV: JSON.stringify('production'),
+          'process.env.NODE_ENV': JSON.stringify('production'),
         },
       },
     }
