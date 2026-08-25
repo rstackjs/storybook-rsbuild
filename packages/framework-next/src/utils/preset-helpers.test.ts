@@ -991,13 +991,10 @@ describe('TARGET_CSS_RE (next/font synthetic module)', () => {
     ).toBe(true)
   })
 
-  it('matches the @next/font variant and pnpm store paths', () => {
-    expect(
-      TARGET_CSS_RE.test('node_modules/@next/font/google/target.css'),
-    ).toBe(true)
+  it('matches pnpm store paths', () => {
     expect(
       TARGET_CSS_RE.test(
-        'node_modules/.pnpm/next@16.2.9_react@19.0.0/node_modules/next/font/local/target.css',
+        'node_modules/.pnpm/next@16.3.2_react@19.0.0/node_modules/next/font/local/target.css',
       ),
     ).toBe(true)
   })

@@ -448,10 +448,11 @@ function isMissingPagesOrAppDirError(err: unknown): boolean {
  * `resolveAlias` / `resolveExtensions` is exactly where a default Next 16
  * project wires SVGR-style loaders — yet `getBaseWebpackConfig` never reads the
  * `turbopack` key, making it the only dropped-config surface with no signal.
- * Also inspects the legacy pre-16 spelling `experimental.turbo` (same shape).
+ * Also inspects the `experimental.turbo` compatibility alias that Next.js 16.3
+ * still accepts (same shape).
  *
  * Returns a single warning message naming which keys were found (and whether
- * they came from the legacy location), or `null` when nothing relevant is
+ * they came from the compatibility alias), or `null` when nothing relevant is
  * present. Pure/exported so the key detection is unit-testable. We deliberately
  * do NOT translate turbopack rules into rspack rules — that is simulation,
  * which this package rejects; the fix is to mirror them via `webpack()`.
@@ -478,13 +479,15 @@ export function describeUnbridgedTurbopackConfig(
   ]
   if (found.length === 0) return null
 
-  const usesLegacy = found.some((f) => f.startsWith('experimental.turbo.'))
+  const usesCompatibilityAlias = found.some((f) =>
+    f.startsWith('experimental.turbo.'),
+  )
   return (
     `Detected Turbopack config (${found.join(', ')}) that is not bridged. ` +
     'The Next.js → Storybook bridge reads only the webpack config, so ' +
     'these Turbopack loader/resolve settings (SVGR etc.) are ignored' +
-    (usesLegacy
-      ? ' (`experimental.turbo` is the pre-16 spelling of `turbopack`).'
+    (usesCompatibilityAlias
+      ? ' (`experimental.turbo` is a compatibility alias still accepted by Next.js 16.3).'
       : '.') +
     ' Mirror them the Storybook way via the `webpack()` snippet in the docs ' +
     '(Advanced: custom loaders that span both layers, e.g. SVGR).'
@@ -501,7 +504,7 @@ export function describeUnbridgedTurbopackConfig(
  * now resolve to Next's compiled copy instead of the user's own webpack.
  *
  * Reads `hookPropertyMap` from `next/dist/server/require-hook` (verified against
- * next@16.2.9: `loadWebpackHook` calls `addHookAliases([['webpack', ...], ...])`
+ * next@16.3.2: `loadWebpackHook` calls `addHookAliases([['webpack', ...], ...])`
  * on that shared `Map`). Pure/exported so the detection is unit-testable without
  * loading Next. We check the map's `webpack` key rather than
  * `Module._resolveFilename` identity — the framework's own imports patch

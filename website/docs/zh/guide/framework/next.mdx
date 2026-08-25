@@ -637,7 +637,7 @@ export const Default: StoryObj = {
 - **无 Server Components 运行时。** 标记了 `'use client'` 的组件会渲染;纯 Server Components 不会执行。注意本 framework **不**提供 [`@storybook/nextjs-vite` 所记录](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#react-server-components-rsc)的 `experimentalRSC` Suspense 包裹路径 —— 只有 client 组件会渲染。
 - **无 API routes、middleware 或 server actions。** Storybook 不运行 Next.js 服务器 —— `route.ts`、`middleware.ts` 和 `'use server'` 入口都不会执行。(与 `@storybook/nextjs-vite` 相同。)
 - **无 `/_next/image` 优化。** `next/image`(以及 `next/legacy/image`)直接提供图片;运行时行为与生产环境(图片即时优化)不同。
-- **`turbopack.*` 配置键会被忽略。** Storybook 使用的是 Next.js webpack 侧的配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及旧式的 `experimental.turbo`)不会生效 —— framework 发现它们时会记录一条 warning。请通过 [`webpack()` 片段](#custom-loaders-svgr)镜像 Turbopack 的 loader 规则。
+- **`turbopack.*` 配置键会被忽略。** Storybook 使用的是 Next.js webpack 侧的配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及 Next.js 16.3 仍接受的 `experimental.turbo` compatibility alias)不会生效 —— framework 发现它们时会记录一条 warning。请通过 [`webpack()` 片段](#custom-loaders-svgr)镜像 Turbopack 的 loader 规则。
 - **Sass/Less 需要一个 Rsbuild 插件。** 预处理器支持需通过 `rsbuildFinal` 手动开启,而非从 Next.js 继承(见 [Sass / Less](#sass--less))。
 - **Next 16+ 不再支持 runtime config**(见 [Runtime config](#runtime-config))。
 - **部署/输出类配置大多不影响服务。** `output`(`export`/`standalone`)、`assetPrefix`、`trailingSlash` 以及 `rewrites`/`redirects`/`headers` 在 Storybook 中无任何作用 —— preview 在根路径下提供服务,所以 story 的资源路径(`staticDirs`、`next/image` 的 `src`)**无需**加 `basePath` 前缀。**`basePath` 是例外:** 它的值仍会编译进 client 代码,因此 `next/link` 与 router 的 href 在运行时*确实*会带上 `basePath` 前缀 —— 与 `@storybook/nextjs-vite` 一致。

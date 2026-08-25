@@ -570,19 +570,20 @@ describe('describeUnbridgedTurbopackConfig (F6 — turbopack is not bridged)', (
     expect(msg).not.toBeNull()
     expect(msg).toContain('turbopack.rules')
     expect(msg).toContain('not bridged')
-    // Modern spelling → does not mention the legacy location.
+    // Canonical spelling → does not mention the compatibility alias.
     expect(msg).not.toContain('experimental.turbo')
     // Points at the docs SVGR webpack()-mirror section.
     expect(msg).toContain('SVGR')
   })
 
-  it('names the legacy `experimental.turbo.resolveAlias` and its location', () => {
+  it('names the `experimental.turbo.resolveAlias` compatibility alias', () => {
     const msg = describeUnbridgedTurbopackConfig({
       experimental: { turbo: { resolveAlias: { underscore: 'lodash' } } },
     })
     expect(msg).not.toBeNull()
     expect(msg).toContain('experimental.turbo.resolveAlias')
-    expect(msg).toContain('pre-16 spelling')
+    expect(msg).toContain('compatibility alias')
+    expect(msg).toContain('Next.js 16.3')
   })
 
   it('lists all populated keys in a single message', () => {

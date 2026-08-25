@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@rstest/core'
 
 // The loader resolves `next`/`storybook` helpers lazily inside the google/local
-// branches, so the SWC-mode parsing and the non-font fallthrough are testable
+// branches, so the query parsing and the non-font fallthrough are testable
 // without a real Next.js install. The full google/local paths are covered
 // end-to-end by the sandbox `Font` story and the community gauntlet.
 const loader: (
@@ -10,7 +10,6 @@ const loader: (
 
 function swcContext(query: object, context: string, rootContext = '/project') {
   return {
-    getOptions: () => ({}),
     resourceQuery: `?${JSON.stringify(query)}`,
     context,
     rootContext,
@@ -27,30 +26,12 @@ describe('storybook-nextjs-font-loader', () => {
     expect(out).toBe('module.exports = {}')
   })
 
-  it('uses loader options directly in Babel mode (non-empty getOptions)', async () => {
-    const ctx = {
-      getOptions: () => ({
-        source: '/project/node_modules/some-pkg',
-        props: { weight: '700' },
-        fontFamily: 'X',
-        filename: 'a.tsx',
-      }),
-      resourceQuery: '',
-      context: '/project/elsewhere',
-      rootContext: '/project',
-    }
-    // Source is neither next/font/google nor /local → empty module, without
-    // ever parsing a (here empty) resourceQuery.
-    await expect(loader.call(ctx)).resolves.toBe('module.exports = {}')
-  })
-
-  it('reads font config from the resourceQuery, not loader options', async () => {
+  it('reads font config from the resourceQuery', async () => {
     const ctx = swcContext(
       { path: 'a.tsx', import: 'X', arguments: [{ weight: '700' }] },
       '/project/elsewhere',
     )
-    // Non-font source short-circuits to the empty module without touching
-    // the (empty) loader options object.
+    // A non-font source still parses the query before falling through.
     await expect(loader.call(ctx)).resolves.toBe('module.exports = {}')
   })
 })

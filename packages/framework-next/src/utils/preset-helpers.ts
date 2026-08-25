@@ -488,7 +488,7 @@ export function filterNextPlugins(rawPlugins: any[]): any[] {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Matches the synthetic `…/(next|@next)/font/**\/target.css` module that
+ * Matches the synthetic `…/next/font/**\/target.css` module that
  * `next-swc` emits for every `next/font` call. Deliberately *tighter* than
  * `@storybook/nextjs`'s upstream regex (which only requires `next<sep>…<sep>
  * target.css`): without a left boundary and a `font` segment, upstream also
@@ -496,12 +496,12 @@ export function filterNextPlugins(rawPlugins: any[]): any[] {
  * (e.g. a project rooted at `~/projects/next/` or a `src/mynext/` folder),
  * which would wrongly route it to the font loader and crash with an
  * unattributable JSON error. We anchor on the real module shape: a path
- * separator (or string start), then `next`/`@next`, then `font`, then any
+ * separator (or string start), then `next`, then `font`, then any
  * subdir, ending in `target.css`. The separator class covers POSIX `/`,
  * Windows `\`, and double-escaped `\\`.
  */
 export const TARGET_CSS_RE =
-  /(^|\\|\/|\\\\)@?next(\\|\/|\\\\)font(\\|\/|\\\\).*target\.css$/
+  /(^|\\|\/|\\\\)next(\\|\/|\\\\)font(\\|\/|\\\\).*target\.css$/
 
 /**
  * Root-absolute (`/fonts/x.css`, `/images/y.png`) and scheme-absolute

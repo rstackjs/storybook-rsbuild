@@ -88,7 +88,7 @@ async function getGoogleFontFaceDeclarations(options) {
   }
 }
 
-async function getLocalFontFaceDeclarations(options, rootContext, swcMode) {
+async function getLocalFontFaceDeclarations(options, rootContext) {
   const { dirname, join } = require('node:path')
   const {
     validateLocalFontFunctionCall,
@@ -100,9 +100,9 @@ async function getLocalFontFaceDeclarations(options, rootContext, swcMode) {
 
   // Parent folder of the issuer file, relative to the root context — local font
   // `src` paths are resolved relative to the file that called `next/font/local`.
-  const parentFolder = swcMode
-    ? dirname(join(getProjectRoot(), options.filename)).replace(rootContext, '')
-    : dirname(options.filename).replace(rootContext, '')
+  const parentFolder = dirname(
+    join(getProjectRoot(), options.filename),
+  ).replace(rootContext, '')
 
   const {
     weight,
@@ -244,44 +244,23 @@ function setFontDeclarationsInHead({ id, fontFaceCSS, classNamesCSS }) {
 }
 
 module.exports = async function storybookNextjsFontLoader() {
-  const loaderOptions = this.getOptions()
-  let swcMode = false
-  let options
-
-  if (Object.keys(loaderOptions).length > 0) {
-    // Babel mode: the font transform passes options directly.
-    options = loaderOptions
-  } else {
-    // SWC mode: the font config rides on the `target.css?{json}` query.
-    const importQuery = JSON.parse(this.resourceQuery.slice(1))
-    swcMode = true
-    options = {
-      filename: importQuery.path,
-      fontFamily: importQuery.import,
-      props: importQuery.arguments[0],
-      source: this.context.replace(this.rootContext, ''),
-    }
+  const importQuery = JSON.parse(this.resourceQuery.slice(1))
+  const options = {
+    filename: importQuery.path,
+    fontFamily: importQuery.import,
+    props: importQuery.arguments[0],
+    source: this.context.replace(this.rootContext, ''),
   }
 
   const rootCtx = this.rootContext
   let fontFaceDeclaration
 
-  if (
-    options.source.endsWith(`next${sep}font${sep}google`) ||
-    options.source.endsWith(`@next${sep}font${sep}google`)
-  ) {
+  if (options.source.endsWith(`next${sep}font${sep}google`)) {
     fontFaceDeclaration = await getGoogleFontFaceDeclarations(options)
   }
 
-  if (
-    options.source.endsWith(`next${sep}font${sep}local`) ||
-    options.source.endsWith(`@next${sep}font${sep}local`)
-  ) {
-    fontFaceDeclaration = await getLocalFontFaceDeclarations(
-      options,
-      rootCtx,
-      swcMode,
-    )
+  if (options.source.endsWith(`next${sep}font${sep}local`)) {
+    fontFaceDeclaration = await getLocalFontFaceDeclarations(options, rootCtx)
   }
 
   if (typeof fontFaceDeclaration !== 'undefined') {
