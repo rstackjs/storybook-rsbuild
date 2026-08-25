@@ -80,6 +80,13 @@
       "intentionalDivergences": []
     },
     {
+      "upstream": "code/builders/builder-webpack5/src/preview/preview-filename.ts",
+      "local": "packages/builder-rsbuild/src/preview/preview-filename.ts",
+      "intentionalDivergences": [
+        "biome-ignore suppression for lint/suspicious/noControlCharactersInRegex on the sanitization regex — upstream's control-char range is intentional"
+      ]
+    },
+    {
       "upstream": "code/builders/builder-webpack5/src/types.ts",
       "local": "packages/builder-rsbuild/src/types.ts",
       "intentionalDivergences": []
@@ -209,6 +216,20 @@
       "intentionalDivergences": []
     },
     {
+      "upstream": "code/frameworks/vue3-vite/src/docgen/options.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Part of upstream's docgen-server migration (vue-docgen-api deprecation, experimentalDocgenServer feature flag). Deferred on issue #544 until @storybook/vue3 exports the docgen engines. Review for the option-resolution contract (docgen: false | true | string | object) that framework-vue3 will need when the migration lands.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/docgen/preset.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Docgen-server provider preset (experimental_docgenProvider / experimental_manifests) gated on features.experimentalDocgenServer. Deferred on issue #544; blocked until the storybook dependency ships the docgen-worker contract. Review for the gating semantics framework-vue3 must mirror to avoid double docgen.",
+      "intentionalDivergences": []
+    },
+    {
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-docgen.ts",
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
@@ -282,13 +303,15 @@
     "code/presets/react-webpack/src/framework-preset-cra.ts"
   ],
   "localOnlyFiles": {
-    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild.",
+    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild. loaders/tsconfig-paths.ts backfills getTsconfigPathsBaseDir from storybook core (code/core/src/common/utils/tsconfig.ts, not exported in 10.5.10); remove once the installed storybook exports it.",
     "files": [
       "packages/builder-rsbuild/src/chromatic-stats.ts",
+      "packages/builder-rsbuild/src/inherited-config.ts",
       "packages/builder-rsbuild/src/logger.ts",
       "packages/builder-rsbuild/src/preview/detect-msw.ts",
       "packages/builder-rsbuild/src/react-shims.ts",
       "packages/framework-react/src/requirer.ts",
+      "packages/framework-react/src/loaders/tsconfig-paths.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/index.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/generate.ts",
