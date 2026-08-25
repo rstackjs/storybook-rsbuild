@@ -41,7 +41,7 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "magic-string": "^0.30.21",
+    "magic-string": "^1.1.0",
     "pathe": "^2.0.3"
   },
   "devDependencies": {

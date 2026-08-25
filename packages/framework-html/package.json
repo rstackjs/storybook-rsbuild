@@ -49,7 +49,7 @@
     "@rollup/pluginutils": "^5.4.0",
     "@storybook/html": "^10.5.10",
     "find-up": "^5.0.0",
-    "magic-string": "^0.30.21",
+    "magic-string": "^1.1.0",
     "resolve": "^1.22.12",
     "storybook-builder-rsbuild": "workspace:*",
     "tsconfig-paths": "^4.2.0"

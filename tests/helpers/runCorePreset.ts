@@ -21,11 +21,11 @@ export async function runCorePreset(presetPath: string): Promise<CoreResult> {
     channelOptions: { wsToken: 'test-token' },
     disableTelemetry: true,
   }
-  const framework = { options: { builder: { lazyCompilation: true } } }
+  const frameworkOptions = { builder: { lazyCompilation: true } }
   const options = {
     presets: {
       apply: async (name: string) =>
-        name === 'framework' ? framework : undefined,
+        name === 'frameworkOptions' ? frameworkOptions : undefined,
     },
   }
 

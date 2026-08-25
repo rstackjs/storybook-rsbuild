@@ -142,8 +142,8 @@ importers:
         specifier: ^11.4.0
         version: 11.4.0
       magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
+        specifier: ^1.1.0
+        version: 1.2.2
       path-browserify:
         specifier: ^1.0.1
         version: 1.0.1
@@ -224,8 +224,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
+        specifier: ^1.1.0
+        version: 1.2.2
       resolve:
         specifier: ^1.22.12
         version: 1.22.12
@@ -264,8 +264,8 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1(typescript@5.9.3)(webpack@5.104.1)
       magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
+        specifier: ^1.1.0
+        version: 1.2.2
       react-docgen:
         specifier: ^8.0.3
         version: 8.0.3
@@ -409,8 +409,8 @@ importers:
   packages/rsbuild-plugin-react-native-web:
     dependencies:
       magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
+        specifier: ^1.1.0
+        version: 1.2.2
       pathe:
         specifier: ^2.0.3
         version: 2.0.3
@@ -8987,6 +8987,9 @@ packages:
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
+
+  magic-string@1.2.2:
+    resolution: {integrity: sha512-veT/+7iXrXzT39XnEN4lOxtNl72dMgJ8Lp+5Bd6YcMSWpb0n0MjBM8Uuooi6jgJr8dhUW2swQgBmoZVMni5SVg==}
 
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
@@ -23376,6 +23379,10 @@ snapshots:
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.5
+
+  magic-string@1.2.2:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 

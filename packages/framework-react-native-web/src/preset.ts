@@ -34,9 +34,9 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   const reactConfig = await reactRsbuildFinal(config, options)
 
   // Get framework options
-  const framework = await options.presets.apply('framework')
-  const frameworkOptions: FrameworkOptions =
-    typeof framework === 'string' ? {} : framework.options || {}
+  const frameworkOptions = await options.presets.apply<FrameworkOptions | null>(
+    'frameworkOptions',
+  )
 
   // Resolve react-native-web to absolute path for proper alias resolution in monorepos
   const reactNativeWebPath = resolveReactNativeWeb(options.configDir)
@@ -45,10 +45,10 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   return mergeRsbuildConfig(reactConfig, {
     plugins: [
       pluginReactNativeWeb({
-        modulesToTranspile: frameworkOptions.modulesToTranspile,
+        modulesToTranspile: frameworkOptions?.modulesToTranspile,
         // Pass the resolved path to enable absolute imports in transformed code
         reactNativeWebPath,
-        ...frameworkOptions.pluginOptions,
+        ...frameworkOptions?.pluginOptions,
       }),
     ],
     resolve: {
@@ -61,13 +61,14 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
 }
 
 export const core: PresetProperty<'core'> = async (config, options) => {
-  const framework = await options.presets.apply('framework')
+  const frameworkOptions = await options.presets.apply<FrameworkOptions | null>(
+    'frameworkOptions',
+  )
   return {
     ...config,
     builder: {
       name: fileURLToPath(import.meta.resolve('storybook-builder-rsbuild')),
-      options:
-        typeof framework === 'string' ? {} : framework.options.builder || {},
+      options: frameworkOptions?.builder || {},
     },
     renderer: fileURLToPath(import.meta.resolve('@storybook/react/preset')),
   }

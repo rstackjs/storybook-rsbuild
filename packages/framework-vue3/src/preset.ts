@@ -1,17 +1,19 @@
 import { fileURLToPath } from 'node:url'
 import type { PresetProperty } from 'storybook/internal/types'
+import type { FrameworkOptions } from './types'
 
 export { rsbuildFinal } from './framework-preset-vue3'
 
 export const core: PresetProperty<'core'> = async (config, options) => {
-  const framework = await options.presets.apply('framework')
+  const frameworkOptions = await options.presets.apply<FrameworkOptions | null>(
+    'frameworkOptions',
+  )
 
   return {
     ...config,
     builder: {
       name: fileURLToPath(import.meta.resolve('storybook-builder-rsbuild')),
-      options:
-        typeof framework === 'string' ? {} : framework.options.builder || {},
+      options: frameworkOptions?.builder || {},
     },
     renderer: fileURLToPath(import.meta.resolve('@storybook/vue3/preset')),
   }
