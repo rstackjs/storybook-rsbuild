@@ -55,12 +55,12 @@
     "@rollup/pluginutils": "^5.4.0",
     "@storybook/react": "^10.5.10",
     "@storybook/react-docgen-typescript-plugin": "^1.0.1",
-    "find-up": "^5.0.0",
     "magic-string": "^0.30.21",
     "react-docgen": "^8.0.3",
     "react-docgen-typescript": "^2.4.0",
     "resolve": "^1.22.12",
     "storybook-builder-rsbuild": "workspace:*",
+    "strip-json-comments": "^5.0.1",
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
