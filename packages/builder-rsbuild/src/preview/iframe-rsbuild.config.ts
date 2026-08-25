@@ -20,6 +20,10 @@ import { dedent } from 'ts-dedent'
 import { stripInheritedConfig } from '../inherited-config'
 import type { BuilderOptions, TypescriptOptions } from '../types'
 import { isMswActive } from './detect-msw'
+import {
+  developmentPreviewChunkFilename,
+  productionPreviewChunkFilename,
+} from './preview-filename'
 import { getVirtualModules } from './virtual-module-mapping'
 
 const require = createRequire(import.meta.url)
@@ -485,6 +489,9 @@ export default async (
 
         config.externalsType = 'var'
         config.output ??= {}
+        config.output.chunkFilename = isProd
+          ? productionPreviewChunkFilename
+          : developmentPreviewChunkFilename
         config.output.module = false
         config.output.chunkFormat = 'array-push'
         config.output.chunkLoading = 'jsonp'
