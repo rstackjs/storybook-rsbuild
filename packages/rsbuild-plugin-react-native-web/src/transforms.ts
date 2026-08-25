@@ -74,7 +74,7 @@ function generateDirectExports(
 
 export interface TransformResult {
   code: string
-  map: ReturnType<MagicString['generateMap']> | null
+  map: string | null
   changed: boolean
 }
 
@@ -165,11 +165,13 @@ export function transformReanimatedWebUtils(
   }
 
   const resultCode = ms.toString()
-  const map = ms.generateMap({
-    source: opts?.source ?? id.split('?')[0],
-    includeContent: true,
-    hires: true,
-  })
+  const map = ms
+    .generateMap({
+      source: opts?.source ?? id.split('?')[0],
+      includeContent: true,
+      hires: true,
+    })
+    .toString()
 
   return { code: resultCode, map, changed: true }
 }
@@ -213,11 +215,13 @@ export function transformCssInteropDoctorCheck(
   }
 
   const resultCode = ms.toString()
-  const map = ms.generateMap({
-    source: opts?.source ?? id.split('?')[0],
-    includeContent: true,
-    hires: true,
-  })
+  const map = ms
+    .generateMap({
+      source: opts?.source ?? id.split('?')[0],
+      includeContent: true,
+      hires: true,
+    })
+    .toString()
 
   return { code: resultCode, map, changed: true }
 }
