@@ -82,9 +82,12 @@ const createOptions = ({
 }
 
 describe('production build output', () => {
-  it('preserves function names while minifying JavaScript', async () => {
+  it('preserves function names and keeps source maps gated', async () => {
     const config = await createIframeRsbuildConfig(
-      createOptions({ configType: 'PRODUCTION' }),
+      createOptions({
+        configType: 'PRODUCTION',
+        disableSourcemaps: true,
+      }),
     )
 
     expect(config.output?.minify).toMatchObject({
@@ -97,42 +100,32 @@ describe('production build output', () => {
         },
       },
     })
-  })
-
-  it('keeps source maps gated by build.test.disableSourcemaps', async () => {
-    const config = await createIframeRsbuildConfig(
-      createOptions({
-        configType: 'PRODUCTION',
-        disableSourcemaps: true,
-      }),
-    )
-
     expect(config.output?.sourceMap).toEqual({
       js: false,
       css: false,
     })
   })
 
-  it('defines NODE_ENV as development when the feature is enabled', async () => {
-    const config = await createIframeRsbuildConfig(
+  it('defines NODE_ENV as development only for production builds', async () => {
+    const productionConfig = await createIframeRsbuildConfig(
       createOptions({
         configType: 'PRODUCTION',
         developmentModeForBuild: true,
       }),
     )
 
-    expect(config.source?.define?.NODE_ENV).toBe(JSON.stringify('development'))
-  })
+    expect(productionConfig.source?.define?.NODE_ENV).toBe(
+      JSON.stringify('development'),
+    )
 
-  it('does not change NODE_ENV in development builds', async () => {
-    const config = await createIframeRsbuildConfig(
+    const developmentConfig = await createIframeRsbuildConfig(
       createOptions({
         configType: 'DEVELOPMENT',
         developmentModeForBuild: true,
       }),
     )
 
-    expect(config.source?.define?.NODE_ENV).toBe(
+    expect(developmentConfig.source?.define?.NODE_ENV).toBe(
       JSON.stringify(process.env.NODE_ENV),
     )
   })

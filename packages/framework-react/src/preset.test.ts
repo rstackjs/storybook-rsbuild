@@ -14,8 +14,8 @@ const createOptions = (developmentModeForBuild: boolean) =>
   }) as RsbuildFinalOptions
 
 describe('rsbuildFinal', () => {
-  it('defines NODE_ENV as development when the feature is enabled', async () => {
-    const config: RsbuildConfig = {
+  it('defines NODE_ENV only when the feature is enabled', async () => {
+    const enabledConfig: RsbuildConfig = {
       source: {
         define: {
           EXISTING: JSON.stringify(true),
@@ -23,7 +23,9 @@ describe('rsbuildFinal', () => {
       },
     }
 
-    await expect(rsbuildFinal(config, createOptions(true))).resolves.toEqual({
+    await expect(
+      rsbuildFinal(enabledConfig, createOptions(true)),
+    ).resolves.toEqual({
       source: {
         define: {
           EXISTING: JSON.stringify(true),
@@ -31,10 +33,8 @@ describe('rsbuildFinal', () => {
         },
       },
     })
-  })
 
-  it('leaves NODE_ENV unchanged when the feature is disabled', async () => {
-    const config: RsbuildConfig = {
+    const disabledConfig: RsbuildConfig = {
       source: {
         define: {
           NODE_ENV: JSON.stringify('production'),
@@ -42,8 +42,8 @@ describe('rsbuildFinal', () => {
       },
     }
 
-    await expect(rsbuildFinal(config, createOptions(false))).resolves.toBe(
-      config,
-    )
+    await expect(
+      rsbuildFinal(disabledConfig, createOptions(false)),
+    ).resolves.toBe(disabledConfig)
   })
 })
