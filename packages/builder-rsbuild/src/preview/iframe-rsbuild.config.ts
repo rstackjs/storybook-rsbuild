@@ -289,6 +289,20 @@ export default async (
           : 'cheap-module-source-map',
         css: !options.build?.test?.disableSourcemaps,
       },
+      ...(isProd
+        ? {
+            minify: {
+              jsOptions: {
+                minimizerOptions: {
+                  compress: {
+                    keep_fnames: true,
+                  },
+                  mangle: false,
+                },
+              },
+            },
+          }
+        : {}),
       distPath: {
         root: resolve(process.cwd(), outputDir),
         // Flat output, matching the official webpack5 builder. With
@@ -339,7 +353,11 @@ export default async (
     source: {
       define: {
         ...stringifyProcessEnvs(envs),
-        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+        NODE_ENV: JSON.stringify(
+          features?.developmentModeForBuild && isProd
+            ? 'development'
+            : process.env.NODE_ENV,
+        ),
       },
     },
     // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.
