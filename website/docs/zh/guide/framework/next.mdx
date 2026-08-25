@@ -16,10 +16,11 @@ Storybook for Next.js & Rsbuild 让你在隔离环境中开发和测试 Next.js 
 
 | Package | Version |
 | :--- | :--- |
+| Node.js | `^20.19.0 \|\| >=22.12.0` |
 | `next` | `>=16.3.0 <17.0.0` |
 | `next-rspack` | 与 `next` 相同(同一版本) |
-| `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
-| `storybook` | `^10.5.0` |
+| `react` / `react-dom` | `^18.2.0 \|\| ^19.0.0` |
+| `storybook` | `^10.5.10` |
 | `@rsbuild/core` | 见[版本矩阵](#version-matrix) |
 
 </div>
@@ -187,7 +188,7 @@ export default config
 | [CSS Modules、Tailwind/PostCSS、styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [版本矩阵与 `@rspack/core` 启动检查](#version-matrix) |
 | [绝对导入、aliases、subpath imports、tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` 的 plugins 受选项门控](#custom-webpack-settings) |
 | [`*.mock` subpath API](#mocking-nextjs-apis-in-stories)(`cache`/`headers`/`navigation`/`router`) | [`node:` 协议与 Node 内置模块](#node-protocol--node-builtins)的处理 |
-| [SWC transforms、`transpilePackages`、`optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Next 16+ 不再支持 runtime config](#runtime-config) |
+| [SWC transforms、`transpilePackages`、`optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [无法使用 `next/config` runtime config](#runtime-config) |
 
 > **经验法则:** 如果某个 Next.js 或 Storybook 特性在本页完全没有提及,默认按官方 [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) 文档来 —— runtime 正是移植自它。唯一不能照搬的是**构建/打包配置**:请忽略上游的 `viteFinal` 指引,改为通过 `next.config.ts` 加 `rsbuildFinal` / `webpackFinal` 来驱动构建,如上所述。
 
@@ -628,9 +629,7 @@ export const Default: StoryObj = {
 
 ## Runtime config {#runtime-config}
 
-`getConfig()` 和 `publicRuntimeConfig` 原则上可用 —— 因为 Storybook 不做服务端渲染,组件看到的是 `publicRuntimeConfig`(而非 `serverRuntimeConfig`),与上游一致(**见 [Runtime config](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#runtime-config)**)。
-
-有一处差异:对 `next/config` 的旧式 import **不可用**。Next.js 16 把 `next/config` 从其 package exports 中移除了,因此在所支持的 Next 16 线上,从 `next/config` 导入的 `getConfig()` 已无法解析。
+所支持的 Next.js 16 已移除 `serverRuntimeConfig`、`publicRuntimeConfig` 和 `next/config` API,因此无法使用 `getConfig()`。请把 client 可见的值迁移到 `process.env.NEXT_PUBLIC_*`;Next.js 会将其内联到 browser bundle 中,Storybook 则通过同一套 Next.js 配置 bridge 加载这些值。敏感值应仅保留在 server 侧,因为 Storybook preview 运行在 browser 中。详见 Next.js 的[环境变量指南](https://nextjs.org/docs/app/guides/environment-variables)。
 
 ## 已知限制 {#known-limitations}
 
@@ -639,7 +638,7 @@ export const Default: StoryObj = {
 - **无 `/_next/image` 优化。** `next/image`(以及 `next/legacy/image`)直接提供图片;运行时行为与生产环境(图片即时优化)不同。
 - **`turbopack.*` 配置键会被忽略。** Storybook 使用的是 Next.js webpack 侧的配置,因此 `turbopack.rules` / `resolveAlias` / `resolveExtensions`(以及 Next.js 16.3 仍接受的 `experimental.turbo` compatibility alias)不会生效 —— framework 发现它们时会记录一条 warning。请通过 [`webpack()` 片段](#custom-loaders-svgr)镜像 Turbopack 的 loader 规则。
 - **Sass/Less 需要一个 Rsbuild 插件。** 预处理器支持需通过 `rsbuildFinal` 手动开启,而非从 Next.js 继承(见 [Sass / Less](#sass--less))。
-- **Next 16+ 不再支持 runtime config**(见 [Runtime config](#runtime-config))。
+- **无法使用 `next/config` runtime config**(见 [Runtime config](#runtime-config))。
 - **部署/输出类配置大多不影响服务。** `output`(`export`/`standalone`)、`assetPrefix`、`trailingSlash` 以及 `rewrites`/`redirects`/`headers` 在 Storybook 中无任何作用 —— preview 在根路径下提供服务,所以 story 的资源路径(`staticDirs`、`next/image` 的 `src`)**无需**加 `basePath` 前缀。**`basePath` 是例外:** 它的值仍会编译进 client 代码,因此 `next/link` 与 router 的 href 在运行时*确实*会带上 `basePath` 前缀 —— 与 `@storybook/nextjs-vite` 一致。
 - **版本耦合。** framework 依赖 Next.js 内部实现。任何 `next` 的 patch 或 minor 发布都可能破坏兼容性 —— 请让 `storybook-next-rsbuild` 与 `next` 一起升级。
 

@@ -16,10 +16,11 @@ There is **no framework-specific build configuration to learn**: keep configurin
 
 | Package | Version |
 | :--- | :--- |
+| Node.js | `^20.19.0 \|\| >=22.12.0` |
 | `next` | `>=16.3.0 <17.0.0` |
 | `next-rspack` | matches `next` (same version) |
-| `react` / `react-dom` | `^18.0.0 \|\| ^19.0.0` |
-| `storybook` | `^10.5.0` |
+| `react` / `react-dom` | `^18.2.0 \|\| ^19.0.0` |
+| `storybook` | `^10.5.10` |
 | `@rsbuild/core` | see [version matrix](#version-matrix) |
 
 </div>
@@ -187,7 +188,7 @@ The runtime behavior — decorators, mocks, and story-authoring APIs — is port
 | [CSS Modules, Tailwind/PostCSS, styled-jsx](#css-css-modules-postcss--tailwind-styled-jsx) | [Version matrix & the `@rspack/core` startup check](#version-matrix) |
 | [Absolute imports, aliases, subpath imports, tsconfig paths](#imports-aliases--tsconfig-paths) | [`next.config.webpack()` plugins are gated](#custom-webpack-settings) behind an option |
 | [`*.mock` subpath APIs](#mocking-nextjs-apis-in-stories) (`cache`/`headers`/`navigation`/`router`) | [`node:` protocol & Node builtins](#node-protocol--node-builtins) handling |
-| [SWC transforms, `transpilePackages`, `optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [Runtime config is dropped on Next 16+](#runtime-config) |
+| [SWC transforms, `transpilePackages`, `optimizePackageImports`](#swc-transforms-transpilepackages-optimizepackageimports) | [`next/config` runtime config is unavailable](#runtime-config) |
 
 > **Rule of thumb:** if a Next.js or Storybook feature isn't covered on this page at all, default to the official [`@storybook/nextjs-vite`](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite) docs — the runtime is ported from it. The one thing that never carries over is **build/bundler configuration**: ignore upstream's `viteFinal` guidance and drive the build through `next.config.ts` plus `rsbuildFinal` / `webpackFinal`, as described above.
 
@@ -628,9 +629,7 @@ Caveats:
 
 ## Runtime config
 
-`getConfig()` and `publicRuntimeConfig` work in principle — because Storybook doesn't server-render, components see `publicRuntimeConfig` (not `serverRuntimeConfig`), the same as upstream (**see [Runtime config](https://storybook.js.org/docs/get-started/frameworks/nextjs-vite#runtime-config)**).
-
-One delta: the legacy `next/config` import is **not available**. Next.js 16 removed `next/config` from its package exports, so `getConfig()` imported from `next/config` no longer resolves on the supported Next 16 line.
+The supported Next.js 16 line removed `serverRuntimeConfig`, `publicRuntimeConfig`, and the `next/config` API, so `getConfig()` is not available. Migrate client-visible values to `process.env.NEXT_PUBLIC_*`; Next.js inlines them into the browser bundle, and Storybook loads them through the same Next.js configuration bridge. Keep sensitive values server-only because Storybook's preview runs in the browser. See Next.js's [environment variables guide](https://nextjs.org/docs/app/guides/environment-variables).
 
 ## Known limitations
 
@@ -639,7 +638,7 @@ One delta: the legacy `next/config` import is **not available**. Next.js 16 remo
 - **No `/_next/image` optimization.** `next/image` (and `next/legacy/image`) serve images directly; runtime behavior differs from production, where the image is optimized on the fly.
 - **`turbopack.*` config keys are ignored.** Storybook consumes Next.js's webpack-side configuration, so `turbopack.rules` / `resolveAlias` / `resolveExtensions` (and the `experimental.turbo` compatibility alias still accepted by Next.js 16.3) have no effect — the framework logs a warning when it finds them. Mirror Turbopack loader rules via the [`webpack()` snippet](#custom-loaders-svgr).
 - **Sass/Less need an Rsbuild plugin.** Preprocessor support is opt-in via `rsbuildFinal` rather than inherited from Next.js (see [Sass / Less](#sass--less)).
-- **Runtime config is dropped on Next 16+** (see [Runtime config](#runtime-config)).
+- **`next/config` runtime config is unavailable** (see [Runtime config](#runtime-config)).
 - **Deployment/output keys mostly don't affect serving.** `output` (`export`/`standalone`), `assetPrefix`, `trailingSlash`, and `rewrites`/`redirects`/`headers` have no effect in Storybook — the preview is served at the root, so story assets (`staticDirs`, `next/image` `src`) need **no** `basePath` prefix. **`basePath` is the exception:** its value is still compiled into the client code, so `next/link` and router hrefs *are* `basePath`-prefixed at runtime — same as `@storybook/nextjs-vite`.
 - **Version coupling.** The framework relies on Next.js internals. Any `next` patch or minor release can break compatibility — upgrade `storybook-next-rsbuild` alongside `next`.
 

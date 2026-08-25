@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it } from '@rstest/core'
 import React, { useContext } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { createNavigation } from 'storybook-next-rsbuild/navigation.mock'
 import {
   GlobalLayoutRouterContext,
@@ -8,17 +7,53 @@ import {
 } from '../next-internals'
 import { AppRouterProvider } from './app-router-provider'
 
-type GlobalContextValue = React.ContextType<typeof GlobalLayoutRouterContext>
-type LayoutContextValue = NonNullable<
-  React.ContextType<typeof LayoutRouterContext>
->
+const { renderToStaticMarkup } = require('react-dom/server') as {
+  renderToStaticMarkup(node: React.ReactNode): string
+}
+
+type CacheNodeValue = {
+  rsc: React.ReactNode
+  prefetchRsc: React.ReactNode
+  prefetchHead: React.ReactNode
+  head: React.ReactNode
+  slots: Record<string, unknown> | null
+  scrollRef: { current: boolean } | null
+  bfcacheId: number
+}
+
+type GlobalContextValue = {
+  tree: unknown
+  focusAndScrollRef: {
+    scrollRef: { current: boolean } | null
+    forceScroll: boolean
+    hashFragment: string | null
+    onlyHashChange: boolean
+  }
+  nextUrl: string | null
+  previousNextUrl: string | null
+}
+
+type LayoutContextValue = {
+  parentTree: unknown
+  parentCacheNode: CacheNodeValue
+  parentSegmentPath: unknown | null
+  parentParams: Record<string, string | string[] | undefined>
+  parentLoadingData: React.ReactNode
+  debugNameContext: string
+  url: string
+  isActive: boolean
+}
 
 let globalContextValue: GlobalContextValue
 let layoutContextValue: LayoutContextValue
 
 function ContextProbe() {
-  globalContextValue = useContext(GlobalLayoutRouterContext)
-  const layoutContext = useContext(LayoutRouterContext)
+  globalContextValue = useContext(
+    GlobalLayoutRouterContext,
+  ) as GlobalContextValue
+  const layoutContext = useContext(
+    LayoutRouterContext,
+  ) as LayoutContextValue | null
   if (!layoutContext) throw new Error('LayoutRouterContext was not provided')
   layoutContextValue = layoutContext
   return null
