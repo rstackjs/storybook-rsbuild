@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
+import { WebpackCompilationError } from 'storybook/internal/server-errors'
 import type { Options } from 'storybook/internal/types'
 import { bail, type Stats, start } from './index'
 
@@ -29,13 +30,17 @@ rs.mock('./react-shims', () => ({
 
 type ProgressHandler = (value: number, message: string) => void
 
-const createStats = (): Stats =>
+type CompilationError = ConstructorParameters<
+  typeof WebpackCompilationError
+>[0]['errors'][number]
+
+const createStats = (errors: CompilationError[] = []): Stats =>
   ({
     compilation: {
       modules: { size: 20 },
     },
-    hasErrors: () => false,
-    toJson: () => ({ errors: [] }),
+    hasErrors: () => errors.length > 0,
+    toJson: () => ({ errors }),
   }) as unknown as Stats
 
 const createStartHarness = (stats: Stats = createStats()) => {
@@ -151,5 +156,26 @@ describe('start', () => {
       message: expect.stringMatching(/^Completed in /),
     })
     expect(cache.set).toHaveBeenCalledWith('modulesCount', 20)
+  })
+
+  it('throws a compilation error when the initial compilation fails', async () => {
+    const compilationError = {
+      message: 'Module build failed: SyntaxError: Unexpected token',
+      name: 'ModuleBuildError',
+      stack: 'ModuleBuildError: Module build failed',
+    }
+    const { startOptions } = createStartHarness(createStats([compilationError]))
+
+    let error: unknown
+    try {
+      await start(startOptions)
+    } catch (caught) {
+      error = caught
+    }
+
+    expect(error).toBeInstanceOf(WebpackCompilationError)
+    expect(error).toMatchObject({
+      data: { errors: [compilationError] },
+    })
   })
 })

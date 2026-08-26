@@ -6,7 +6,10 @@ import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
-import { WebpackInvocationError } from 'storybook/internal/server-errors'
+import {
+  WebpackCompilationError,
+  WebpackInvocationError,
+} from 'storybook/internal/server-errors'
 import type {
   Options,
   Preset,
@@ -30,7 +33,7 @@ const corePath = dirname(require.resolve('storybook/package.json'))
 type RsbuildDevServer = Awaited<
   ReturnType<rsbuildReal.RsbuildInstance['createDevServer']>
 >
-type StatsOrMultiStats = Parameters<rsbuildReal.OnAfterBuildFn>[0]['stats']
+type StatsOrMultiStats = Parameters<rsbuildReal.OnDevCompileDoneFn>[0]['stats']
 export type Stats = NonNullable<
   Exclude<StatsOrMultiStats, { stats: unknown[] }>
 >
@@ -244,6 +247,13 @@ export const start: RsbuildBuilder['start'] = async ({
   router.use(rsbuildServer.middlewares)
   rsbuildServer.connectWebSocket({ server: storybookServer })
   const stats = await waitFirstCompileDone
+  if (stats.hasErrors()) {
+    const statsJson = stats.toJson({ all: false, errors: true })
+    const errors = statsJson.errors?.length
+      ? statsJson.errors
+      : (statsJson.children ?? []).flatMap((child) => child.errors ?? [])
+    throw new WebpackCompilationError({ errors })
+  }
   await server.afterListen()
 
   return {
