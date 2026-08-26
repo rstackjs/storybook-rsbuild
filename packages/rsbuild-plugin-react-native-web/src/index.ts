@@ -160,14 +160,10 @@ export function pluginReactNativeWeb(
         const isDevelopment =
           options.dev ?? process.env.NODE_ENV !== 'production'
         const nodeEnvDefine =
-          config.source.define?.['process.env.NODE_ENV'] ??
-          JSON.stringify(
-            options.dev != null
-              ? isDevelopment
-                ? 'development'
-                : 'production'
-              : process.env.NODE_ENV || 'development',
-          )
+          options.dev != null
+            ? JSON.stringify(isDevelopment ? 'development' : 'production')
+            : (config.source.define?.['process.env.NODE_ENV'] ??
+              JSON.stringify(process.env.NODE_ENV || 'development'))
         config.source.define = {
           ...config.source.define,
           __DEV__: JSON.stringify(isDevelopment),
