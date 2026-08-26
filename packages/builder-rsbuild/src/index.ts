@@ -6,9 +6,8 @@ import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
-import { logger } from 'storybook/internal/node-logger'
 import {
-  WebpackCompilationError,
+  NoStatsForViteDevError,
   WebpackInvocationError,
 } from 'storybook/internal/server-errors'
 import type {
@@ -44,12 +43,6 @@ export const printDuration = (startTime: [number, number]) =>
     .replace(' min', ' minutes')
 
 type BuilderStartOptions = Parameters<RsbuildBuilder['start']>['0']
-type ListeningRouter = BuilderStartOptions['router'] & {
-  listen: (
-    options: { host?: string; port?: number },
-    callback: () => void,
-  ) => unknown
-}
 
 export const executor = {
   get: async (options: Options) => {
@@ -141,27 +134,10 @@ export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
 
 let server: RsbuildDevServer
 let activeCompiler: rsbuildReal.Rspack.Compiler | undefined
-let activeStorybookServer: BuilderStartOptions['server'] | undefined
-let didBuilderStartStorybookServer = false
-let rejectFirstCompile: ((reason?: unknown) => void) | undefined
 
 export async function bail(): Promise<void> {
-  const storybookServerToClose =
-    didBuilderStartStorybookServer && activeStorybookServer?.listening
-      ? activeStorybookServer
-      : undefined
   activeCompiler = undefined
-  activeStorybookServer = undefined
-  didBuilderStartStorybookServer = false
-  rejectFirstCompile?.()
-  rejectFirstCompile = undefined
-  await Promise.all([
-    storybookServerToClose &&
-      new Promise<void>((resolve) => {
-        storybookServerToClose.close(() => resolve())
-      }),
-    server?.close(),
-  ])
+  return server?.close()
 }
 
 /**
@@ -207,11 +183,13 @@ export const start: RsbuildBuilder['start'] = async ({
     },
   })
 
+  let buildStartTime = startTime
   let progressValue = 0
   const reportProgress = (newValue: number, message: string) => {
     // Unlike builder-webpack5, reset after a completed compilation because Rspack reuses this
     // handler for rebuilds; otherwise every later update is permanently clamped to 1.
     if (progressValue === 1 && newValue < 1) {
+      buildStartTime = process.hrtime()
       progressValue = 0
     }
     progressValue = Math.max(newValue, progressValue)
@@ -221,7 +199,7 @@ export const start: RsbuildBuilder['start'] = async ({
     }
 
     if (progressValue === 1) {
-      progress.message = `Completed in ${printDuration(startTime)}.`
+      progress.message = `Completed in ${printDuration(buildStartTime)}.`
     }
 
     channel.emit(PREVIEW_BUILDER_PROGRESS, progress)
@@ -241,21 +219,6 @@ export const start: RsbuildBuilder['start'] = async ({
   })
 
   const rsbuildServer = await rsbuildBuild.createDevServer()
-
-  const waitFirstCompileDone = new Promise<StatsOrMultiStats>(
-    (resolve, rej) => {
-      rejectFirstCompile = rej
-      rsbuildBuild.onDevCompileDone(({ stats, isFirstCompile }) => {
-        if (!isFirstCompile) {
-          return
-        }
-        rejectFirstCompile = undefined
-        resolve(stats)
-      })
-    },
-  )
-  waitFirstCompileDone.catch(() => {})
-
   server = rsbuildServer
 
   if (!rsbuildBuild) {
@@ -275,49 +238,14 @@ export const start: RsbuildBuilder['start'] = async ({
 
   router.use(rsbuildServer.middlewares)
   rsbuildServer.connectWebSocket({ server: storybookServer })
-  // Storybook 10.5 waits for start() before listening, while the upstream webpack contract starts
-  // the server first and keeps start() pending for the initial compilation. Restore that ordering
-  // here so the manager can receive progress, then make core's later listen call idempotent.
-  const listeningRouter = router as ListeningRouter
-  const listen = listeningRouter.listen.bind(listeningRouter)
-  listeningRouter.listen = (listenOptions, callback) => {
-    if (!storybookServer.listening) {
-      return listen(listenOptions, () => {
-        activeStorybookServer = storybookServer
-        didBuilderStartStorybookServer = true
-        callback()
-      })
-    }
-    callback()
-    return listeningRouter
-  }
-  await new Promise<void>((resolve, reject) => {
-    storybookServer.once('error', reject)
-    listeningRouter.listen({ port: options.port, host: options.host }, resolve)
-  })
-  if (!options.quiet && options.localAddress) {
-    logger.info(
-      `Storybook server is listening at ${options.localAddress} while the preview builds.`,
-    )
-  }
-  const stats = await waitFirstCompileDone
-  if (stats.hasErrors()) {
-    let errors
-    if ('stats' in stats) {
-      errors = stats.toJson({ all: false, errors: true }).errors ?? []
-    } else {
-      const json = stats.toJson({ all: false, children: true, errors: true })
-      errors = [json, ...(json.children ?? [])].flatMap(
-        (compilation) => compilation.errors ?? [],
-      )
-    }
-    throw new WebpackCompilationError({ errors })
-  }
-  await server.afterListen()
 
   return {
     bail,
-    stats,
+    stats: {
+      toJson: () => {
+        throw new NoStatsForViteDevError()
+      },
+    },
     totalTime: process.hrtime(startTime),
   }
 }
