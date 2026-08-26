@@ -7,10 +7,7 @@ import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { logger } from 'storybook/internal/node-logger'
-import {
-  NoStatsForViteDevError,
-  WebpackInvocationError,
-} from 'storybook/internal/server-errors'
+import { WebpackInvocationError } from 'storybook/internal/server-errors'
 import type {
   Options,
   Preset,
@@ -256,7 +253,10 @@ export const start: RsbuildBuilder['start'] = async ({
     bail,
     stats: {
       toJson: () => {
-        throw new NoStatsForViteDevError()
+        // eslint-disable-next-line local-rules/no-uncategorized-errors
+        throw new Error(
+          'No stats are available for the Rsbuild dev server: stats are only produced by production builds (storybook build).',
+        )
       },
     },
     totalTime: process.hrtime(startTime),

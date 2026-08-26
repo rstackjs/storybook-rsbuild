@@ -2,7 +2,6 @@ import { EventEmitter } from 'node:events'
 import type { Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
-import { NoStatsForViteDevError } from 'storybook/internal/server-errors'
 import { bail, printDuration, start } from '../src/index'
 import { createTestOptions } from './fixtures/options'
 
@@ -152,7 +151,9 @@ describe('start', () => {
 
     const result = await start(startOptions)
 
-    expect(() => result.stats?.toJson()).toThrow(NoStatsForViteDevError)
+    expect(() => result.stats?.toJson()).toThrow(
+      'No stats are available for the Rsbuild dev server: stats are only produced by production builds (storybook build).',
+    )
   })
 
   it('notifies Rsbuild after the Storybook server starts listening', async () => {
