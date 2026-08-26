@@ -37,7 +37,13 @@ const DEFAULT_NO_TREESHAKE_MODULES = [
 export interface PluginReactNativeWebOptions {
   /**
    * Whether React Native Web should run in development mode.
-   * @default process.env.NODE_ENV !== 'production'
+   *
+   * `process.env.NODE_ENV` and `__DEV__` are resolved independently using this
+   * priority: `dev` > the corresponding existing define > the host environment.
+   * Define expressions are intentionally not parsed. If only `process.env.NODE_ENV`
+   * is customized while `dev` and `__DEV__` are unset, `__DEV__` falls back to the
+   * host environment and may disagree with that custom define. To keep them aligned,
+   * set `dev` or define `__DEV__` explicitly.
    */
   dev?: boolean
 
