@@ -151,12 +151,15 @@ export function pluginReactNativeWeb(
       api.modifyRsbuildConfig((config) => {
         // 1. Define global variables required by React Native
         config.source ??= {}
+        const nodeEnvDefine =
+          config.source.define?.['process.env.NODE_ENV'] ??
+          JSON.stringify(process.env.NODE_ENV || 'development')
         config.source.define = {
           ...config.source.define,
-          __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
-          'process.env.NODE_ENV': JSON.stringify(
-            process.env.NODE_ENV || 'development',
+          __DEV__: JSON.stringify(
+            nodeEnvDefine !== JSON.stringify('production'),
           ),
+          'process.env.NODE_ENV': nodeEnvDefine,
           EXPO_OS: JSON.stringify('web'),
           'process.env.EXPO_OS': JSON.stringify('web'),
           _WORKLET: 'false',

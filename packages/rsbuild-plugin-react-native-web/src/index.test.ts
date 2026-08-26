@@ -1,5 +1,19 @@
+import { createRsbuild } from '@rsbuild/core'
 import { describe, expect, it } from '@rstest/core'
 import { pluginReactNativeWeb } from './index'
+
+const getResolvedDefines = async (define?: Record<string, string>) => {
+  const rsbuild = await createRsbuild({
+    cwd: process.cwd(),
+    rsbuildConfig: {
+      plugins: [pluginReactNativeWeb()],
+      source: { define },
+    },
+  })
+
+  await rsbuild.initConfigs()
+  return rsbuild.getRsbuildConfig().source?.define
+}
 
 describe('pluginReactNativeWeb', () => {
   describe('plugin creation', () => {
@@ -85,6 +99,30 @@ describe('pluginReactNativeWeb', () => {
           noTreeshakeModules: [],
         }),
       ).not.toThrow()
+    })
+  })
+
+  describe('environment defines', () => {
+    it('preserves developmentModeForBuild defines from the framework', async () => {
+      const defines = await getResolvedDefines({
+        'process.env.NODE_ENV': JSON.stringify('development'),
+      })
+
+      expect(defines?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify('development'),
+      )
+      expect(defines?.__DEV__).toBe('true')
+    })
+
+    it('uses the host environment when no framework define is present', async () => {
+      const defines = await getResolvedDefines()
+
+      expect(defines?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify(process.env.NODE_ENV || 'development'),
+      )
+      expect(defines?.__DEV__).toBe(
+        JSON.stringify(process.env.NODE_ENV !== 'production'),
+      )
     })
   })
 })
