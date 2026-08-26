@@ -5,15 +5,21 @@ import createIframeRsbuildConfig from './iframe-rsbuild.config'
 
 const fixtureDir = resolve(__dirname, '../../tests/fixtures')
 const fixtureRsbuildConfig = resolve(fixtureDir, 'rsbuild.config.ts')
+const minifyDisabledRsbuildConfig = resolve(
+  fixtureDir,
+  'minify-disabled-rsbuild.config.ts',
+)
 
 const createOptions = ({
   configType,
   developmentModeForBuild = false,
   disableSourcemaps = false,
+  rsbuildConfigPath = fixtureRsbuildConfig,
 }: {
   configType: 'DEVELOPMENT' | 'PRODUCTION'
   developmentModeForBuild?: boolean
   disableSourcemaps?: boolean
+  rsbuildConfigPath?: string
 }) => {
   const presetValues = new Map<string, unknown>([
     [
@@ -22,7 +28,7 @@ const createOptions = ({
         builder: {
           name: 'storybook-builder-rsbuild',
           options: {
-            rsbuildConfigPath: fixtureRsbuildConfig,
+            rsbuildConfigPath,
             addonDocs: {},
             fsCache: false,
             lazyCompilation: false,
@@ -104,6 +110,17 @@ describe('production build output', () => {
       js: false,
       css: false,
     })
+  })
+
+  it('preserves an inherited production minification opt-out', async () => {
+    const config = await createIframeRsbuildConfig(
+      createOptions({
+        configType: 'PRODUCTION',
+        rsbuildConfigPath: minifyDisabledRsbuildConfig,
+      }),
+    )
+
+    expect(config.output?.minify).toBe(false)
   })
 
   it('defines process.env.NODE_ENV only for production builds', async () => {

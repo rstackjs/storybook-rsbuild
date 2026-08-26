@@ -289,7 +289,7 @@ export default async (
           : 'cheap-module-source-map',
         css: !options.build?.test?.disableSourcemaps,
       },
-      ...(isProd
+      ...(isProd && contentFromConfig.output?.minify !== false
         ? {
             minify: {
               jsOptions: {
