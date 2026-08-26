@@ -274,7 +274,7 @@ export const start: RsbuildBuilder['start'] = async ({
     storybookServer.once('error', reject)
     listeningRouter.listen({ port: options.port, host: options.host }, resolve)
   })
-  if (options.localAddress) {
+  if (!options.quiet && options.localAddress) {
     logger.info(
       `Storybook server is listening at ${options.localAddress} while the preview builds.`,
     )

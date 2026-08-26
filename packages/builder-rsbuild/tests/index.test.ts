@@ -84,10 +84,12 @@ const createStartHarness = ({
   stats = createStats(),
   compiler = {} as Rspack.Compiler,
   autoComplete = true,
+  quiet,
 }: {
   stats?: CompileStats
   compiler?: Rspack.Compiler | Rspack.MultiCompiler
   autoComplete?: boolean
+  quiet?: boolean
 } = {}) => {
   let progress: ProgressHandler | undefined
   let compileDoneHandler: CompileDoneHandler | undefined
@@ -183,6 +185,7 @@ const createStartHarness = ({
       host: 'localhost',
       localAddress: 'http://localhost:6006/',
       port: 6006,
+      ...(quiet === undefined ? {} : { quiet }),
     },
   })
   const startOptions = {
@@ -252,11 +255,12 @@ describe('start', () => {
     expect(coreListenCallback).toHaveBeenCalledTimes(1)
   })
 
-  it('prints the Storybook URL as soon as the server starts', async () => {
+  it.each([
+    ['unset', undefined],
+    ['false', false],
+  ])('prints the Storybook URL when quiet is %s', async (_name, quiet) => {
     const { completeCompile, serverStarted, startOptions } = createStartHarness(
-      {
-        autoComplete: false,
-      },
+      { autoComplete: false, quiet },
     )
 
     const result = start(startOptions)
@@ -270,6 +274,24 @@ describe('start', () => {
     expect(mocks.loggerInfo).toHaveBeenCalledWith(
       expect.stringContaining('http://localhost:6006/'),
     )
+  })
+
+  it('does not print the Storybook URL when quiet is true', async () => {
+    const { completeCompile, serverStarted, startOptions } = createStartHarness(
+      {
+        autoComplete: false,
+        quiet: true,
+      },
+    )
+
+    const result = start(startOptions)
+    await serverStarted
+    await Promise.resolve()
+    const loggedBeforeCompile = mocks.loggerInfo.mock.calls.length
+    completeCompile()
+    await result
+
+    expect(loggedBeforeCompile).toBe(0)
   })
 
   it('rejects a pending first compilation when bailed', async () => {
