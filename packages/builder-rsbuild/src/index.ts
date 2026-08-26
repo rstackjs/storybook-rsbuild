@@ -6,6 +6,7 @@ import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
+import { logger } from 'storybook/internal/node-logger'
 import {
   NoStatsForViteDevError,
   WebpackInvocationError,
@@ -238,10 +239,17 @@ export const start: RsbuildBuilder['start'] = async ({
 
   router.use(rsbuildServer.middlewares)
   rsbuildServer.connectWebSocket({ server: storybookServer })
+  const runAfterListen = () => {
+    void rsbuildServer.afterListen().catch((error) => {
+      logger.error(
+        `Rsbuild onAfterStartDevServer hook failed in afterListen(): ${error}`,
+      )
+    })
+  }
   if (storybookServer.listening) {
-    void rsbuildServer.afterListen()
+    runAfterListen()
   } else {
-    storybookServer.once('listening', () => void rsbuildServer.afterListen())
+    storybookServer.once('listening', runAfterListen)
   }
 
   return {

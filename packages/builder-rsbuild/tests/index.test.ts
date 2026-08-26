@@ -10,12 +10,17 @@ const mocks = rs.hoisted(() => ({
   applyReactShims: rs.fn(),
   getPresets: rs.fn(),
   iframeConfig: rs.fn(),
+  loggerError: rs.fn(),
   overrideRsbuildLogger: rs.fn(),
 }))
 
 rs.mock('storybook/internal/common', () => ({
   getPresets: mocks.getPresets,
   resolveAddonName: rs.fn(),
+}))
+
+rs.mock('storybook/internal/node-logger', () => ({
+  logger: { error: mocks.loggerError },
 }))
 
 rs.mock('../src/logger', () => ({
@@ -33,10 +38,12 @@ rs.mock('../src/react-shims', () => ({
 type ProgressHandler = (value: number, message: string) => void
 
 const createStartHarness = ({
+  afterListenError,
   compiler = {} as Rspack.Compiler,
   serverListening = false,
   startTime = process.hrtime(),
 }: {
+  afterListenError?: Error
   compiler?: Rspack.Compiler | Rspack.MultiCompiler
   serverListening?: boolean
   startTime?: [number, number]
@@ -44,7 +51,9 @@ const createStartHarness = ({
   let progress: ProgressHandler | undefined
   const channel = { emit: rs.fn() }
   const devServer = {
-    afterListen: rs.fn().mockResolvedValue(undefined),
+    afterListen: afterListenError
+      ? () => Promise.reject(afterListenError)
+      : rs.fn().mockResolvedValue(undefined),
     close: rs.fn(),
     connectWebSocket: rs.fn(),
     middlewares: rs.fn(),
@@ -167,6 +176,42 @@ describe('start', () => {
 
     expect(afterListen).toHaveBeenCalledTimes(1)
   })
+
+  it.each([
+    ['already listening', true, false],
+    ['listening event', false, true],
+  ])(
+    'reports an afterListen failure without an unhandled rejection when %s',
+    async (_name, serverListening, emitListening) => {
+      const afterListenError = new Error('plugin hook failed')
+      const { startListening, startOptions } = createStartHarness({
+        afterListenError,
+        serverListening,
+      })
+      const unhandledRejection = rs.fn()
+      const handleUnhandledRejection = (reason: unknown) => {
+        if (reason === afterListenError) {
+          unhandledRejection(reason)
+        }
+      }
+      process.prependListener('unhandledRejection', handleUnhandledRejection)
+
+      try {
+        await start(startOptions)
+        if (emitListening) {
+          startListening()
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 10))
+
+        expect(unhandledRejection).not.toHaveBeenCalled()
+        expect(mocks.loggerError).toHaveBeenCalledWith(
+          expect.stringMatching(/onAfterStartDevServer|afterListen/),
+        )
+      } finally {
+        process.removeListener('unhandledRejection', handleUnhandledRejection)
+      }
+    },
+  )
 
   it('reports preview compilation progress', async () => {
     const { channel, reportProgress, startOptions } = createStartHarness()
