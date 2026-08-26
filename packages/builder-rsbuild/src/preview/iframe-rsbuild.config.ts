@@ -73,6 +73,30 @@ const rspackMajorVersion = getRspackMajorVersion(rspack.rspackVersion)
 /** @see https://github.com/web-infra-dev/rsbuild/blob/d8204bb72b5dd32dc736372dff6bb618675a4ad5/packages/core/src/constants.ts#L61 */
 const RAW_QUERY_REGEX = /[?&]raw(?:&|=|$)/
 
+const PRODUCTION_MINIFY_OPTIONS: NonNullable<
+  RsbuildConfig['output']
+>['minify'] = {
+  jsOptions: {
+    minimizerOptions: {
+      compress: {
+        keep_fnames: true,
+      },
+      // Unlike upstream's historical `mangle: false` (in place since 2016),
+      // preserving only function and class names—which docs titles and Show code
+      // depend on—still mangles local identifiers and measured ~26% smaller gzip
+      // than disabling mangle. Production probes confirm that `keep_fnames`
+      // preserves arrow-function binding names, but `const X = class {}` has a
+      // binding-inferred name that `keep_classnames` does not protect from
+      // mangling. We accept this rare form because user-source components fall
+      // back to `__docgenInfo.displayName`.
+      mangle: {
+        keep_classnames: true,
+        keep_fnames: true,
+      },
+    },
+  },
+}
+
 const globalPath = maybeGetAbsolutePath('@storybook/global')
 
 // these packages are not pre-bundled because of react dependencies.
@@ -276,6 +300,11 @@ export default async (
     ? 'static/media/[name].[contenthash:8][ext]'
     : 'static/media/[path][name][ext]'
 
+  const inheritedMinify = contentFromConfig.output?.minify
+  const hasInheritedJsMinifyOptions =
+    typeof inheritedMinify === 'object' &&
+    ('js' in inheritedMinify || 'jsOptions' in inheritedMinify)
+
   const rsbuildConfig = mergeRsbuildConfig(contentFromConfig, {
     output: {
       cleanDistPath: false,
@@ -289,6 +318,10 @@ export default async (
           : 'cheap-module-source-map',
         css: !options.build?.test?.disableSourcemaps,
       },
+      minify:
+        isProd && inheritedMinify !== false && !hasInheritedJsMinifyOptions
+          ? PRODUCTION_MINIFY_OPTIONS
+          : undefined,
       distPath: {
         root: resolve(process.cwd(), outputDir),
         // Flat output, matching the official webpack5 builder. With
@@ -339,7 +372,11 @@ export default async (
     source: {
       define: {
         ...stringifyProcessEnvs(envs),
-        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+        'process.env.NODE_ENV': JSON.stringify(
+          features?.developmentModeForBuild && isProd
+            ? 'development'
+            : process.env.NODE_ENV,
+        ),
       },
     },
     // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.

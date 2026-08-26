@@ -12,6 +12,14 @@ import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'
 
 const fixtureDir = resolve(__dirname, '../fixtures')
 const fixtureRsbuildConfig = resolve(fixtureDir, 'rsbuild.config.ts')
+const minifyCustomRsbuildConfig = resolve(
+  fixtureDir,
+  'minify-custom-rsbuild.config.ts',
+)
+const minifyDisabledRsbuildConfig = resolve(
+  fixtureDir,
+  'minify-disabled-rsbuild.config.ts',
+)
 const inheritanceBoundaryRsbuildConfig = resolve(
   fixtureDir,
   'inheritance-boundary-rsbuild.config.ts',
@@ -37,6 +45,8 @@ const createOptions = (
   configType: 'DEVELOPMENT' | 'PRODUCTION' = 'DEVELOPMENT',
   staticDirs: unknown = [],
   builderOptionOverrides: Record<string, unknown> = {},
+  developmentModeForBuild = false,
+  disableSourcemaps = false,
   rsbuildFinal?: (config: RsbuildConfig) => RsbuildConfig,
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
@@ -71,7 +81,7 @@ const createOptions = (
     ['entries', storybookEntries],
     ['stories', storiesConfig],
     ['tags', {}],
-    ['build', { test: {} }],
+    ['build', { test: { disableSourcemaps } }],
     ['previewAnnotations', []],
     ['staticDirs', staticDirs],
     ['typescript', { check: false, skipCompiler: true }],
@@ -113,10 +123,10 @@ const createOptions = (
       check: false,
       skipCompiler: true,
     },
-    features: {},
+    features: { developmentModeForBuild },
     cache,
     configDir: fixtureDir,
-    build: {},
+    build: { test: { disableSourcemaps } },
   }
 
   return { options, apply }
@@ -221,6 +231,8 @@ describe('iframe-rsbuild.config', () => {
       'DEVELOPMENT',
       [],
       { rsbuildConfigPath: inheritanceBoundaryRsbuildConfig },
+      false,
+      false,
       (config) =>
         mergeRsbuildConfig(config, {
           output: { externals: ['explicit-external'] },
@@ -314,6 +326,100 @@ describe('iframe-rsbuild.config', () => {
     expect(appendRules).toHaveBeenCalledWith({
       resourceQuery: /[?&]raw(?:&|=|$)/,
       type: 'asset/source',
+    })
+  })
+
+  describe('production build output', () => {
+    it('preserves function names and keeps source maps gated', async () => {
+      const { options } = createOptions(
+        false,
+        'PRODUCTION',
+        [],
+        {},
+        false,
+        true,
+      )
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(config.output?.minify).toMatchObject({
+        jsOptions: {
+          minimizerOptions: {
+            compress: {
+              keep_fnames: true,
+            },
+            mangle: {
+              keep_classnames: true,
+              keep_fnames: true,
+            },
+          },
+        },
+      })
+      expect(config.output?.sourceMap).toEqual({
+        js: false,
+        css: false,
+      })
+    })
+
+    it('preserves an inherited production minification opt-out', async () => {
+      const { options } = createOptions(false, 'PRODUCTION', [], {
+        rsbuildConfigPath: minifyDisabledRsbuildConfig,
+      })
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(config.output?.minify).toBe(false)
+    })
+
+    it('preserves inherited custom JavaScript minification options', async () => {
+      const { options } = createOptions(false, 'PRODUCTION', [], {
+        rsbuildConfigPath: minifyCustomRsbuildConfig,
+      })
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(config.output?.minify).toEqual({
+        jsOptions: {
+          minimizerOptions: {
+            compress: false,
+          },
+        },
+      })
+    })
+
+    it('defines process.env.NODE_ENV only for production builds', async () => {
+      const { options: productionOptions } = createOptions(
+        false,
+        'PRODUCTION',
+        [],
+        {},
+        true,
+      )
+      const productionConfig = await createIframeRsbuildConfig(
+        productionOptions as RsbuildBuilderOptions,
+      )
+
+      expect(productionConfig.source?.define?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify('development'),
+      )
+
+      const { options: developmentOptions } = createOptions(
+        false,
+        'DEVELOPMENT',
+        [],
+        {},
+        true,
+      )
+      const developmentConfig = await createIframeRsbuildConfig(
+        developmentOptions as RsbuildBuilderOptions,
+      )
+
+      expect(developmentConfig.source?.define?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify(process.env.NODE_ENV),
+      )
     })
   })
 
