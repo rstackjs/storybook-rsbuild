@@ -33,10 +33,8 @@ const corePath = dirname(require.resolve('storybook/package.json'))
 type RsbuildDevServer = Awaited<
   ReturnType<rsbuildReal.RsbuildInstance['createDevServer']>
 >
-type StatsOrMultiStats = Parameters<rsbuildReal.OnDevCompileDoneFn>[0]['stats']
-export type Stats = NonNullable<
-  Exclude<StatsOrMultiStats, { stats: unknown[] }>
->
+type StatsOrMultiStats = Parameters<rsbuildReal.OnAfterDevCompileFn>[0]['stats']
+export type Stats = Exclude<StatsOrMultiStats, { stats: unknown[] }>
 
 export const printDuration = (startTime: [number, number]) =>
   prettyTime(process.hrtime(startTime))
@@ -193,7 +191,7 @@ export const start: RsbuildBuilder['start'] = async ({
       message: message.charAt(0).toUpperCase() + message.slice(1),
     }
 
-    if (progressValue === 1 && !progress.message) {
+    if (progressValue === 1) {
       progress.message = `Completed in ${printDuration(startTime)}.`
     }
 
@@ -203,8 +201,12 @@ export const start: RsbuildBuilder['start'] = async ({
   rsbuildBuild.onAfterCreateCompiler(({ compiler }) => {
     // Rsbuild yields a MultiCompiler when several environments are built; the preview iframe is
     // a single environment, so pick the first child compiler for change detection.
-    activeCompiler = 'compilers' in compiler ? compiler.compilers[0] : compiler
-    new rspack.ProgressPlugin(reportProgress).apply(activeCompiler)
+    const previewCompiler =
+      'compilers' in compiler ? compiler.compilers[0] : compiler
+    activeCompiler = previewCompiler
+    // Storybook channel progress intentionally reflects only the preview environment and coexists
+    // with Rsbuild's terminal progress bar; any additional environments are not included.
+    new rspack.ProgressPlugin(reportProgress).apply(previewCompiler)
   })
 
   const rsbuildServer = await rsbuildBuild.createDevServer()
@@ -214,15 +216,6 @@ export const start: RsbuildBuilder['start'] = async ({
       if (!isFirstCompile) {
         return
       }
-      const modulesCount =
-        'stats' in stats
-          ? stats.stats.reduce(
-              (count, childStats) =>
-                count + childStats.compilation.modules.size,
-              0,
-            )
-          : stats.compilation.modules.size
-      options.cache?.set('modulesCount', modulesCount)
       resolve(stats)
     })
   })
@@ -248,10 +241,15 @@ export const start: RsbuildBuilder['start'] = async ({
   rsbuildServer.connectWebSocket({ server: storybookServer })
   const stats = await waitFirstCompileDone
   if (stats.hasErrors()) {
-    const statsJson = stats.toJson({ all: false, errors: true })
-    const errors = statsJson.errors?.length
-      ? statsJson.errors
-      : (statsJson.children ?? []).flatMap((child) => child.errors ?? [])
+    const isMultiStats = 'stats' in stats
+    const statsJson = isMultiStats
+      ? stats.toJson({ all: false, errors: true })
+      : stats.toJson({ all: false, children: true, errors: true })
+    const errors = isMultiStats
+      ? (statsJson.errors ?? [])
+      : [statsJson, ...(statsJson.children ?? [])].flatMap(
+          (compilation) => compilation.errors ?? [],
+        )
     throw new WebpackCompilationError({ errors })
   }
   await server.afterListen()
