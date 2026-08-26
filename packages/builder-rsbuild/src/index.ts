@@ -238,6 +238,11 @@ export const start: RsbuildBuilder['start'] = async ({
 
   router.use(rsbuildServer.middlewares)
   rsbuildServer.connectWebSocket({ server: storybookServer })
+  if (storybookServer.listening) {
+    void rsbuildServer.afterListen()
+  } else {
+    storybookServer.once('listening', () => void rsbuildServer.afterListen())
+  }
 
   return {
     bail,

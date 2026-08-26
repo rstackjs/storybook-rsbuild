@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events'
 import type { Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
@@ -33,19 +34,29 @@ type ProgressHandler = (value: number, message: string) => void
 
 const createStartHarness = ({
   compiler = {} as Rspack.Compiler,
+  serverListening = false,
   startTime = process.hrtime(),
 }: {
   compiler?: Rspack.Compiler | Rspack.MultiCompiler
+  serverListening?: boolean
   startTime?: [number, number]
 } = {}) => {
   let progress: ProgressHandler | undefined
   const channel = { emit: rs.fn() }
   const devServer = {
+    afterListen: rs.fn().mockResolvedValue(undefined),
     close: rs.fn(),
     connectWebSocket: rs.fn(),
     middlewares: rs.fn(),
   }
   const router = { use: rs.fn() }
+  const storybookServer = Object.assign(new EventEmitter(), {
+    listening: serverListening,
+  })
+  const startListening = () => {
+    storybookServer.listening = true
+    storybookServer.emit('listening')
+  }
   const reportProgress = (value: number, message: string) => {
     progress?.(value, message)
   }
@@ -91,14 +102,16 @@ const createStartHarness = ({
     channel,
     options,
     router,
-    server: {},
+    server: storybookServer,
     startTime,
   } as unknown as Parameters<typeof start>[0]
 
   return {
+    afterListen: devServer.afterListen,
     applyProgressPlugin,
     channel,
     reportProgress,
+    startListening,
     startOptions,
   }
 }
@@ -131,6 +144,28 @@ describe('start', () => {
     const result = await start(startOptions)
 
     expect(() => result.stats?.toJson()).toThrow(NoStatsForViteDevError)
+  })
+
+  it('notifies Rsbuild after the Storybook server starts listening', async () => {
+    const { afterListen, startListening, startOptions } = createStartHarness()
+
+    await start(startOptions)
+    expect(afterListen).not.toHaveBeenCalled()
+
+    startListening()
+    startListening()
+
+    expect(afterListen).toHaveBeenCalledTimes(1)
+  })
+
+  it('notifies Rsbuild when the Storybook server is already listening', async () => {
+    const { afterListen, startOptions } = createStartHarness({
+      serverListening: true,
+    })
+
+    await start(startOptions)
+
+    expect(afterListen).toHaveBeenCalledTimes(1)
   })
 
   it('reports preview compilation progress', async () => {
