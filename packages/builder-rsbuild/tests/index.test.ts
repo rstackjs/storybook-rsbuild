@@ -121,6 +121,11 @@ const createStartHarness = ({
     get listening() {
       return isListening
     },
+    close: rs.fn((callback?: (error?: Error) => void) => {
+      isListening = false
+      callback?.()
+      return storybookServer
+    }),
     once: rs.fn((event: string, handler: (error: Error) => void) => {
       if (event === 'error') {
         serverErrorHandler = handler
@@ -219,6 +224,7 @@ const createStartHarness = ({
     router,
     serverStarted: serverStarted.promise,
     startOptions,
+    storybookServer,
   }
 }
 
@@ -418,6 +424,19 @@ describe('start', () => {
     await expect(result).rejects.toMatchObject({
       data: { errors: [compilationError] },
     })
+  })
+
+  it('closes the early-listening server when bailing after a compilation error', async () => {
+    const { startOptions, storybookServer } = createStartHarness({
+      stats: createStats({ errors: [compilationError] }),
+    })
+
+    await expect(start(startOptions)).rejects.toBeInstanceOf(
+      WebpackCompilationError,
+    )
+    await bail()
+
+    expect(storybookServer.close).toHaveBeenCalledTimes(1)
   })
 
   it('preserves root and child compilation errors', async () => {

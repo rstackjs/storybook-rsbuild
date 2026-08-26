@@ -141,13 +141,27 @@ export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
 
 let server: RsbuildDevServer
 let activeCompiler: rsbuildReal.Rspack.Compiler | undefined
+let activeStorybookServer: BuilderStartOptions['server'] | undefined
+let didBuilderStartStorybookServer = false
 let rejectFirstCompile: ((reason?: unknown) => void) | undefined
 
 export async function bail(): Promise<void> {
+  const storybookServerToClose =
+    didBuilderStartStorybookServer && activeStorybookServer?.listening
+      ? activeStorybookServer
+      : undefined
   activeCompiler = undefined
+  activeStorybookServer = undefined
+  didBuilderStartStorybookServer = false
   rejectFirstCompile?.()
   rejectFirstCompile = undefined
-  return server?.close()
+  await Promise.all([
+    storybookServerToClose &&
+      new Promise<void>((resolve) => {
+        storybookServerToClose.close(() => resolve())
+      }),
+    server?.close(),
+  ])
 }
 
 /**
@@ -268,7 +282,11 @@ export const start: RsbuildBuilder['start'] = async ({
   const listen = listeningRouter.listen.bind(listeningRouter)
   listeningRouter.listen = (listenOptions, callback) => {
     if (!storybookServer.listening) {
-      return listen(listenOptions, callback)
+      return listen(listenOptions, () => {
+        activeStorybookServer = storybookServer
+        didBuilderStartStorybookServer = true
+        callback()
+      })
     }
     callback()
     return listeningRouter
