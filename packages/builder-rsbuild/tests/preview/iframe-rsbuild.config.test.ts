@@ -349,7 +349,10 @@ describe('iframe-rsbuild.config', () => {
             compress: {
               keep_fnames: true,
             },
-            mangle: false,
+            mangle: {
+              keep_classnames: true,
+              keep_fnames: true,
+            },
           },
         },
       })
