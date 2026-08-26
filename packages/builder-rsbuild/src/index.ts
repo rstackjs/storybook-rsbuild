@@ -251,14 +251,6 @@ export const start: RsbuildBuilder['start'] = async ({
 
   return {
     bail,
-    stats: {
-      toJson: () => {
-        // eslint-disable-next-line local-rules/no-uncategorized-errors
-        throw new Error(
-          'No stats are available for the Rsbuild dev server: stats are only produced by production builds (storybook build).',
-        )
-      },
-    },
     totalTime: process.hrtime(startTime),
   }
 }

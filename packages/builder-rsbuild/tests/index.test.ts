@@ -146,14 +146,12 @@ describe('printDuration', () => {
 })
 
 describe('start', () => {
-  it('resolves without waiting for the first compilation', async () => {
+  it('resolves without preview stats or waiting for the first compilation', async () => {
     const { startOptions } = createStartHarness()
 
     const result = await start(startOptions)
 
-    expect(() => result.stats?.toJson()).toThrow(
-      'No stats are available for the Rsbuild dev server: stats are only produced by production builds (storybook build).',
-    )
+    expect(result).not.toHaveProperty('stats')
   })
 
   it('notifies Rsbuild after the Storybook server starts listening', async () => {
