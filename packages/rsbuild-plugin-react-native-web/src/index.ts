@@ -154,11 +154,16 @@ export function pluginReactNativeWeb(
         const nodeEnvDefine =
           config.source.define?.['process.env.NODE_ENV'] ??
           JSON.stringify(process.env.NODE_ENV || 'development')
+        const normalizedNodeEnvDefine =
+          typeof nodeEnvDefine === 'string'
+            ? nodeEnvDefine.trim()
+            : nodeEnvDefine
+        const isProduction =
+          normalizedNodeEnvDefine === JSON.stringify('production') ||
+          normalizedNodeEnvDefine === "'production'"
         config.source.define = {
           ...config.source.define,
-          __DEV__: JSON.stringify(
-            nodeEnvDefine !== JSON.stringify('production'),
-          ),
+          __DEV__: JSON.stringify(!isProduction),
           'process.env.NODE_ENV': nodeEnvDefine,
           EXPO_OS: JSON.stringify('web'),
           'process.env.EXPO_OS': JSON.stringify('web'),

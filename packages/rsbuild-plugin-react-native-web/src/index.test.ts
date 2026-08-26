@@ -124,5 +124,14 @@ describe('pluginReactNativeWeb', () => {
         JSON.stringify(process.env.NODE_ENV !== 'production'),
       )
     })
+
+    it('derives __DEV__ from equivalent production literals', async () => {
+      const defines = await getResolvedDefines({
+        'process.env.NODE_ENV': "'production'",
+      })
+
+      expect(defines?.['process.env.NODE_ENV']).toBe("'production'")
+      expect(defines?.__DEV__).toBe('false')
+    })
   })
 })
