@@ -73,6 +73,19 @@ const rspackMajorVersion = getRspackMajorVersion(rspack.rspackVersion)
 /** @see https://github.com/web-infra-dev/rsbuild/blob/d8204bb72b5dd32dc736372dff6bb618675a4ad5/packages/core/src/constants.ts#L61 */
 const RAW_QUERY_REGEX = /[?&]raw(?:&|=|$)/
 
+const PRODUCTION_MINIFY_OPTIONS: NonNullable<
+  RsbuildConfig['output']
+>['minify'] = {
+  jsOptions: {
+    minimizerOptions: {
+      compress: {
+        keep_fnames: true,
+      },
+      mangle: false,
+    },
+  },
+}
+
 const globalPath = maybeGetAbsolutePath('@storybook/global')
 
 // these packages are not pre-bundled because of react dependencies.
@@ -289,20 +302,10 @@ export default async (
           : 'cheap-module-source-map',
         css: !options.build?.test?.disableSourcemaps,
       },
-      ...(isProd && contentFromConfig.output?.minify !== false
-        ? {
-            minify: {
-              jsOptions: {
-                minimizerOptions: {
-                  compress: {
-                    keep_fnames: true,
-                  },
-                  mangle: false,
-                },
-              },
-            },
-          }
-        : {}),
+      minify:
+        isProd && contentFromConfig.output?.minify !== false
+          ? PRODUCTION_MINIFY_OPTIONS
+          : undefined,
       distPath: {
         root: resolve(process.cwd(), outputDir),
         // Flat output, matching the official webpack5 builder. With

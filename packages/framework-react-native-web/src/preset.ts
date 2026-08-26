@@ -46,6 +46,11 @@ export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
     plugins: [
       pluginReactNativeWeb({
         modulesToTranspile: frameworkOptions?.modulesToTranspile,
+        dev:
+          options.features?.developmentModeForBuild &&
+          options.configType === 'PRODUCTION'
+            ? true
+            : undefined,
         // Pass the resolved path to enable absolute imports in transformed code
         reactNativeWebPath,
         ...frameworkOptions?.pluginOptions,

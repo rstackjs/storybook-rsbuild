@@ -36,6 +36,12 @@ const DEFAULT_NO_TREESHAKE_MODULES = [
 
 export interface PluginReactNativeWebOptions {
   /**
+   * Whether React Native Web should run in development mode.
+   * @default process.env.NODE_ENV !== 'production'
+   */
+  dev?: boolean
+
+  /**
    * Additional node_modules that need to be transpiled.
    * By default, packages starting with `react-native`, `@react-native`, `expo`, and `@expo`
    * are already included.
@@ -154,16 +160,11 @@ export function pluginReactNativeWeb(
         const nodeEnvDefine =
           config.source.define?.['process.env.NODE_ENV'] ??
           JSON.stringify(process.env.NODE_ENV || 'development')
-        const normalizedNodeEnvDefine =
-          typeof nodeEnvDefine === 'string'
-            ? nodeEnvDefine.trim()
-            : nodeEnvDefine
-        const isProduction =
-          normalizedNodeEnvDefine === JSON.stringify('production') ||
-          normalizedNodeEnvDefine === "'production'"
         config.source.define = {
           ...config.source.define,
-          __DEV__: JSON.stringify(!isProduction),
+          __DEV__: JSON.stringify(
+            options.dev ?? process.env.NODE_ENV !== 'production',
+          ),
           'process.env.NODE_ENV': nodeEnvDefine,
           EXPO_OS: JSON.stringify('web'),
           'process.env.EXPO_OS': JSON.stringify('web'),

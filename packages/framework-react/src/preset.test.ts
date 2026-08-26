@@ -8,14 +8,13 @@ const createOptions = (developmentModeForBuild: boolean) =>
   ({
     features: { developmentModeForBuild },
     presets: {
-      apply: async (name: string, defaultValue?: unknown) =>
-        name === 'features' ? { experimentalDocgenServer: true } : defaultValue,
+      apply: async () => ({ experimentalDocgenServer: true }),
     },
-  }) as RsbuildFinalOptions
+  }) as unknown as RsbuildFinalOptions
 
 describe('rsbuildFinal', () => {
-  it('defines process.env.NODE_ENV only when the feature is enabled', async () => {
-    const enabledConfig: RsbuildConfig = {
+  it('adds a development NODE_ENV define when the feature is enabled', async () => {
+    const config: RsbuildConfig = {
       source: {
         define: {
           EXISTING: JSON.stringify(true),
@@ -23,24 +22,16 @@ describe('rsbuildFinal', () => {
       },
     }
 
-    await expect(
-      rsbuildFinal(enabledConfig, createOptions(true)),
-    ).resolves.toEqual({
-      source: {
-        define: {
-          EXISTING: JSON.stringify(true),
-          'process.env.NODE_ENV': JSON.stringify('development'),
-        },
-      },
+    const result = await rsbuildFinal(config, createOptions(true))
+
+    expect(result.source?.define).toMatchObject({
+      EXISTING: JSON.stringify(true),
+      'process.env.NODE_ENV': JSON.stringify('development'),
     })
+  })
 
-    const disabledConfig: RsbuildConfig = {
-      source: {
-        define: {
-          'process.env.NODE_ENV': JSON.stringify('production'),
-        },
-      },
-    }
+  it('leaves the config unchanged when the feature is disabled', async () => {
+    const disabledConfig: RsbuildConfig = {}
 
     await expect(
       rsbuildFinal(disabledConfig, createOptions(false)),

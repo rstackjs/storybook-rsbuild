@@ -1,12 +1,28 @@
 import { createRsbuild } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
+import { afterEach, describe, expect, it } from '@rstest/core'
 import { pluginReactNativeWeb } from './index'
 
-const getResolvedDefines = async (define?: Record<string, string>) => {
+const originalNodeEnv = process.env.NODE_ENV
+
+afterEach(() => {
+  if (originalNodeEnv === undefined) {
+    delete process.env.NODE_ENV
+  } else {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
+
+const getResolvedDefines = async ({
+  define,
+  dev,
+}: {
+  define?: Record<string, string>
+  dev?: boolean
+} = {}) => {
   const rsbuild = await createRsbuild({
     cwd: process.cwd(),
     rsbuildConfig: {
-      plugins: [pluginReactNativeWeb()],
+      plugins: [pluginReactNativeWeb({ dev })],
       source: { define },
     },
   })
@@ -103,9 +119,13 @@ describe('pluginReactNativeWeb', () => {
   })
 
   describe('environment defines', () => {
-    it('preserves developmentModeForBuild defines from the framework', async () => {
+    it('uses the dev option without overriding the existing NODE_ENV define', async () => {
+      process.env.NODE_ENV = 'production'
       const defines = await getResolvedDefines({
-        'process.env.NODE_ENV': JSON.stringify('development'),
+        dev: true,
+        define: {
+          'process.env.NODE_ENV': JSON.stringify('development'),
+        },
       })
 
       expect(defines?.['process.env.NODE_ENV']).toBe(
@@ -114,24 +134,12 @@ describe('pluginReactNativeWeb', () => {
       expect(defines?.__DEV__).toBe('true')
     })
 
-    it('uses the host environment when no framework define is present', async () => {
+    it('uses the host environment when dev is not configured', async () => {
+      process.env.NODE_ENV = 'test'
       const defines = await getResolvedDefines()
 
-      expect(defines?.['process.env.NODE_ENV']).toBe(
-        JSON.stringify(process.env.NODE_ENV || 'development'),
-      )
-      expect(defines?.__DEV__).toBe(
-        JSON.stringify(process.env.NODE_ENV !== 'production'),
-      )
-    })
-
-    it('derives __DEV__ from equivalent production literals', async () => {
-      const defines = await getResolvedDefines({
-        'process.env.NODE_ENV': "'production'",
-      })
-
-      expect(defines?.['process.env.NODE_ENV']).toBe("'production'")
-      expect(defines?.__DEV__).toBe('false')
+      expect(defines?.['process.env.NODE_ENV']).toBe(JSON.stringify('test'))
+      expect(defines?.__DEV__).toBe('true')
     })
   })
 })
