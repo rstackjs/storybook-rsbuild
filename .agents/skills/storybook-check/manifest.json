@@ -57,7 +57,9 @@
       "upstream": "code/builders/builder-webpack5/src/preview/iframe-webpack.config.ts",
       "local": "packages/builder-rsbuild/src/preview/iframe-rsbuild.config.ts",
       "intentionalDivergences": [
-        "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities"
+        "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities",
+        "build.test.esbuildMinify branch not ported: Rsbuild's output.minify.jsOptions only exposes the built-in SWC minimizer, no clean seam to swap in esbuild (mangle:false/keep_fnames ported in PR #549)",
+        "prod minify fragment is gated on the inherited rsbuild.config not setting output.minify: false — upstream minimizes unconditionally, but the inherited-config path (PR #538) is a local-only feature whose explicit opt-out must survive the merge (PR #549 review)"
       ]
     },
     {
@@ -80,6 +82,13 @@
       "intentionalDivergences": []
     },
     {
+      "upstream": "code/builders/builder-webpack5/src/preview/preview-filename.ts",
+      "local": "packages/builder-rsbuild/src/preview/preview-filename.ts",
+      "intentionalDivergences": [
+        "biome-ignore suppression for lint/suspicious/noControlCharactersInRegex on the sanitization regex — upstream's control-char range is intentional"
+      ]
+    },
+    {
       "upstream": "code/builders/builder-webpack5/src/types.ts",
       "local": "packages/builder-rsbuild/src/types.ts",
       "intentionalDivergences": []
@@ -100,7 +109,8 @@
       "upstream": "code/presets/react-webpack/src/framework-preset-react-docs.ts",
       "local": "packages/framework-react/src/react-docs.ts",
       "intentionalDivergences": [
-        "webpack config mutation expressed as rsbuildFinalDocs via mergeRsbuildConfig; docgen loader wiring adapted to Rsbuild tools API"
+        "webpack config mutation expressed as rsbuildFinalDocs via mergeRsbuildConfig; docgen loader wiring adapted to Rsbuild tools API",
+        "typescriptPresent guard (fall back to plain react-docgen when typescript cannot be resolved) grafted from react-vite's preset onto this webpack-mapped file"
       ]
     },
     {
@@ -130,7 +140,10 @@
     {
       "upstream": "code/frameworks/react-webpack5/src/preset.ts",
       "local": "packages/framework-react/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty that reads frameworkOptions and forwards frameworkOptions.builder as builder options — upstream made core a static object (PR #34260), but iframe-rsbuild.config.ts consumes builderOptions.lazyCompilation/fsCache so the function form is retained (repo-wide idiom across all framework packages)",
+        "builder/renderer specifiers wrapped in fileURLToPath — Rsbuild presets take paths, not file:// URLs (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/react-webpack5/src/types.ts",
@@ -200,7 +213,8 @@
       "upstream": "code/frameworks/vue3-vite/src/preset.ts",
       "local": "packages/framework-vue3/src/preset.ts",
       "intentionalDivergences": [
-        "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts"
+        "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts",
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
       ]
     },
     {
@@ -209,10 +223,25 @@
       "intentionalDivergences": []
     },
     {
+      "upstream": "code/frameworks/vue3-vite/src/docgen/options.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Part of upstream's docgen-server migration (vue-docgen-api deprecation, experimentalDocgenServer feature flag). Deferred on issue #544 until @storybook/vue3 exports the docgen engines. Review for the option-resolution contract (docgen: false | true | string | object) that framework-vue3 will need when the migration lands.",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/frameworks/vue3-vite/src/docgen/preset.ts",
+      "local": null,
+      "reviewWith": "packages/framework-vue3",
+      "note": "Docgen-server provider preset (experimental_docgenProvider / experimental_manifests) gated on features.experimentalDocgenServer. Deferred on issue #544; blocked until the storybook dependency ships the docgen-worker contract. Review for the gating semantics framework-vue3 must mirror to avoid double docgen.",
+      "intentionalDivergences": []
+    },
+    {
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-docgen.ts",
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
-        "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics"
+        "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics",
+        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics"
       ]
     },
     {
@@ -249,12 +278,16 @@
     {
       "upstream": "code/frameworks/web-components-vite/src/preset.ts",
       "local": "packages/framework-web-components/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/web-components-vite/src/types.ts",
       "local": "packages/framework-web-components/src/types.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "adds typescript?: Partial<TypescriptOptions...> to StorybookConfigFramework — the vite variant has no typescript key, the webpack5 frameworks do (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/html-vite/src/index.ts",
@@ -269,12 +302,16 @@
     {
       "upstream": "code/frameworks/html-vite/src/preset.ts",
       "local": "packages/framework-html/src/preset.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+      ]
     },
     {
       "upstream": "code/frameworks/html-vite/src/types.ts",
       "local": "packages/framework-html/src/types.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "adds typescript?: Partial<TypescriptOptions...> to StorybookConfigFramework — the vite variant has no typescript key, the webpack5 frameworks do (repo-wide idiom)"
+      ]
     }
   ],
   "ignoredUpstreamFiles": [
@@ -282,13 +319,15 @@
     "code/presets/react-webpack/src/framework-preset-cra.ts"
   ],
   "localOnlyFiles": {
-    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild.",
+    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild. loaders/tsconfig-paths.ts backfills getTsconfigPathsBaseDir from storybook core (code/core/src/common/utils/tsconfig.ts, not exported in 10.5.10); remove once the installed storybook exports it.",
     "files": [
       "packages/builder-rsbuild/src/chromatic-stats.ts",
+      "packages/builder-rsbuild/src/inherited-config.ts",
       "packages/builder-rsbuild/src/logger.ts",
       "packages/builder-rsbuild/src/preview/detect-msw.ts",
       "packages/builder-rsbuild/src/react-shims.ts",
       "packages/framework-react/src/requirer.ts",
+      "packages/framework-react/src/loaders/tsconfig-paths.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/index.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/generate.ts",
