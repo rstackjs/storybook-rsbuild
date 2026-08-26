@@ -289,6 +289,11 @@ export default async (
     ? 'static/media/[name].[contenthash:8][ext]'
     : 'static/media/[path][name][ext]'
 
+  const inheritedMinify = contentFromConfig.output?.minify
+  const hasInheritedJsMinifyOptions =
+    typeof inheritedMinify === 'object' &&
+    ('js' in inheritedMinify || 'jsOptions' in inheritedMinify)
+
   const rsbuildConfig = mergeRsbuildConfig(contentFromConfig, {
     output: {
       cleanDistPath: false,
@@ -303,7 +308,7 @@ export default async (
         css: !options.build?.test?.disableSourcemaps,
       },
       minify:
-        isProd && contentFromConfig.output?.minify !== false
+        isProd && inheritedMinify !== false && !hasInheritedJsMinifyOptions
           ? PRODUCTION_MINIFY_OPTIONS
           : undefined,
       distPath: {

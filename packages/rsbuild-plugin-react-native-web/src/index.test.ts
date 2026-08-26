@@ -119,6 +119,16 @@ describe('pluginReactNativeWeb', () => {
   })
 
   describe('environment defines', () => {
+    it('uses the dev option for both environment defines', async () => {
+      process.env.NODE_ENV = 'production'
+      const defines = await getResolvedDefines({ dev: true })
+
+      expect(defines?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify('development'),
+      )
+      expect(defines?.__DEV__).toBe('true')
+    })
+
     it('uses the dev option without overriding the existing NODE_ENV define', async () => {
       process.env.NODE_ENV = 'production'
       const defines = await getResolvedDefines({

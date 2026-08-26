@@ -12,6 +12,10 @@ import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'
 
 const fixtureDir = resolve(__dirname, '../fixtures')
 const fixtureRsbuildConfig = resolve(fixtureDir, 'rsbuild.config.ts')
+const minifyCustomRsbuildConfig = resolve(
+  fixtureDir,
+  'minify-custom-rsbuild.config.ts',
+)
 const minifyDisabledRsbuildConfig = resolve(
   fixtureDir,
   'minify-disabled-rsbuild.config.ts',
@@ -364,6 +368,23 @@ describe('iframe-rsbuild.config', () => {
       )
 
       expect(config.output?.minify).toBe(false)
+    })
+
+    it('preserves inherited custom JavaScript minification options', async () => {
+      const { options } = createOptions(false, 'PRODUCTION', [], {
+        rsbuildConfigPath: minifyCustomRsbuildConfig,
+      })
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(config.output?.minify).toEqual({
+        jsOptions: {
+          minimizerOptions: {
+            compress: false,
+          },
+        },
+      })
     })
 
     it('defines process.env.NODE_ENV only for production builds', async () => {
