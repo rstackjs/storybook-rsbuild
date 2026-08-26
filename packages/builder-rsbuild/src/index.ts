@@ -5,6 +5,7 @@ import fs from 'fs-extra'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
+import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { WebpackInvocationError } from 'storybook/internal/server-errors'
 import type {
   Options,
@@ -162,9 +163,10 @@ export const start: RsbuildBuilder['start'] = async ({
   options,
   router,
   server: storybookServer,
+  channel,
 }) => {
   overrideRsbuildLogger()
-  const { createRsbuild } = await executor.get(options)
+  const { createRsbuild, rspack } = await executor.get(options)
   const config = await getConfig(options)
   const rsbuildBuild = await createRsbuild({
     cwd: process.cwd(),
@@ -180,10 +182,26 @@ export const start: RsbuildBuilder['start'] = async ({
     },
   })
 
+  let progressValue = 0
+  const reportProgress = (newValue: number, message: string) => {
+    progressValue = Math.max(newValue, progressValue)
+    const progress = {
+      value: progressValue,
+      message: message.charAt(0).toUpperCase() + message.slice(1),
+    }
+
+    if (progressValue === 1 && !progress.message) {
+      progress.message = `Completed in ${printDuration(startTime)}.`
+    }
+
+    channel.emit(PREVIEW_BUILDER_PROGRESS, progress)
+  }
+
   rsbuildBuild.onAfterCreateCompiler(({ compiler }) => {
     // Rsbuild yields a MultiCompiler when several environments are built; the preview iframe is
     // a single environment, so pick the first child compiler for change detection.
     activeCompiler = 'compilers' in compiler ? compiler.compilers[0] : compiler
+    new rspack.ProgressPlugin(reportProgress).apply(activeCompiler)
   })
 
   const rsbuildServer = await rsbuildBuild.createDevServer()
@@ -193,6 +211,15 @@ export const start: RsbuildBuilder['start'] = async ({
       if (!isFirstCompile) {
         return
       }
+      const modulesCount =
+        'stats' in stats
+          ? stats.stats.reduce(
+              (count, childStats) =>
+                count + childStats.compilation.modules.size,
+              0,
+            )
+          : stats.compilation.modules.size
+      options.cache?.set('modulesCount', modulesCount)
       resolve(stats)
     })
   })
