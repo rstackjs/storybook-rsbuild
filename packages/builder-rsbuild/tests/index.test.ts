@@ -2,7 +2,7 @@ import type { OnAfterDevCompileFn, Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { WebpackCompilationError } from 'storybook/internal/server-errors'
-import { bail, printDuration, type Stats, start } from '../src/index'
+import { bail, printDuration, start } from '../src/index'
 import { createTestOptions } from './fixtures/options'
 
 const mocks = rs.hoisted(() => ({
@@ -35,8 +35,7 @@ rs.mock('../src/react-shims', () => ({
 }))
 
 type ProgressHandler = (value: number, message: string) => void
-type CompileDoneHandler = OnAfterDevCompileFn
-type CompileStats = Parameters<CompileDoneHandler>[0]['stats']
+type CompileStats = Parameters<OnAfterDevCompileFn>[0]['stats']
 
 type CompilationError = ConstructorParameters<
   typeof WebpackCompilationError
@@ -60,18 +59,20 @@ const createStats = ({
 }: {
   errors?: CompilationError[]
   childErrors?: CompilationError[]
-} = {}): Stats =>
+} = {}): CompileStats =>
   ({
     hasErrors: () => errors.length > 0 || childErrors.length > 0,
-    toJson: (
-      options: boolean | string | { all?: boolean; children?: boolean },
-    ) => ({
+    toJson: (options: {
+      all?: boolean
+      children?: boolean
+      errors?: boolean
+    }) => ({
       errors,
       ...(typeof options === 'object' && options.children
         ? { children: [{ errors: childErrors }] }
         : {}),
     }),
-  }) as unknown as Stats
+  }) as unknown as CompileStats
 
 const createMultiStats = (errors: CompilationError[]): CompileStats =>
   ({
@@ -79,6 +80,15 @@ const createMultiStats = (errors: CompilationError[]): CompileStats =>
     hasErrors: () => errors.length > 0,
     toJson: () => ({ errors }),
   }) as unknown as CompileStats
+
+const deferred = () => {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
 
 const createStartHarness = ({
   stats = createStats(),
@@ -94,15 +104,9 @@ const createStartHarness = ({
   quiet?: boolean
 } = {}) => {
   let progress: ProgressHandler | undefined
-  let compileDoneHandler: CompileDoneHandler | undefined
-  let markCompileHandlerRegistered: () => void
-  const compileHandlerRegistered = new Promise<void>((resolve) => {
-    markCompileHandlerRegistered = resolve
-  })
-  let markServerStarted: () => void
-  const serverStarted = new Promise<void>((resolve) => {
-    markServerStarted = resolve
-  })
+  let compileDoneHandler: OnAfterDevCompileFn | undefined
+  const compileHandlerRegistered = deferred()
+  const serverStarted = deferred()
 
   const channel = { emit: rs.fn() }
   const devServer = {
@@ -132,7 +136,7 @@ const createStartHarness = ({
       }
       isListening = true
       callback()
-      markServerStarted()
+      serverStarted.resolve()
       return router
     },
   )
@@ -163,9 +167,9 @@ const createStartHarness = ({
         handler({ compiler, environments: {} })
       },
     ),
-    onDevCompileDone: rs.fn((handler: CompileDoneHandler) => {
+    onDevCompileDone: rs.fn((handler: OnAfterDevCompileFn) => {
       compileDoneHandler = handler
-      markCompileHandlerRegistered()
+      compileHandlerRegistered.resolve()
       if (autoComplete) {
         queueMicrotask(completeCompile)
       }
@@ -181,9 +185,6 @@ const createStartHarness = ({
 
         apply(compiler: Rspack.Compiler) {
           applyProgressPlugin(compiler)
-          progress?.(0.5, 'building')
-          progress?.(0.4, 'building')
-          progress?.(1, 'done')
         }
       },
     },
@@ -197,7 +198,7 @@ const createStartHarness = ({
       host: 'localhost',
       localAddress: 'http://localhost:6006/',
       port: 6006,
-      ...(quiet === undefined ? {} : { quiet }),
+      quiet,
     },
   })
   const startOptions = {
@@ -211,12 +212,12 @@ const createStartHarness = ({
   return {
     applyProgressPlugin,
     channel,
-    compileHandlerRegistered,
+    compileHandlerRegistered: compileHandlerRegistered.promise,
     completeCompile,
     listen,
     reportProgress,
     router,
-    serverStarted,
+    serverStarted: serverStarted.promise,
     startOptions,
   }
 }
@@ -268,31 +269,14 @@ describe('start', () => {
   })
 
   it.each([
-    ['unset', undefined],
-    ['false', false],
-  ])('prints the Storybook URL when quiet is %s', async (_name, quiet) => {
-    const { completeCompile, serverStarted, startOptions } = createStartHarness(
-      { autoComplete: false, quiet },
-    )
-
-    const result = start(startOptions)
-    await serverStarted
-    await Promise.resolve()
-    const loggedBeforeCompile = mocks.loggerInfo.mock.calls.length
-    completeCompile()
-    await result
-
-    expect(loggedBeforeCompile).toBe(1)
-    expect(mocks.loggerInfo).toHaveBeenCalledWith(
-      expect.stringContaining('http://localhost:6006/'),
-    )
-  })
-
-  it('does not print the Storybook URL when quiet is true', async () => {
+    [undefined, 1],
+    [false, 1],
+    [true, 0],
+  ])('logs the early URL based on quiet=%s', async (quiet, expectedCount) => {
     const { completeCompile, serverStarted, startOptions } = createStartHarness(
       {
         autoComplete: false,
-        quiet: true,
+        quiet,
       },
     )
 
@@ -303,7 +287,13 @@ describe('start', () => {
     completeCompile()
     await result
 
-    expect(loggedBeforeCompile).toBe(0)
+    expect(loggedBeforeCompile).toBe(expectedCount)
+    expect(mocks.loggerInfo).toHaveBeenCalledTimes(expectedCount)
+    if (expectedCount > 0) {
+      expect(mocks.loggerInfo).toHaveBeenCalledWith(
+        expect.stringContaining('http://localhost:6006/'),
+      )
+    }
   })
 
   it('rejects a pending first compilation when bailed', async () => {
@@ -363,9 +353,12 @@ describe('start', () => {
   })
 
   it('reports preview compilation progress', async () => {
-    const { channel, startOptions } = createStartHarness()
+    const { channel, reportProgress, startOptions } = createStartHarness()
 
     await start(startOptions)
+    reportProgress(0.5, 'building')
+    reportProgress(0.4, 'building')
+    reportProgress(1, 'done')
 
     expect(channel.emit).toHaveBeenNthCalledWith(1, PREVIEW_BUILDER_PROGRESS, {
       value: 0.5,
@@ -385,15 +378,15 @@ describe('start', () => {
     const { channel, reportProgress, startOptions } = createStartHarness()
 
     await start(startOptions)
-    channel.emit.mockClear()
+    reportProgress(1, 'done')
     reportProgress(0.2, 'building')
     reportProgress(0.1, 'building')
 
-    expect(channel.emit).toHaveBeenNthCalledWith(1, PREVIEW_BUILDER_PROGRESS, {
+    expect(channel.emit).toHaveBeenNthCalledWith(2, PREVIEW_BUILDER_PROGRESS, {
       value: 0.2,
       message: 'Building',
     })
-    expect(channel.emit).toHaveBeenNthCalledWith(2, PREVIEW_BUILDER_PROGRESS, {
+    expect(channel.emit).toHaveBeenNthCalledWith(3, PREVIEW_BUILDER_PROGRESS, {
       value: 0.2,
       message: 'Building',
     })

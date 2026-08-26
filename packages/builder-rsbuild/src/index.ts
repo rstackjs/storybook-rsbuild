@@ -141,12 +141,12 @@ export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
 
 let server: RsbuildDevServer
 let activeCompiler: rsbuildReal.Rspack.Compiler | undefined
-let reject: ((reason?: unknown) => void) | undefined
+let rejectFirstCompile: ((reason?: unknown) => void) | undefined
 
 export async function bail(): Promise<void> {
   activeCompiler = undefined
-  reject?.()
-  reject = undefined
+  rejectFirstCompile?.()
+  rejectFirstCompile = undefined
   return server?.close()
 }
 
@@ -221,6 +221,8 @@ export const start: RsbuildBuilder['start'] = async ({
     activeCompiler = previewCompiler
     // Storybook channel progress intentionally reflects only the preview environment and coexists
     // with Rsbuild's terminal progress bar; any additional environments are not included.
+    // This deliberately adds a second progress instrumentation alongside Rsbuild's dev.progressBar:
+    // the terminal bar and Storybook channel serve separate consumers, and that cost is accepted.
     new rspack.ProgressPlugin(reportProgress).apply(previewCompiler)
   })
 
@@ -228,12 +230,12 @@ export const start: RsbuildBuilder['start'] = async ({
 
   const waitFirstCompileDone = new Promise<StatsOrMultiStats>(
     (resolve, rej) => {
-      reject = rej
+      rejectFirstCompile = rej
       rsbuildBuild.onDevCompileDone(({ stats, isFirstCompile }) => {
         if (!isFirstCompile) {
           return
         }
-        reject = undefined
+        rejectFirstCompile = undefined
         resolve(stats)
       })
     },
@@ -282,15 +284,15 @@ export const start: RsbuildBuilder['start'] = async ({
   }
   const stats = await waitFirstCompileDone
   if (stats.hasErrors()) {
-    const isMultiStats = 'stats' in stats
-    const statsJson = isMultiStats
-      ? stats.toJson({ all: false, errors: true })
-      : stats.toJson({ all: false, children: true, errors: true })
-    const errors = isMultiStats
-      ? (statsJson.errors ?? [])
-      : [statsJson, ...(statsJson.children ?? [])].flatMap(
-          (compilation) => compilation.errors ?? [],
-        )
+    let errors
+    if ('stats' in stats) {
+      errors = stats.toJson({ all: false, errors: true }).errors ?? []
+    } else {
+      const json = stats.toJson({ all: false, children: true, errors: true })
+      errors = [json, ...(json.children ?? [])].flatMap(
+        (compilation) => compilation.errors ?? [],
+      )
+    }
     throw new WebpackCompilationError({ errors })
   }
   await server.afterListen()
