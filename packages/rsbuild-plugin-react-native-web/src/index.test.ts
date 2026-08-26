@@ -144,6 +144,20 @@ describe('pluginReactNativeWeb', () => {
       expect(defines?.__DEV__).toBe('true')
     })
 
+    it('preserves an existing __DEV__ define when dev is not configured', async () => {
+      process.env.NODE_ENV = 'production'
+      const defines = await getResolvedDefines({
+        define: {
+          __DEV__: 'existingDevFlag',
+        },
+      })
+
+      expect(defines?.['process.env.NODE_ENV']).toBe(
+        JSON.stringify('production'),
+      )
+      expect(defines?.__DEV__).toBe('existingDevFlag')
+    })
+
     it('uses the host environment when dev is not configured', async () => {
       process.env.NODE_ENV = 'test'
       const defines = await getResolvedDefines()
