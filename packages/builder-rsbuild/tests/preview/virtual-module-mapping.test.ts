@@ -1,7 +1,8 @@
 import { resolve } from 'node:path'
-import { describe, expect, it, rs } from '@rstest/core'
+import { describe, expect, it } from '@rstest/core'
 import type { Options } from 'storybook/internal/types'
 import { getVirtualModules } from '../../src/preview/virtual-module-mapping'
+import { createTestOptions } from '../fixtures/options'
 
 const fixtureDir = resolve(__dirname, '../fixtures')
 
@@ -15,21 +16,16 @@ const createOptions = (
   stories: unknown = storiesConfig,
   configType: 'PRODUCTION' | 'DEVELOPMENT' = 'PRODUCTION',
 ) => {
-  const presetValues = new Map<string, unknown>([
-    ['core', { builder: { name: 'storybook-builder-rsbuild', options: {} } }],
-    ['stories', stories],
-    ['previewAnnotations', []],
-  ])
+  const { options } = createTestOptions({
+    presetValues: new Map([
+      ['core', { builder: { name: 'storybook-builder-rsbuild', options: {} } }],
+      ['stories', stories],
+      ['previewAnnotations', []],
+    ]),
+    overrides: { configType, configDir: fixtureDir },
+  })
 
-  const apply = rs.fn(async (name: string, defaultValue?: unknown) =>
-    presetValues.has(name) ? presetValues.get(name) : defaultValue,
-  )
-
-  return {
-    configType,
-    presets: { apply },
-    configDir: fixtureDir,
-  } as unknown as Options
+  return options
 }
 
 const getStoriesModule = async (options: Options) => {

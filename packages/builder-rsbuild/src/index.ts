@@ -5,6 +5,8 @@ import fs from 'fs-extra'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import { getPresets, resolveAddonName } from 'storybook/internal/common'
+import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
+import { logger } from 'storybook/internal/node-logger'
 import { WebpackInvocationError } from 'storybook/internal/server-errors'
 import type {
   Options,
@@ -29,16 +31,14 @@ const corePath = dirname(require.resolve('storybook/package.json'))
 type RsbuildDevServer = Awaited<
   ReturnType<rsbuildReal.RsbuildInstance['createDevServer']>
 >
-type StatsOrMultiStats = Parameters<rsbuildReal.OnAfterBuildFn>[0]['stats']
-export type Stats = NonNullable<
-  Exclude<StatsOrMultiStats, { stats: unknown[] }>
->
+type StatsOrMultiStats = Parameters<rsbuildReal.OnAfterDevCompileFn>[0]['stats']
+export type Stats = Exclude<StatsOrMultiStats, { stats: unknown[] }>
 
 export const printDuration = (startTime: [number, number]) =>
   prettyTime(process.hrtime(startTime))
     .replace(' ms', ' milliseconds')
     .replace(' s', ' seconds')
-    .replace(' m', ' minutes')
+    .replace(' min', ' minutes')
 
 type BuilderStartOptions = Parameters<RsbuildBuilder['start']>['0']
 
@@ -162,9 +162,10 @@ export const start: RsbuildBuilder['start'] = async ({
   options,
   router,
   server: storybookServer,
+  channel,
 }) => {
   overrideRsbuildLogger()
-  const { createRsbuild } = await executor.get(options)
+  const { createRsbuild, rspack } = await executor.get(options)
   const config = await getConfig(options)
   const rsbuildBuild = await createRsbuild({
     cwd: process.cwd(),
@@ -180,23 +181,42 @@ export const start: RsbuildBuilder['start'] = async ({
     },
   })
 
+  let buildStartTime = startTime
+  let progressValue = 0
+  const reportProgress = (newValue: number, message: string) => {
+    // Unlike builder-webpack5, reset after a completed compilation because Rspack reuses this
+    // handler for rebuilds; otherwise every later update is permanently clamped to 1.
+    if (progressValue === 1 && newValue < 1) {
+      buildStartTime = process.hrtime()
+      progressValue = 0
+    }
+    progressValue = Math.max(newValue, progressValue)
+    const progress = {
+      value: progressValue,
+      message: message.charAt(0).toUpperCase() + message.slice(1),
+    }
+
+    if (progressValue === 1) {
+      progress.message = `Completed in ${printDuration(buildStartTime)}.`
+    }
+
+    channel.emit(PREVIEW_BUILDER_PROGRESS, progress)
+  }
+
   rsbuildBuild.onAfterCreateCompiler(({ compiler }) => {
     // Rsbuild yields a MultiCompiler when several environments are built; the preview iframe is
     // a single environment, so pick the first child compiler for change detection.
-    activeCompiler = 'compilers' in compiler ? compiler.compilers[0] : compiler
+    const previewCompiler =
+      'compilers' in compiler ? compiler.compilers[0] : compiler
+    activeCompiler = previewCompiler
+    // Storybook channel progress intentionally reflects only the preview environment and coexists
+    // with Rsbuild's terminal progress bar; any additional environments are not included.
+    // This deliberately adds a second progress instrumentation alongside Rsbuild's dev.progressBar:
+    // the terminal bar and Storybook channel serve separate consumers, and that cost is accepted.
+    new rspack.ProgressPlugin(reportProgress).apply(previewCompiler)
   })
 
   const rsbuildServer = await rsbuildBuild.createDevServer()
-
-  const waitFirstCompileDone = new Promise<StatsOrMultiStats>((resolve) => {
-    rsbuildBuild.onDevCompileDone(({ stats, isFirstCompile }) => {
-      if (!isFirstCompile) {
-        return
-      }
-      resolve(stats)
-    })
-  })
-
   server = rsbuildServer
 
   if (!rsbuildBuild) {
@@ -216,12 +236,21 @@ export const start: RsbuildBuilder['start'] = async ({
 
   router.use(rsbuildServer.middlewares)
   rsbuildServer.connectWebSocket({ server: storybookServer })
-  const stats = await waitFirstCompileDone
-  await server.afterListen()
+  const runAfterListen = () => {
+    void rsbuildServer.afterListen().catch((error) => {
+      logger.error(
+        `Rsbuild onAfterStartDevServer hook failed in afterListen(): ${error}`,
+      )
+    })
+  }
+  if (storybookServer.listening) {
+    runAfterListen()
+  } else {
+    storybookServer.once('listening', runAfterListen)
+  }
 
   return {
     bail,
-    stats,
     totalTime: process.hrtime(startTime),
   }
 }

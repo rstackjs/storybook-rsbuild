@@ -46,7 +46,9 @@
       "local": "packages/builder-rsbuild/src/index.ts",
       "intentionalDivergences": [
         "builder entry drives Rsbuild's createRsbuild/dev-server lifecycle instead of webpack compiler + webpack-dev-middleware; compare behavior (start/build/bail/corePresets contract), not structure",
-        "PREVIEW_BUILDER_PROGRESS ported without the modulesCount cache loop or progress.modules counts — Rspack's ProgressPlugin has no modulesCount estimation option and nothing consumes the cached value (PR #553)"
+        "PREVIEW_BUILDER_PROGRESS ported without the modulesCount cache loop or progress.modules counts — Rspack's ProgressPlugin has no modulesCount estimation option and nothing consumes the cached value (PR #553)",
+        "progress value resets between compilations so rebuilds report real progress — upstream's monotonic clamp never resets and pins every rebuild at 1 (deliberate fix over upstream, PR #553)",
+        "dev start() adopts the builder-vite non-blocking contract: it returns before the first compile finishes so core listens and prints the URL immediately, and first-compile errors surface via overlay/terminal instead of failing the process — upstream builder-webpack5's blocking start + fail-on-error is dead under current core, which only listens after start() resolves (PR #553)"
       ]
     },
     {
