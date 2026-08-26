@@ -238,6 +238,7 @@ export const start: RsbuildBuilder['start'] = async ({
       })
     },
   )
+  waitFirstCompileDone.catch(() => {})
 
   server = rsbuildServer
 

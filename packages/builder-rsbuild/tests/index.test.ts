@@ -84,11 +84,13 @@ const createStartHarness = ({
   stats = createStats(),
   compiler = {} as Rspack.Compiler,
   autoComplete = true,
+  listenError,
   quiet,
 }: {
   stats?: CompileStats
   compiler?: Rspack.Compiler | Rspack.MultiCompiler
   autoComplete?: boolean
+  listenError?: Error
   quiet?: boolean
 } = {}) => {
   let progress: ProgressHandler | undefined
@@ -110,14 +112,24 @@ const createStartHarness = ({
     middlewares: rs.fn(),
   }
   let isListening = false
+  let serverErrorHandler: ((error: Error) => void) | undefined
   const storybookServer = {
     get listening() {
       return isListening
     },
-    once: rs.fn(),
+    once: rs.fn((event: string, handler: (error: Error) => void) => {
+      if (event === 'error') {
+        serverErrorHandler = handler
+      }
+      return storybookServer
+    }),
   }
   const listen = rs.fn(
     (_options: { host?: string; port?: number }, callback: () => void) => {
+      if (listenError) {
+        queueMicrotask(() => serverErrorHandler?.(listenError))
+        return router
+      }
       isListening = true
       callback()
       markServerStarted()
@@ -314,6 +326,40 @@ describe('start', () => {
     completeCompile()
 
     expect(settled).toBe('rejected')
+  })
+
+  it('does not emit an unhandled rejection when listen fails before bail', async () => {
+    const listenError = Object.assign(new Error('Address already in use'), {
+      code: 'EADDRINUSE',
+    })
+    const { startOptions } = createStartHarness({
+      autoComplete: false,
+      listenError,
+    })
+
+    await expect(start(startOptions)).rejects.toBe(listenError)
+
+    const unhandledRejection = rs.fn()
+    const emit = process.emit.bind(process) as (...args: unknown[]) => boolean
+    const emitSpy = rs.spyOn(process, 'emit').mockImplementation(((
+      event: string | symbol,
+      ...args: unknown[]
+    ) => {
+      if (event === 'unhandledRejection') {
+        unhandledRejection(...args)
+        return true
+      }
+      return emit(event, ...args)
+    }) as typeof process.emit)
+
+    try {
+      await bail()
+      await new Promise<void>((resolve) => setImmediate(resolve))
+
+      expect(unhandledRejection).not.toHaveBeenCalled()
+    } finally {
+      emitSpy.mockRestore()
+    }
   })
 
   it('reports preview compilation progress', async () => {
