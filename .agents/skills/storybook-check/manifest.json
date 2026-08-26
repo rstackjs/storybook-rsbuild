@@ -45,7 +45,8 @@
       "upstream": "code/builders/builder-webpack5/src/index.ts",
       "local": "packages/builder-rsbuild/src/index.ts",
       "intentionalDivergences": [
-        "builder entry drives Rsbuild's createRsbuild/dev-server lifecycle instead of webpack compiler + webpack-dev-middleware; compare behavior (start/build/bail/corePresets contract), not structure"
+        "builder entry drives Rsbuild's createRsbuild/dev-server lifecycle instead of webpack compiler + webpack-dev-middleware; compare behavior (start/build/bail/corePresets contract), not structure",
+        "PREVIEW_BUILDER_PROGRESS ported without the modulesCount cache loop or progress.modules counts — Rspack's ProgressPlugin has no modulesCount estimation option and nothing consumes the cached value (PR #553)"
       ]
     },
     {
