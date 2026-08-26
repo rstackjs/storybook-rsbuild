@@ -84,7 +84,11 @@ const PRODUCTION_MINIFY_OPTIONS: NonNullable<
       // Unlike upstream's historical `mangle: false` (in place since 2016),
       // preserving only function and class names—which docs titles and Show code
       // depend on—still mangles local identifiers and measured ~26% smaller gzip
-      // than disabling mangle.
+      // than disabling mangle. Production probes confirm that `keep_fnames`
+      // preserves arrow-function binding names, but `const X = class {}` has a
+      // binding-inferred name that `keep_classnames` does not protect from
+      // mangling. We accept this rare form because user-source components fall
+      // back to `__docgenInfo.displayName`.
       mangle: {
         keep_classnames: true,
         keep_fnames: true,
