@@ -1,114 +1,37 @@
 # AGENTS.md
 
-## Sub-package Instructions
+storybook-rsbuild is a pnpm monorepo providing an Rsbuild-powered Storybook builder, framework packages, and addons.
 
-When working on code in some specific package, use the Read tool to load that package's AGENTS.md file for package-specific guidelines:
+## Always
 
-- For website: @website/AGENTS.md
-
-### Do
-
-- Use **pnpm** for all package management commands.
-- Use **Biome** for formatting and linting (indentation: 2 spaces, single quotes, minimal semicolons).
+- Use **pnpm** — never `npm` or `yarn`.
+- Use **Biome** for formatting and linting — never `Prettier` or `ESLint`, and never sort imports manually (Biome handles it).
 - Use **Rstest** for unit testing.
-- Follow the **kebab-case** convention for directories, filenames, and package names.
-- Colocate sandbox helpers with their owning packages.
-- Update relevant `sandboxes/` when adding or modifying features.
-- After any `rebase`, `merge`, or `stash pop` that changes dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`), run `pnpm install` before any validation command (`build`, `test`, `e2e`, `lint`).
-- After editing any dependency manifest (`package.json`, `pnpm-workspace.yaml`, `.npmrc`) or adding/removing dependencies, run `pnpm install` and commit the resulting `pnpm-lock.yaml` changes in the same branch before pushing.
+- Name directories, files, and packages in **kebab-case**. Exempt: tool-mandated names (e.g. Rspress `_nav.json` / `_meta.json`), upstream-ported filenames, test fixture components, and the camelCase helpers in `e2e/utils/` and `tests/helpers/`.
+- Propose a short plan before executing a complex refactor.
 
-### Don't
-
-- Do not use `npm` or `yarn`.
-- Do not use `Prettier` or `ESLint` directly; use `Biome`.
-- Do not manually sort imports (Biome handles this).
-- Do not introduce new heavy dependencies without approval.
-- Do not commit code that fails `pnpm lint` or `pnpm test`.
-- Do not push dependency manifest changes without the matching `pnpm-lock.yaml` update.
-
-### Commands
+## Commands
 
 ```bash
-# Format and lint a single file (preferred)
-pnpm exec biome check --write path/to/file.tsx
-
-# Run tests for a single file (preferred)
-pnpm exec rstest path/to/file.test.ts
-
-# Run e2e tests for a specific sandbox
-pnpm e2e <sandbox>.spec.ts
-
-# Run type checks for all packages
-pnpm check
-
-# Run full linting
-pnpm lint
-
-# Build all packages (except sandboxes)
-pnpm build
-
-# Build sandboxes (integration gate)
-pnpm build:sandboxes
+pnpm exec biome check --write path/to/file.tsx  # format + lint a single file (preferred)
+pnpm exec rstest path/to/file.test.ts           # run tests for a single file (preferred)
+pnpm check                                      # type-check all packages
 ```
 
-### Safety and Permissions
+## Ask first
 
-**Allowed without prompt:**
-
-- Read files, list files.
-- Run `biome check` or `rstest` on single files.
-- Create new test files.
-- Update existing non-critical code.
-
-**Ask first:**
-
-- `pnpm install` or adding new dependencies, except when a `rebase`, `merge`, or `stash pop` changed dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) - then `pnpm install` is mandatory before validation.
-- `git push`.
+- `git push` — sole exception: the version commit of a **user-initiated** release (see [docs/release.md](docs/release.md)).
+- Adding a new dependency (running `pnpm install` itself needs no prompt — see [docs/dependencies.md](docs/dependencies.md)).
 - Deleting files or large code blocks.
-- Running full project builds (`pnpm build`, `pnpm build:sandboxes`) unless explicitly requested or necessary for validation.
+- Full repo builds (root `pnpm build`, `pnpm build:test`, `pnpm build:sandboxes`) — except when validating changes before a push/PR or when a documented workflow requires it. Workspace-scoped builds (e.g. `pnpm --filter website build`) need no prompt.
 
-### Project Structure
+## Topic guides
 
-- **`packages/builder-rsbuild`**: Rsbuild-specific Storybook builder.
-- **`packages/addon-rslib`** / **`packages/addon-modernjs`**: Adapter add-ons.
-- **`framework-*`**: Renderer packages (HTML, React, Vue3, Web Components). Runtime logic stays in `src/`.
-- **`sandboxes/`**: Runnable Storybook apps for regression testing.
-- **`website/`**: Documentation (Rspress).
-- **`scripts/`**: Shared tooling.
+Read the matching guide before starting the task:
 
-### Testing & Sandbox Workflow
-
-- Write Rstest coverage beside sources using `.test.ts(x)` or within `__tests__/`.
-- Use `@testing-library/jest-dom` for DOM assertions.
-- **Playwright Debugging**:
-  - Use `pnpm e2e <sandbox>.spec.ts` to reproduce locally.
-  - Attach Playwright MCP client to inspect the DOM (remember Storybook preview is an iframe).
-
-### Commit & Pull Request Guidelines
-
-- Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
-- Subject line under 72 characters.
-- When linking a PR or issue of the upstream `storybookjs/storybook` repository in an issue/PR body or comment, use the `redirect.github.com` host (e.g. `https://redirect.github.com/storybookjs/storybook/pull/14281`) so GitHub does not create backlink notifications on the upstream thread. Use a plain `github.com` link only when explicitly asked to mention/ping that PR or issue. Links to other repositories and plain commit messages are unaffected.
-- Before pushing updates to a branch or PR, first verify dependency manifests and `pnpm-lock.yaml` are in sync, then locally run the CI-relevant validation commands for the changes and fix failures instead of relying on CI to catch them.
-- **PR Checklist**:
-  - `pnpm lint` passes.
-  - `pnpm check` passes.
-  - `pnpm check-dependency-version` passes.
-  - `pnpm build` passes.
-  - `pnpm build:sandboxes` passes.
-  - `pnpm test` passes.
-  - `pnpm build:test` passes.
-  - `pnpm e2e` passes.
-  - Snapshots updated only for intentional changes.
-
-### Release Workflow
-
-- Run `pnpm bump` from `main` to bump versions. Behavior (commit message format, files to update, tag/push opt-out) is pinned in `bump.config.ts` — do not override these via CLI flags.
-- Push the resulting version commit to `origin/main` directly.
-- Do **not** create or push tags locally. The `Release` GitHub Actions workflow (`workflow_dispatch`) reads the version from `packages/builder-rsbuild/package.json`, creates the tag, publishes to npm, and generates the GitHub release.
-
-### When Stuck
-
-- Ask a clarifying question.
-- Propose a short plan before executing complex refactors.
-- Do not push large speculative changes without confirmation.
+- Working in `website/` → [website/AGENTS.md](website/AGENTS.md)
+- Committing, pushing, or opening/updating a PR → [docs/git-workflow.md](docs/git-workflow.md)
+- Editing dependency manifests or lockfiles, or after a `rebase` / `merge` / `stash pop` → [docs/dependencies.md](docs/dependencies.md)
+- Writing/running tests, sandboxes, or e2e → [docs/testing.md](docs/testing.md)
+- Releasing/publishing → [docs/release.md](docs/release.md)
+- Repo layout, package `exports` / `build-config.ts`, or touching anything under `packages/*/src` → [docs/project-structure.md](docs/project-structure.md)
