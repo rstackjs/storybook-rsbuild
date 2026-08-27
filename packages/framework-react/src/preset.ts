@@ -1,13 +1,28 @@
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import type { PresetProperty } from 'storybook/internal/types'
 import { rsbuildFinalDocs } from './react-docs'
 import type { FrameworkOptions, StorybookConfig } from './types'
 
+const require = createRequire(import.meta.url)
+
 export const rsbuildFinal: NonNullable<
   StorybookConfig['rsbuildFinal']
 > = async (config, options) => {
-  const finalConfig = await rsbuildFinalDocs(config, options)
+  const finalConfig = await rsbuildFinalDocs(
+    mergeRsbuildConfig(
+      {
+        resolve: {
+          alias: {
+            '@storybook/react': require.resolve('@storybook/react'),
+          },
+        },
+      },
+      config,
+    ),
+    options,
+  )
 
   if (options.features?.developmentModeForBuild) {
     return mergeRsbuildConfig(finalConfig, {
