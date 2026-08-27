@@ -79,9 +79,8 @@
     },
     {
       "upstream": "code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts",
-      "local": null,
-      "reviewWith": "packages/builder-rsbuild",
-      "note": "No direct counterpart: user customization flows through Rsbuild config loading instead of a custom-webpack preset. Review whether the behavior (user config merge order, babel handling) has a semantic parallel that belongs in iframe-rsbuild.config.ts or preview-preset.ts.",
+      "local": "packages/builder-rsbuild/src/override-preset.ts",
+      "note": "Only the override-layer mocking rsbuildFinal is ported here; the rest of custom-webpack-preset (user webpack config loading, SWC/babel handling) has its semantic parallels reviewed in iframe-rsbuild.config.ts / preview-preset.ts.",
       "intentionalDivergences": [
         "core.disableWebpackDefaults is not ported because it is N/A for current integrations: upstream's only producer is the CRA preset, where an external system owns the whole webpack config (upstream PR #15062); if a future integration preset takes over the full Rsbuild config, it will need a real pre-default opt-out because rsbuildFinal/inherited config cannot opt out before defaults are merged"
       ]
