@@ -4,7 +4,7 @@ This repo adapts upstream `storybookjs/storybook` (mainly `builder-webpack5`, wi
 
 ## Doctrine: pure port
 
-- Follow upstream behavior — implementation, naming, semantics, and dependency choices are copied from upstream; only Rsbuild/Rspack-mandated mechanical adaptation is allowed. Mirror upstream's structure 1:1 even when it duplicates logic locally; staying literally identical reduces noise in every future drift comparison.
+- Follow upstream behavior — implementation, naming, semantics, and the dependency set are copied from upstream; only Rsbuild/Rspack-mandated mechanical adaptation is allowed. Mirror upstream's structure 1:1 even when it duplicates logic locally; staying literally identical reduces noise in every future drift comparison. Dependency **classification** follows the local bundle-vs-external contract, not upstream's placement — check `getExternal` before adopting it (see [dependencies.md](dependencies.md)).
 - Port upstream's **intent**, not lines, in two cases: a capability upstream implemented only on the Vite side (port the Vite semantics onto Rsbuild APIs), and an upstream implementation that is broken under the current core (port the intent, record the deviation).
 - A perceived upstream bug or better approach is reported to the user, never implemented unilaterally. Deviating needs the user's explicit approval, presented as a binary choice (upstream-literal vs. local variant).
 - Every approved deviation is recorded twice, in the same change: an `intentionalDivergences` line in the manifest (see [project-structure.md](project-structure.md)), and an in-code comment on exactly the lines a future sync would silently revert. Comments in ported code cite an upstream permalink instead of copying upstream's own comment text.
@@ -13,7 +13,7 @@ This repo adapts upstream `storybookjs/storybook` (mainly `builder-webpack5`, wi
 
 ## Porting a change
 
-- Port every file the upstream change touches, together with follow-up commits already folded into upstream's current state — a partial port is a defect.
+- Port every touched file that has a mapped or same-purpose local counterpart (plus the tests covering the behavior), together with follow-up commits already folded into upstream's current state — porting only part of the counterpart set is a defect. Upstream-only files (docs, CI/tooling, `storybook/internal/*`) stay out, per the sync skill's skip rules.
 - Verify against the **current** upstream source on `next`, never against the referenced upstream PR (the PR may be stale). `next` is the reference for verification and drift detection; a Storybook **release** is the trigger for adopting a capability that is unreleased or unstable — a port blocked on an unreleased upstream API is implemented and parked as a green draft PR naming the unblock signal, not reimplemented around the block.
 - Never copy an upstream config value or version gate bare: port the preconditions that make the value valid, and translate webpack-version conditions into their rspack equivalents.
 - Work upstream did not do (restructuring sandboxes, fixing pre-existing behavior that matches upstream) is out of scope for a port PR.
