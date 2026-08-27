@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import exampleMarkdown from './assets/example.md?raw'
+import bareMarkdown from './assets/example.md'
+import rawMarkdown from './assets/example.md?raw'
 
 /**
  * A simple component that displays raw markdown content.
- * This story tests the `?raw` import functionality.
  */
 const RawMarkdownDisplay = ({ content }: { content: string }) => {
   return (
@@ -37,6 +37,15 @@ type Story = StoryObj<typeof RawMarkdownDisplay>
  */
 export const MarkdownRaw: Story = {
   args: {
-    content: exampleMarkdown,
+    content: rawMarkdown,
+  },
+}
+
+/**
+ * Demonstrates importing a markdown file as a raw string without a resource query.
+ */
+export const MarkdownBare: Story = {
+  args: {
+    content: bareMarkdown,
   },
 }
