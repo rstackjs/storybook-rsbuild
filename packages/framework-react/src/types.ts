@@ -57,6 +57,14 @@ type StorybookConfigFramework = {
           options: BuilderOptions
         }
   }
+  features?: StorybookConfigBase['features'] & {
+    /**
+     * Enable the experimental `.test` function in CSF Next
+     *
+     * @see https://storybook.js.org/docs/api/main-config/main-config-features#experimentaltestsyntax
+     */
+    experimentalTestSyntax?: boolean
+  }
   typescript?: Partial<
     TypescriptOptionsBase & TypescriptOptionsBuilder & TypescriptOptionsReact
   >

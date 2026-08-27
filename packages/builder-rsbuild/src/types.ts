@@ -34,6 +34,22 @@ export type RsbuildFinal = (
 export type StorybookConfigRsbuild = {
   rsbuildFinal?: RsbuildFinal
   webpackAddons?: StorybookConfigRaw['addons']
+  features?: StorybookConfigRaw['features'] & {
+    /**
+     * Enable the experimental `.test` function in CSF Next
+     *
+     * @see https://storybook.js.org/docs/api/main-config/main-config-features#experimentaltestsyntax
+     */
+    experimentalTestSyntax?: boolean
+
+    /**
+     * Remove the `bugfixes` option from `@babel/preset-env`. This is required when using Babel 8 and when
+     * Storybook fails to detect your Babel version.
+     *
+     * @default false
+     */
+    babelRemoveBugfixes?: boolean
+  }
 }
 
 export type BuilderOptions = {
