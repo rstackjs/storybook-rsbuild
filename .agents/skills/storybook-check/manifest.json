@@ -82,7 +82,7 @@
       "local": "packages/builder-rsbuild/src/override-preset.ts",
       "note": "Only the override-layer mocking rsbuildFinal is ported here; the rest of custom-webpack-preset (user webpack config loading, SWC/babel handling) has its semantic parallels reviewed in iframe-rsbuild.config.ts / preview-preset.ts.",
       "intentionalDivergences": [
-        "core.disableWebpackDefaults is not ported because it is N/A for current integrations: upstream's only producer is the CRA preset, where an external system owns the whole webpack config (upstream PR #15062); if a future integration preset takes over the full Rsbuild config, it will need a real pre-default opt-out because rsbuildFinal/inherited config cannot opt out before defaults are merged"
+        "core.disableWebpackDefaults is not ported and is a present-day user-facing no-op for this builder: the public main.ts option type-checks in Storybook 10.5.10, but webpack's default-skip has no Rsbuild equivalent and rsbuildFinal runs after intrinsic defaults so cannot emulate it; CRA was the original motivating use case (upstream PR #15062), and supporting the option would require a real pre-default opt-out"
       ]
     },
     {
@@ -227,7 +227,7 @@
       "intentionalDivergences": [
         "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts",
         "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
-        "framework-vue3 defaults typescript.skipCompiler to true because the generic ts-checker-rspack-plugin cannot parse .vue files (TS2307 for every .vue import and no SFC checking); upstream vue3-vite performs no SFC type check either, and users can override with main.ts typescript.skipCompiler=false"
+        "framework-vue3 defaults typescript.skipCompiler to true: the default TypeScript wrapper does not check .vue sources and reports TS2307 for .vue imports when no *.vue module shim exists; users who want SFC checking can set main.ts typescript.skipCompiler=false and checkOptions.tsCheckerOptions.typescript.typescriptPath='@esctn/vue-tsc-api'; upstream vue3-vite ships no SFC type check either"
       ]
     },
     {
