@@ -13,10 +13,6 @@ const config: BuildEntries = {
         dts: false,
       },
       {
-        entryPoint: './src/override-preset.ts',
-        dts: false,
-      },
-      {
         exportEntries: ['./loaders/export-order-loader'],
         entryPoint: './src/loaders/export-order-loader.ts',
         dts: false,

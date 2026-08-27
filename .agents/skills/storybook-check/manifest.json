@@ -79,8 +79,8 @@
     },
     {
       "upstream": "code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts",
-      "local": "packages/builder-rsbuild/src/override-preset.ts",
-      "note": "Only the override-layer mocking rsbuildFinal is ported here; the rest of custom-webpack-preset (user webpack config loading, SWC/babel handling) has its semantic parallels reviewed in iframe-rsbuild.config.ts / preview-preset.ts.",
+      "local": "packages/builder-rsbuild/src/apply-mocking.ts",
+      "note": "Mocking is applied in builder code after presets.apply('rsbuildFinal'), making its position mechanically equivalent to upstream's override slot; the rest of custom-webpack-preset (user webpack config loading, SWC/babel handling) has its semantic parallels reviewed in iframe-rsbuild.config.ts / preview-preset.ts.",
       "intentionalDivergences": [
         "core.disableWebpackDefaults is not ported and is a present-day user-facing no-op for this builder: the public main.ts option type-checks in Storybook 10.5.10, but webpack's default-skip has no Rsbuild equivalent and rsbuildFinal runs after intrinsic defaults so cannot emulate it; CRA was the original motivating use case (upstream PR #15062), and supporting the option would require a real pre-default opt-out"
       ]

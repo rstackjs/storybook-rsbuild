@@ -5,7 +5,7 @@ import type { Options } from 'storybook/internal/types'
 import { RspackInjectMockerRuntimePlugin } from './plugins/rspack-inject-mocker-runtime-plugin'
 import { RspackMockPlugin } from './plugins/rspack-mock-plugin'
 
-export async function rsbuildFinal(
+export async function applyMocking(
   config: RsbuildConfig,
   options: Options,
 ): Promise<RsbuildConfig> {
@@ -15,7 +15,7 @@ export async function rsbuildFinal(
     return config
   }
 
-  const applyMocking: NonNullable<RsbuildConfig['tools']>['rspack'] = (
+  const applyMockingToRspack: NonNullable<RsbuildConfig['tools']>['rspack'] = (
     rspackConfig,
     utils,
   ) => {
@@ -44,8 +44,8 @@ export async function rsbuildFinal(
     tools: {
       ...config.tools,
       rspack: Array.isArray(config.tools?.rspack)
-        ? [...config.tools.rspack, applyMocking]
-        : [config.tools?.rspack, applyMocking].filter(
+        ? [...config.tools.rspack, applyMockingToRspack]
+        : [config.tools?.rspack, applyMockingToRspack].filter(
             <T>(v: T): v is NonNullable<T> => Boolean(v),
           ),
     },

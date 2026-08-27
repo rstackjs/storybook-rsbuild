@@ -1,11 +1,9 @@
 import { EventEmitter } from 'node:events'
-import { basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import * as previewBuilder from '../src/index'
-import * as overridePreset from '../src/override-preset'
 import * as previewPreset from '../src/preview-preset'
 import { createTestOptions } from './fixtures/options'
 
@@ -156,7 +154,7 @@ describe('printDuration', () => {
 
 describe('preset ordering', () => {
   it('preserves a custom template while applying mocking after user config', async () => {
-    const { options } = createTestOptions({
+    const { apply, options } = createTestOptions({
       overrides: { configDir: '/project/.storybook' },
     })
     const expectedDefaultTemplate = fileURLToPath(
@@ -173,51 +171,24 @@ describe('preset ordering', () => {
     const userPreviewMainTemplate = rs.fn(
       (_template?: string) => '/project/.storybook/preview-template.ejs',
     )
-    type PresetModule = {
-      previewMainTemplate?: (template?: string) => string
-      rsbuildFinal?: typeof overridePreset.rsbuildFinal
-    }
-    const presetModules: Record<string, PresetModule> = {
-      'override-preset.js': overridePreset,
-      'preview-preset.js': previewPreset,
-    }
-    const userPreset: PresetModule = {
-      previewMainTemplate: userPreviewMainTemplate,
-      rsbuildFinal: userRsbuildFinal,
-    }
-    const orderedPresets = [
-      ...previewBuilder.corePresets.map(
-        (presetPath) => presetModules[basename(presetPath)],
-      ),
-      userPreset,
-      ...previewBuilder.overridePresets.map(
-        (presetPath) => presetModules[basename(presetPath)],
-      ),
-    ]
+    apply.mockImplementation(async (name: string, defaultValue?: unknown) => {
+      if (name === 'rsbuildFinal') {
+        return userRsbuildFinal(defaultValue as RsbuildConfig)
+      }
+
+      return defaultValue
+    })
+    mocks.iframeConfig.mockResolvedValue(baseConfig)
 
     expect(previewPreset).not.toHaveProperty('rsbuildFinal')
-    expect(overridePreset).not.toHaveProperty('previewMainTemplate')
     expect(previewPreset.previewMainTemplate()).toBe(expectedDefaultTemplate)
-    expect(orderedPresets).not.toContain(undefined)
 
-    let config = baseConfig
-    let previewMainTemplate: string | undefined
-    for (const preset of orderedPresets) {
-      if (!preset) {
-        throw new Error('Builder registered a preset without a test module')
-      }
-      if (preset.rsbuildFinal) {
-        config = await preset.rsbuildFinal(config, options)
-      }
-      if (preset.previewMainTemplate) {
-        previewMainTemplate = preset.previewMainTemplate(previewMainTemplate)
-      }
-    }
-
-    expect(userRsbuildFinal).toHaveBeenCalledExactlyOnceWith(
-      baseConfig,
-      options,
+    const previewMainTemplate = userPreviewMainTemplate(
+      previewPreset.previewMainTemplate(),
     )
+    const config = await previewBuilder.getConfig(options)
+
+    expect(userRsbuildFinal).toHaveBeenCalledExactlyOnceWith(baseConfig)
     expect(userPreviewMainTemplate).toHaveBeenCalledExactlyOnceWith(
       expectedDefaultTemplate,
     )

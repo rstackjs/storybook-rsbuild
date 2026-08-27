@@ -13,6 +13,7 @@ import type {
   Preset,
   StorybookConfigRaw,
 } from 'storybook/internal/types'
+import { applyMocking } from './apply-mocking'
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
@@ -115,7 +116,7 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
     options,
   )
 
-  return finalConfig
+  return applyMocking(finalConfig, options)
 }
 
 export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
@@ -293,7 +294,6 @@ export const build: ({ options }: BuilderStartOptions) => Promise<Stats> =
   }
 
 export const corePresets = [join(__dirname, './preview-preset.js')]
-export const overridePresets = [join(__dirname, './override-preset.js')]
 
 export const previewMainTemplate = () =>
   require.resolve('storybook-builder-rsbuild/templates/preview.ejs')
