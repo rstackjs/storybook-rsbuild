@@ -12,8 +12,17 @@ import type {
 type FrameworkName = CompatibleString<'storybook-vue3-rsbuild'>
 type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
 
+export type VueDocgenPlugin = 'vue-docgen-api' | 'vue-component-meta'
+
 export type FrameworkOptions = {
   builder?: BuilderOptions
+  docgen?:
+    | boolean
+    | VueDocgenPlugin
+    | {
+        plugin: 'vue-component-meta'
+        tsconfig: `${string}/tsconfig${string}.json` | `tsconfig${string}.json`
+      }
 }
 
 type StorybookConfigFramework = {
