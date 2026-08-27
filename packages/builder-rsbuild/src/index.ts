@@ -4,7 +4,11 @@ import * as rsbuildReal from '@rsbuild/core'
 import fs from 'fs-extra'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
-import { getPresets, resolveAddonName } from 'storybook/internal/common'
+import {
+  findConfigFile,
+  getPresets,
+  resolveAddonName,
+} from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { logger } from 'storybook/internal/node-logger'
 import { WebpackInvocationError } from 'storybook/internal/server-errors'
@@ -16,6 +20,7 @@ import type {
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
+import { pluginStorybookMock } from './plugins/rsbuild-plugin-storybook-mock'
 import rsbuildConfig, {
   type RsbuildBuilderOptions,
 } from './preview/iframe-rsbuild.config'
@@ -115,7 +120,21 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
     options,
   )
 
-  return finalConfig
+  const previewConfigPath = findConfigFile('preview', options.configDir)
+  if (!previewConfigPath) {
+    return finalConfig
+  }
+
+  // Intentional divergence: this Vite-style builder appends mocking here after the user's hook,
+  // rather than using builder-webpack5's overridePresets slot; the ordering is equivalent.
+  // https://github.com/storybookjs/storybook/blob/0f8be9ce02f2e2d8d8730b8b3c7fecb61edc1fd7/code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts
+  return {
+    ...finalConfig,
+    plugins: [
+      ...(finalConfig.plugins ?? []),
+      pluginStorybookMock({ previewConfigPath }),
+    ],
+  }
 }
 
 export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {

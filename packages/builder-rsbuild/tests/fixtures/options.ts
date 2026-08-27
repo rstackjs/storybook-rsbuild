@@ -18,5 +18,5 @@ export const createTestOptions = ({
     presets: { apply },
   } as unknown as Options
 
-  return { options }
+  return { apply, options }
 }

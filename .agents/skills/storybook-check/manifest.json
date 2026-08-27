@@ -79,10 +79,11 @@
     },
     {
       "upstream": "code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts",
-      "local": null,
-      "reviewWith": "packages/builder-rsbuild",
-      "note": "No direct counterpart: user customization flows through Rsbuild config loading instead of a custom-webpack preset. Review whether the behavior (user config merge order, babel handling) has a semantic parallel that belongs in iframe-rsbuild.config.ts or preview-preset.ts.",
-      "intentionalDivergences": []
+      "local": "packages/builder-rsbuild/src/plugins/rsbuild-plugin-storybook-mock.ts",
+      "note": "Mocking is an Rsbuild plugin appended in builder code after presets.apply('rsbuildFinal'); this mirrors builder-vite's viteMockPlugin shape while keeping the after-user ordering of builder-webpack5's override slot. The rest of custom-webpack-preset (user webpack config loading, SWC/babel handling) has its semantic parallels reviewed in iframe-rsbuild.config.ts / preview-preset.ts.",
+      "intentionalDivergences": [
+        "core.disableWebpackDefaults is not ported and is a present-day user-facing no-op for this builder: the public main.ts option type-checks in Storybook 10.5.10, but webpack's default-skip has no Rsbuild equivalent and rsbuildFinal runs after intrinsic defaults so cannot emulate it; CRA was the original motivating use case (upstream PR #15062), and supporting the option would require a real pre-default opt-out"
+      ]
     },
     {
       "upstream": "code/builders/builder-webpack5/src/preview/virtual-module-mapping.ts",
@@ -225,7 +226,8 @@
       "local": "packages/framework-vue3/src/preset.ts",
       "intentionalDivergences": [
         "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts",
-        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
+        "framework-vue3 defaults typescript.skipCompiler to true: the default TypeScript wrapper does not check .vue sources and reports TS2307 for .vue imports when no *.vue module shim exists; users who want SFC checking can set main.ts typescript.skipCompiler=false and checkOptions.tsCheckerOptions.typescript.typescriptPath='@esctn/vue-tsc-api'; upstream vue3-vite ships no SFC type check either"
       ]
     },
     {
@@ -256,7 +258,8 @@
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
         "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics",
-        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics"
+        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics",
+        "framework-vue3 keeps the vueDocgenOptions addon-docs preset scan because it is a user-supplied options channel still documented upstream at addons/docs/docs/frameworks/VUE3.md:47-58; Storybook core preserves addon options, so removing it would break documented configuration"
       ]
     },
     {
@@ -296,7 +299,8 @@
       "upstream": "code/frameworks/web-components-vite/src/preset.ts",
       "local": "packages/framework-web-components/src/preset.ts",
       "intentionalDivergences": [
-        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
+        "framework-web-components intentionally deletes the whole inherited config.html object in its rsbuildFinal (introduced in local PR #207) to keep an inherited app html.template out of the preview; user main.ts rsbuildFinal runs afterward so user values survive, while Storybook must own template/outputStructure/tools.htmlPlugin"
       ]
     },
     {

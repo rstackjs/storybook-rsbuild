@@ -22,6 +22,9 @@ const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
     )
   }
 
+  // Intentional divergence: keep the documented legacy addon-docs vueDocgenOptions user channel.
+  // A future sync must not remove this scan.
+  // https://github.com/storybookjs/storybook/blob/0f8be9ce02f2e2d8d8730b8b3c7fecb61edc1fd7/code/addons/docs/docs/frameworks/VUE3.md
   let vueDocgenOptions = {}
 
   for (const preset of options.presetsList || []) {

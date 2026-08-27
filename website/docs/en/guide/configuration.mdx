@@ -13,7 +13,7 @@ The `rsbuildFinal` field gives you direct access to the Rsbuild configuration. Y
 This function receives the current Rsbuild config and an options object, and should return the modified config.
 
 :::warning Use `mergeRsbuildConfig` for modifications
-Always use [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) from `@rsbuild/core` to modify the config. Directly mutating properties like `config.tools.rspack = {...}` may not work because internal configs can be arrays of functions/objects, and direct assignment may be silently ignored.
+Always use [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) from `@rsbuild/core` to modify the config in `rsbuildFinal`; returning a brand-new config is unsupported. Directly replacing properties like `config.tools.rspack = {...}` may also be silently ignored because internal configs can be arrays of functions and objects. Inside the function form of `tools.rspack`, modify and return the provided config or use the callback's `mergeConfig` utility; returning a brand-new object silently drops Storybook-injected wiring such as the `sb.mock` machinery.
 :::
 
 ```ts twoslash title=".storybook/main.ts"
