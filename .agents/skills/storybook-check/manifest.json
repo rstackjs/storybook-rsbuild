@@ -82,7 +82,9 @@
       "local": null,
       "reviewWith": "packages/builder-rsbuild",
       "note": "No direct counterpart: user customization flows through Rsbuild config loading instead of a custom-webpack preset. Review whether the behavior (user config merge order, babel handling) has a semantic parallel that belongs in iframe-rsbuild.config.ts or preview-preset.ts.",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "core.disableWebpackDefaults is not ported because it is N/A for current integrations: upstream's only producer is the CRA preset, where an external system owns the whole webpack config (upstream PR #15062); if a future integration preset takes over the full Rsbuild config, it will need a real pre-default opt-out because rsbuildFinal/inherited config cannot opt out before defaults are merged"
+      ]
     },
     {
       "upstream": "code/builders/builder-webpack5/src/preview/virtual-module-mapping.ts",
@@ -225,7 +227,8 @@
       "local": "packages/framework-vue3/src/preset.ts",
       "intentionalDivergences": [
         "vite plugin wiring replaced by rsbuildFinal from framework-preset-vue3.ts",
-        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
+        "framework-vue3 defaults typescript.skipCompiler to true because the generic ts-checker-rspack-plugin cannot parse .vue files (TS2307 for every .vue import and no SFC checking); upstream vue3-vite performs no SFC type check either, and users can override with main.ts typescript.skipCompiler=false"
       ]
     },
     {
@@ -256,7 +259,8 @@
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
         "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics",
-        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics"
+        "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics",
+        "framework-vue3 keeps the vueDocgenOptions addon-docs preset scan because it is a user-supplied options channel still documented upstream at addons/docs/docs/frameworks/VUE3.md:47-58; Storybook core preserves addon options, so removing it would break documented configuration"
       ]
     },
     {
@@ -296,7 +300,8 @@
       "upstream": "code/frameworks/web-components-vite/src/preset.ts",
       "local": "packages/framework-web-components/src/preset.ts",
       "intentionalDivergences": [
-        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)"
+        "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
+        "framework-web-components intentionally deletes the whole inherited config.html object in its rsbuildFinal (introduced in local PR #207) to keep an inherited app html.template out of the preview; user main.ts rsbuildFinal runs afterward so user values survive, while Storybook must own template/outputStructure/tools.htmlPlugin"
       ]
     },
     {
