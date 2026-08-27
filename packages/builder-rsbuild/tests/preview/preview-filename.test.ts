@@ -6,7 +6,7 @@ import { describe, expect, it } from '@rstest/core'
 import {
   developmentPreviewChunkFilename,
   productionPreviewChunkFilename,
-} from './preview-filename'
+} from '../../src/preview/preview-filename'
 
 const filenameFor = (name: string, isProd = false) => {
   const pathData = { chunk: { id: name, name, hash: '' } }

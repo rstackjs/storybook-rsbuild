@@ -2,7 +2,7 @@ import { describe, expect, it } from '@rstest/core'
 import {
   transformCssInteropDoctorCheck,
   transformReanimatedWebUtils,
-} from './transforms'
+} from '../src/transforms'
 
 describe('transformReanimatedWebUtils', () => {
   const webUtilsPath =

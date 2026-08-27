@@ -4,7 +4,7 @@ import type {
   FrameworkOptions,
   VueDocgenInfo,
   VueDocgenInfoEntry,
-} from './types'
+} from '../src/types'
 
 type ArrayElement<T> = T extends readonly (infer TElement)[] ? TElement : never
 

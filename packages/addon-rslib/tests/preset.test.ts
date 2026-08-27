@@ -1,7 +1,7 @@
 import type { RsbuildConfig } from '@rsbuild/core'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
-import { rsbuildFinal } from '../src/preset.ts'
-import type { AddonOptions } from '../src/types.ts'
+import { rsbuildFinal } from '../src/preset'
+import type { AddonOptions } from '../src/types'
 
 type RsbuildFinalOptions = Parameters<NonNullable<typeof rsbuildFinal>>[1]
 
@@ -17,7 +17,7 @@ const runRsbuildFinal = async (
   config: RsbuildConfig = {},
 ) => {
   loadConfigMock.mockResolvedValueOnce({ content })
-  return rsbuildFinal!(config, { rslib } as RsbuildFinalOptions)
+  return rsbuildFinal!(config, { rslib } as unknown as RsbuildFinalOptions)
 }
 
 describe('rsbuildFinal', () => {

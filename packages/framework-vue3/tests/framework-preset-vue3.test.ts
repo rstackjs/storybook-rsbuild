@@ -1,7 +1,7 @@
 import { describe, expect, it, rs } from '@rstest/core'
 import { logger } from 'storybook/internal/node-logger'
-import { rsbuildFinal } from './framework-preset-vue3'
-import type { FrameworkOptions } from './types'
+import { rsbuildFinal } from '../src/framework-preset-vue3'
+import type { FrameworkOptions } from '../src/types'
 
 type RsbuildFinalOptions = Parameters<NonNullable<typeof rsbuildFinal>>[1]
 
