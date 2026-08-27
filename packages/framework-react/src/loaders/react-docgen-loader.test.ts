@@ -143,6 +143,25 @@ describe('getReactDocgenImporter function', () => {
     const result = (imported as any)(filename, basedir)
     expect(result).toBe(mappedFile)
   })
+
+  it('remaps the React Native entry to React Native Web', () => {
+    const dir = createTempProject({
+      'node_modules/react-native-web/dist/index.js': '',
+    })
+    const reactNativeEntry = join(dir, 'node_modules/react-native/index.js')
+    const reactNativeWebEntry = join(
+      dir,
+      'node_modules/react-native-web/dist/index.js',
+    )
+    const imported = getReactDocgenImporter(undefined)
+    reactDocgenResolverMock.defaultLookupModule.mockReturnValue(
+      reactNativeEntry,
+    )
+
+    const result = (imported as any)('react-native', dir)
+
+    expect(result).toBe(reactNativeWebEntry)
+  })
 })
 
 async function runLoader(resourcePath: string) {

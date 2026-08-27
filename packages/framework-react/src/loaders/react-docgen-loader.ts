@@ -2,7 +2,8 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
+import { dirname, sep } from 'node:path'
 import MagicString from 'magic-string'
 import type {
   Documentation,
@@ -161,6 +162,17 @@ export function getReactDocgenImporter(
 
     const result = defaultLookupModule(mappedFilenameByPaths, basedir)
 
+    if (result.includes(`${sep}react-native${sep}index.js`)) {
+      const replaced = result.replace(
+        `${sep}react-native${sep}index.js`,
+        `${sep}react-native-web${sep}dist${sep}index.js`,
+      )
+      if (existsSync(replaced)) {
+        if (RESOLVE_EXTENSIONS.find((ext) => result.endsWith(ext))) {
+          return replaced
+        }
+      }
+    }
     if (RESOLVE_EXTENSIONS.find((ext) => result.endsWith(ext))) {
       return result
     }
