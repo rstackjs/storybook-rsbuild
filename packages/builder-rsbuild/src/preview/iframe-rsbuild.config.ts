@@ -417,18 +417,34 @@ export default async (
         config.env.bugfixes = true
       },
       rspack: (config, { addRules, appendRules, rspack, mergeConfig }) => {
-        addRules({
-          test: /\.stories\.([tj])sx?$|(stories|story)\.mdx$/,
-          exclude: /node_modules/,
-          enforce: 'post',
-          use: [
-            {
-              loader: require.resolve(
-                'storybook-builder-rsbuild/loaders/export-order-loader',
-              ),
+        addRules([
+          {
+            test: /\.stories\.([tj])sx?$|(stories|story)\.mdx$/,
+            exclude: /node_modules/,
+            enforce: 'post',
+            use: [
+              {
+                loader: require.resolve(
+                  'storybook-builder-rsbuild/loaders/export-order-loader',
+                ),
+              },
+            ],
+          },
+          {
+            test: /\.m?js$/,
+            type: 'javascript/auto',
+          },
+          {
+            test: /\.m?js$/,
+            resolve: {
+              fullySpecified: false,
             },
-          ],
-        })
+          },
+          {
+            test: /\.md$/,
+            type: 'asset/source',
+          },
+        ])
 
         // Disable warning for dynamic requires
         config.module ??= {}

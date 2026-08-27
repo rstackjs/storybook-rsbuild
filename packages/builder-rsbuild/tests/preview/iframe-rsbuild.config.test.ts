@@ -294,6 +294,38 @@ describe('iframe-rsbuild.config', () => {
     expect(storiesModule).not.toContain('const importPipeline =')
   })
 
+  it('handles bare Markdown imports as source assets', async () => {
+    const { addRules } = await runRspackTool(false)
+
+    expect(addRules).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          test: /\.md$/,
+          type: 'asset/source',
+        },
+      ]),
+    )
+  })
+
+  it('relaxes strict ESM resolution for JavaScript modules', async () => {
+    const { addRules } = await runRspackTool(false)
+
+    expect(addRules).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          test: /\.m?js$/,
+          type: 'javascript/auto',
+        },
+        {
+          test: /\.m?js$/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
+      ]),
+    )
+  })
+
   it('appends raw query fallback rule for asset/source imports', async () => {
     const { appendRules } = await runRspackTool(false)
 
