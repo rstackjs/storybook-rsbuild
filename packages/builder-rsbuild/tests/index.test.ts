@@ -1,12 +1,16 @@
 import { EventEmitter } from 'node:events'
-import type { Rspack } from '@rsbuild/core'
+import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
-import { bail, printDuration, start } from '../src/index'
+import * as previewBuilder from '../src/index'
+import { rsbuildFinal as applyMockingPreset } from '../src/preview-preset'
 import { createTestOptions } from './fixtures/options'
+
+const { bail, printDuration, start } = previewBuilder
 
 const mocks = rs.hoisted(() => ({
   applyReactShims: rs.fn(),
+  findConfigFile: rs.fn(),
   getPresets: rs.fn(),
   iframeConfig: rs.fn(),
   loggerError: rs.fn(),
@@ -14,6 +18,7 @@ const mocks = rs.hoisted(() => ({
 }))
 
 rs.mock('storybook/internal/common', () => ({
+  findConfigFile: mocks.findConfigFile,
   getPresets: mocks.getPresets,
   resolveAddonName: rs.fn(),
 }))
@@ -126,6 +131,7 @@ const createStartHarness = ({
 
 beforeEach(() => {
   mocks.applyReactShims.mockResolvedValue({})
+  mocks.findConfigFile.mockReturnValue('/project/.storybook/preview.ts')
   mocks.getPresets.mockResolvedValue({
     apply: async (_name: string, config: unknown) => config,
   })
@@ -142,6 +148,39 @@ describe('printDuration', () => {
     startTime[0] -= 72
 
     expect(printDuration(startTime)).toBe('1.2 minutes')
+  })
+})
+
+describe('preset ordering', () => {
+  it('applies mocking after a replacement-style user rsbuildFinal', async () => {
+    const { options } = createTestOptions({
+      overrides: { configDir: '/project/.storybook' },
+    })
+    const { corePresets, overridePresets = [] } =
+      previewBuilder as typeof previewBuilder & {
+        overridePresets?: string[]
+      }
+    let config: RsbuildConfig = {}
+
+    for (const preset of corePresets) {
+      if (preset.endsWith('preview-preset.js')) {
+        config = await applyMockingPreset(config, options)
+      }
+    }
+
+    const userRsbuildFinal = rs.fn(async () => ({
+      source: { alias: { app: '/project/src/app' } },
+    }))
+    config = await userRsbuildFinal()
+
+    for (const preset of overridePresets) {
+      if (preset.endsWith('preview-preset.js')) {
+        config = await applyMockingPreset(config, options)
+      }
+    }
+
+    expect(config.source?.alias).toEqual({ app: '/project/src/app' })
+    expect(config.tools?.rspack).toEqual([expect.any(Function)])
   })
 })
 
