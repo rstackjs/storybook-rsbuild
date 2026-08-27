@@ -194,7 +194,11 @@ describe('preset ordering', () => {
     )
     expect(previewMainTemplate).toBe('/project/.storybook/preview-template.ejs')
     expect(config.resolve?.alias).toEqual({ app: '/project/src/app' })
-    expect(config.tools?.rspack).toEqual([expect.any(Function)])
+    expect(config.plugins).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'storybook:mock' }),
+      ]),
+    )
   })
 })
 

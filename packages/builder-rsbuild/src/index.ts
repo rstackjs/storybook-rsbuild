@@ -4,7 +4,11 @@ import * as rsbuildReal from '@rsbuild/core'
 import fs from 'fs-extra'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
-import { getPresets, resolveAddonName } from 'storybook/internal/common'
+import {
+  findConfigFile,
+  getPresets,
+  resolveAddonName,
+} from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { logger } from 'storybook/internal/node-logger'
 import { WebpackInvocationError } from 'storybook/internal/server-errors'
@@ -13,10 +17,10 @@ import type {
   Preset,
   StorybookConfigRaw,
 } from 'storybook/internal/types'
-import { applyMocking } from './apply-mocking'
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
+import { pluginStorybookMock } from './plugins/rsbuild-plugin-storybook-mock'
 import rsbuildConfig, {
   type RsbuildBuilderOptions,
 } from './preview/iframe-rsbuild.config'
@@ -116,7 +120,18 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
     options,
   )
 
-  return applyMocking(finalConfig, options)
+  const previewConfigPath = findConfigFile('preview', options.configDir)
+  if (!previewConfigPath) {
+    return finalConfig
+  }
+
+  return {
+    ...finalConfig,
+    plugins: [
+      ...(finalConfig.plugins ?? []),
+      pluginStorybookMock({ previewConfigPath }),
+    ],
+  }
 }
 
 export const getConfig: RsbuildBuilder['getConfig'] = async (options) => {
