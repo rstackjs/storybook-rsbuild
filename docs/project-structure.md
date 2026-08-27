@@ -22,4 +22,4 @@
 - **File set changes** — adding, renaming, moving, or deleting a file in those trees needs a `mappings` entry or a `localOnlyFiles` entry.
 - **Content changes** — editing a mapped file so it deliberately departs from its upstream counterpart needs a line in that mapping's `intentionalDivergences` saying why. The audit diffs file contents, so an undocumented divergence is indistinguishable from a bug; no lint or check command catches it.
 
-Tests, `.stories.`, `.d.ts`, `__tests__/`, `__fixtures__/`, and `__mocks__/` files are exempt.
+Tests, `.stories.`, `.d.ts`, `__tests__/`, `__fixtures__/`, and `__mocks__/` files are exempt. The porting doctrine itself lives in [upstream-port.md](upstream-port.md).

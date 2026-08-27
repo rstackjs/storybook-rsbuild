@@ -33,5 +33,6 @@ Read the matching guide before starting the task:
 - Committing, pushing, or opening/updating a PR → [docs/git-workflow.md](docs/git-workflow.md)
 - Editing dependency manifests or lockfiles, or after a `rebase` / `merge` / `stash pop` → [docs/dependencies.md](docs/dependencies.md)
 - Writing/running tests, sandboxes, or e2e → [docs/testing.md](docs/testing.md)
+- Porting or syncing code from upstream `storybookjs/storybook`, or acting on a sync/check report → [docs/upstream-port.md](docs/upstream-port.md)
 - Releasing/publishing → [docs/release.md](docs/release.md)
 - Repo layout, package `exports` / `build-config.ts`, or touching anything under `packages/*/src` → [docs/project-structure.md](docs/project-structure.md)
