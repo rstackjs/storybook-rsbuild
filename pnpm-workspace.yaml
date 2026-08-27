@@ -13,9 +13,6 @@ onlyBuiltDependencies:
   - esbuild
   - simple-git-hooks
 hoistPattern:
-  # the code https://github.com/storybookjs/storybook/blob/1f0efb849d5ba0d527384d8675f4bd33c9497d5e/code/builders/builder-webpack5/src/plugins/webpack-inject-mocker-runtime-plugin.ts#L55
-  # can't work without hoisting '@vitest/mocker', it bundles mock runtime with esbuild which will resolving error.
-  - '@vitest/mocker'
   # react-native-css-interop/babel uses @babel/plugin-transform-react-jsx as a phantom dependency
   - '@babel/plugin-transform-react-jsx'
   # react-native-worklets/plugin uses these as phantom dependencies

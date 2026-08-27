@@ -1,10 +1,10 @@
 import { dirname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Rspack } from '@rsbuild/core'
-import { findMockRedirect } from '@vitest/mocker/redirect'
 import {
   babelParser,
   extractMockCalls,
+  findMockRedirect,
   getIsExternal,
   resolveExternalModule,
   resolveWithExtensions,
