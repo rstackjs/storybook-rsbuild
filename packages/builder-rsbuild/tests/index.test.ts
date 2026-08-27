@@ -97,7 +97,7 @@ const createStartHarness = ({
     },
   }
   const { options } = createTestOptions({
-    presetValues: new Map([
+    presetValues: new Map<string, unknown>([
       ['rsbuildInstance', rsbuildInstance],
       ['webpackAddons', []],
     ]),

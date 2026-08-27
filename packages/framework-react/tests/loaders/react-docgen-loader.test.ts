@@ -5,12 +5,12 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
-import * as docgenResolverActual from './docgen-resolver' with {
+import * as docgenResolverActual from '../../src/loaders/docgen-resolver' with {
   rstest: 'importActual',
 }
 import reactDocgenLoader, {
   getReactDocgenImporter,
-} from './react-docgen-loader'
+} from '../../src/loaders/react-docgen-loader'
 
 const { reactDocgenActual } = rs.hoisted(() => {
   return {
@@ -31,7 +31,7 @@ const reactDocgenResolverMock = rs.hoisted(() => {
   }
 })
 
-rs.mock('./docgen-resolver', () => {
+rs.mock('../../src/loaders/docgen-resolver', () => {
   return {
     ...docgenResolverActual,
     defaultLookupModule: reactDocgenResolverMock.defaultLookupModule,

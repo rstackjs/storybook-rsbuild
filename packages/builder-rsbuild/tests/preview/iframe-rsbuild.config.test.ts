@@ -294,7 +294,7 @@ describe('iframe-rsbuild.config', () => {
     options.features = {
       ...options.features,
       babelRemoveBugfixes,
-    }
+    } as typeof options.features
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
     )

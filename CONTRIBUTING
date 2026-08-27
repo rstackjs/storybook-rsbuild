@@ -17,9 +17,11 @@ Then development with the packages in `./sandboxes`.
 
 For repository maintainers:
 
-1. bump version locally with changeset (`changeset add` and `changeset version`) and generate a bump commit.
-2. create a PR to merge the commit into main branch.
+1. bump versions locally with `pnpm bump patch|minor|major` from `main` (behavior is pinned in `bump.config.ts`) and push the resulting version commit to `origin/main`.
+2. wait for CI on that commit to go green.
 3. trigger [rstackjs/storybook-rsbuild/actions/workflows/release.yaml](https://github.com/rstackjs/storybook-rsbuild/actions/workflows/release.yaml) manually, NPM publish, git tag push and GitHub Release will be created then.
+
+See [docs/release.md](docs/release.md) for the full workflow and its gotchas.
 
 ## E2E Testing
 

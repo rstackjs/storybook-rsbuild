@@ -1,13 +1,13 @@
 import { describe, expect, it } from '@rstest/core'
-import type { StorybookConfigRsbuild } from './types'
+import type { StorybookConfig } from '../src/types'
 
 const features = {
   experimentalTestSyntax: true,
   babelRemoveBugfixes: true,
-} satisfies NonNullable<StorybookConfigRsbuild['features']>
+} satisfies NonNullable<StorybookConfig['features']>
 
-describe('StorybookConfigRsbuild', () => {
-  it('accepts builder feature flags', () => {
+describe('StorybookConfig', () => {
+  it('accepts React framework feature flags', () => {
     expect(features).toEqual({
       experimentalTestSyntax: true,
       babelRemoveBugfixes: true,
