@@ -387,6 +387,17 @@ describe('iframe-rsbuild.config', () => {
     expect(rspackConfig.optimization.sideEffects).toBe(true)
   })
 
+  it.each([false, 'flag'] as const)(
+    'preserves user-provided side-effects analysis value %s',
+    async (sideEffects) => {
+      const { rspackConfig } = await runRspackTool(false, [], {
+        optimization: { sideEffects },
+      })
+
+      expect(rspackConfig.optimization.sideEffects).toBe(sideEffects)
+    },
+  )
+
   it('merges fallback defaults without overriding user values', async () => {
     const { rspackConfig } = await runRspackTool(false, [], {
       resolve: {

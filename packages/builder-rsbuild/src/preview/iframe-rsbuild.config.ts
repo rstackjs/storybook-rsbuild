@@ -507,7 +507,7 @@ export default async (
 
         config.optimization ??= {}
         config.optimization.runtimeChunk = true
-        config.optimization.sideEffects = true
+        config.optimization.sideEffects ??= true
         config.optimization.usedExports = options.build?.test
           ?.disableTreeShaking
           ? false
