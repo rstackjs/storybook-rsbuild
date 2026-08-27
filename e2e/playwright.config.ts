@@ -18,6 +18,9 @@ export default defineConfig({
   timeout: isCI ? 360_000 : 180_000,
   use: {
     ...devices['Desktop Chrome'],
+    // Use the runner's pre-installed Chrome on CI so the workflow needs no
+    // Playwright browser download, cache, or system deps.
+    channel: isCI ? 'chrome' : undefined,
     headless: true,
     trace: 'retain-on-failure',
     navigationTimeout: 60_000,

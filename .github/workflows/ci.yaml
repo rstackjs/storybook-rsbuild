@@ -68,10 +68,10 @@ jobs:
           npm install -g corepack@latest --force
           corepack enable
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: 'pnpm'
 
       - name: Install Dependencies
@@ -85,18 +85,25 @@ jobs:
           pnpm check-dependency-version
   # ======== test ========
   test-build:
-    needs: [lint-check, changes]
+    # Only gated by the path filter — lint-check runs in parallel and is
+    # still enforced via the ci-passed aggregator.
+    needs: [changes]
     # Non-PR events (push to main/v1, merge_group, workflow_dispatch)
     # always run heavy as a post-merge safety net; PR events go through
     # the `changes` path filter.
     if: github.event_name != 'pull_request' || needs.changes.outputs.heavy == 'true'
+    # One job per OS instead of a full node × OS product; Node 22 (oldest
+    # active LTS we target) on Linux, Node 26 smoke-tests the other platforms.
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            node-version: 22.x
+          - os: macos-latest
+            node-version: 26.x
+          - os: windows-latest
+            node-version: 26.x
     runs-on: ${{ matrix.os }}
-    env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -120,24 +127,8 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
 
-      - name: Prepare Playwright cache directory
-        shell: bash
-        run: mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Playwright system dependencies
-        if: runner.os == 'Linux'
-        run: pnpm exec playwright install-deps
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install chromium
+      # No Playwright browser install/cache: e2e runs on the runner's
+      # pre-installed Chrome via `channel: 'chrome'` (e2e/playwright.config.ts).
 
       # `pnpm dedupe --check` still find duplications after run `pnpm dedupe`
       # - name: Check pnpm Dedupe

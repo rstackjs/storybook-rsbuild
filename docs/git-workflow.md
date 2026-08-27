@@ -4,7 +4,7 @@
 
 - Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
 - Subject line under 72 characters.
-- `git commit` fires a `simple-git-hooks` pre-commit hook (`npx nano-staged`) that **rewrites staged files in place**: `biome check --write` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`, plus `sort-package-json` on every staged `package.json`. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff, and never bypass with `--no-verify` (unformatted code fails CI's `pnpm lint`, and the test matrix `needs` that job).
+- `git commit` fires a `simple-git-hooks` pre-commit hook (`npx nano-staged`) that **rewrites staged files in place**: `biome check --write` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`, plus `sort-package-json` on every staged `package.json`. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff, and never bypass with `--no-verify` (unformatted code fails CI's `pnpm lint`, which gates the merge via the `ci-passed` aggregator).
 
 ## Linking upstream storybookjs/storybook
 
@@ -29,5 +29,5 @@ CI runs these on the PR; all must be green before merge (order matches CI — it
 
 Two things the list does not show:
 
-- The test matrix `needs` the lint/type-check job — a Biome, type, or dependency-version failure means the tests never start and the PR returns no test signal. Run `pnpm lint` first.
+- The lint/type-check job runs in parallel with the test matrix; a Biome, type, or dependency-version failure still blocks the merge through the `ci-passed` aggregator even when every test job is green. Run `pnpm lint` first.
 - A PR whose diff touches only safelisted paths (docs, website, editor config — the exact filter lives in `.github/workflows/ci.yaml`) skips the test matrix, so a green check there proves nothing about tests. `.agents/**` is not safelisted — the agent skills and the port manifest live there, and the safelisted `.claude/skills` is only a symlink to it. The filter applies to `pull_request` events only; pushes to `main`, merge groups, and manual dispatches run the full matrix.
