@@ -8,7 +8,7 @@
     "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "bump": "bumpp",
     "check": "pnpm --parallel --filter \"./packages/**\" run check",
-    "check-dependency-version": "pnpm tsx ./scripts/check-dependency-version.mts",
+    "check-dependency-version": "pnpm jiti ./scripts/check-dependency-version.mts",
     "dev": "pnpm --parallel --filter \"./packages/**\" run prep --watch",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
     "format": "biome check --write --unsafe",
@@ -43,7 +43,6 @@
     "sort-package-json": "^2.15.1",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^2.3.0",
-    "tsx": "4.23.0",
     "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.14.0"
