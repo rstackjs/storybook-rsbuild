@@ -89,6 +89,7 @@ pnpm build:sandboxes
 
 - Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
 - Subject line under 72 characters.
+- When linking a PR or issue of the upstream `storybookjs/storybook` repository in an issue/PR body or comment, use the `redirect.github.com` host (e.g. `https://redirect.github.com/storybookjs/storybook/pull/14281`) so GitHub does not create backlink notifications on the upstream thread. Use a plain `github.com` link only when explicitly asked to mention/ping that PR or issue. Links to other repositories and plain commit messages are unaffected.
 - Before pushing updates to a branch or PR, first verify dependency manifests and `pnpm-lock.yaml` are in sync, then locally run the CI-relevant validation commands for the changes and fix failures instead of relying on CI to catch them.
 - **PR Checklist**:
   - `pnpm lint` passes.
