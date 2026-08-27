@@ -150,7 +150,8 @@
       "local": "packages/framework-react/src/preset.ts",
       "intentionalDivergences": [
         "core expressed as an async PresetProperty that reads frameworkOptions and forwards frameworkOptions.builder as builder options — upstream made core a static object (PR #34260), but iframe-rsbuild.config.ts consumes builderOptions.lazyCompilation/fsCache so the function form is retained (repo-wide idiom across all framework packages)",
-        "builder/renderer specifiers wrapped in fileURLToPath — Rsbuild presets take paths, not file:// URLs (repo-wide idiom)"
+        "builder/renderer specifiers wrapped in fileURLToPath — Rsbuild presets take paths, not file:// URLs (repo-wide idiom)",
+        "@storybook/react alias is injected through rsbuildFinal with a framework-local createRequire resolution and merged before the inherited config so explicit user aliases win — upstream injects it in the webpack preset before user webpackFinal (upstream PR #18461)"
       ]
     },
     {
@@ -191,7 +192,9 @@
       "local": null,
       "reviewWith": "packages/framework-react",
       "note": "Vite twin of the react-docgen port; the port source is code/presets/react-webpack/src/loaders/react-docgen-loader.ts. Review only for docgen behaviors the webpack twin lacks.",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "react-native -> react-native-web importer remap lives in packages/framework-react/src/loaders/react-docgen-loader.ts because the local loader serves both upstream docgen implementations (upstream PR #31324)"
+      ]
     },
     {
       "upstream": "code/frameworks/react-vite/src/plugins/docgen-resolver.ts",
