@@ -12,7 +12,6 @@ When working on code in some specific package, use the Read tool to load that pa
 - Use **Biome** for formatting and linting (indentation: 2 spaces, single quotes, minimal semicolons).
 - Use **Rstest** for unit testing.
 - Follow the **kebab-case** convention for directories, filenames, and package names.
-- Use explicit `.ts`/`.tsx` extensions.
 - Colocate sandbox helpers with their owning packages.
 - Update relevant `sandboxes/` when adding or modifying features.
 - After any `rebase`, `merge`, or `stash pop` that changes dependency files (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`), run `pnpm install` before any validation command (`build`, `test`, `e2e`, `lint`).

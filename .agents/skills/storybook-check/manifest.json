@@ -231,14 +231,18 @@
     {
       "upstream": "code/frameworks/vue3-vite/src/types.ts",
       "local": "packages/framework-vue3/src/types.ts",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "public VueDocgenInfo and VueDocgenInfoEntry declarations are local ComponentDoc-based equivalents because pinned @storybook/vue3 does not export upstream's types; vue-component-meta metadata resolves to never and remains deferred with V2/issue #544"
+      ]
     },
     {
       "upstream": "code/frameworks/vue3-vite/src/docgen/options.ts",
       "local": null,
       "reviewWith": "packages/framework-vue3",
-      "note": "Part of upstream's docgen-server migration (vue-docgen-api deprecation, experimentalDocgenServer feature flag). Deferred on issue #544 until @storybook/vue3 exports the docgen engines. Review for the option-resolution contract (docgen: false | true | string | object) that framework-vue3 will need when the migration lands.",
-      "intentionalDivergences": []
+      "note": "Part of upstream's docgen-server migration (vue-docgen-api deprecation, experimentalDocgenServer feature flag). The docgen-server portion remains deferred on issue #544 until @storybook/vue3 exports the required contracts.",
+      "intentionalDivergences": [
+        "docgen option resolution is folded into framework-preset-vue3.ts instead of a separate module: false disables the loader while undefined, true, and vue-docgen-api retain the existing vue-docgen-api loader"
+      ]
     },
     {
       "upstream": "code/frameworks/vue3-vite/src/docgen/preset.ts",
@@ -259,8 +263,10 @@
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-component-meta.ts",
       "local": null,
       "reviewWith": "packages/framework-vue3",
-      "note": "Alternative docgen backend (vue-component-meta) with a vite-specific implementation. Review whether the capability or its options should have an Rsbuild parallel in framework-vue3.",
-      "intentionalDivergences": []
+      "note": "Alternative docgen backend (vue-component-meta) with a Vite-specific implementation. The Rsbuild engine remains deferred with V2 on issue #544.",
+      "intentionalDivergences": [
+        "docgen option accepts vue-component-meta string/object selectors for upstream config portability, but logs a warning and falls back to vue-docgen-api because the vue-component-meta engine remains deferred with V2/issue #544"
+      ]
     },
     {
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-template.ts",

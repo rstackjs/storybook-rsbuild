@@ -1,10 +1,27 @@
 import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
-import type { StorybookConfig } from './types'
+import { logger } from 'storybook/internal/node-logger'
+import type { FrameworkOptions, StorybookConfig } from './types'
 
-const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = (
+const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
   _config,
   options,
-): RsbuildConfig => {
+): Promise<RsbuildConfig> => {
+  const frameworkOptions = await options.presets.apply<FrameworkOptions | null>(
+    'frameworkOptions',
+  )
+  if (frameworkOptions?.docgen === false) {
+    return {}
+  }
+  if (
+    frameworkOptions?.docgen === 'vue-component-meta' ||
+    (typeof frameworkOptions?.docgen === 'object' &&
+      frameworkOptions.docgen.plugin === 'vue-component-meta')
+  ) {
+    logger.warn(
+      'vue-component-meta is not yet supported by storybook-rsbuild; falling back to vue-docgen-api.',
+    )
+  }
+
   let vueDocgenOptions = {}
 
   for (const preset of options.presetsList || []) {
@@ -59,13 +76,13 @@ const rsbuildFinalBase: StorybookConfig['rsbuildFinal'] = (
   }
 }
 
-export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = (
+export const rsbuildFinal: StorybookConfig['rsbuildFinal'] = async (
   config,
   options,
 ) => {
   return mergeRsbuildConfig(
     config,
     rsbuildFinalBase(config, options),
-    rsbuildFinalDoc(config, options),
+    await rsbuildFinalDoc(config, options),
   )
 }
