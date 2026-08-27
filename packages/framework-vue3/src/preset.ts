@@ -21,5 +21,9 @@ export const core: PresetProperty<'core'> = async (config, options) => {
 
 export const typescript: PresetProperty<'typescript'> = async (config) => ({
   ...config,
+  // Intentional divergence: generic ts-checker skips .vue SFCs; upstream Vue3 Vite has no SFC check.
+  // Users can set typescript.skipCompiler=false and
+  // typescript.checkOptions.tsCheckerOptions.typescript.typescriptPath='@esctn/vue-tsc-api' in main.ts.
+  // https://github.com/storybookjs/storybook/blob/0f8be9ce02f2e2d8d8730b8b3c7fecb61edc1fd7/code/frameworks/vue3-vite/src/preset.ts
   skipCompiler: true,
 })

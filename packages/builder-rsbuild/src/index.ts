@@ -125,6 +125,9 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
     return finalConfig
   }
 
+  // Intentional divergence: this Vite-style builder appends mocking here after the user's hook,
+  // rather than using builder-webpack5's overridePresets slot; the ordering is equivalent.
+  // https://github.com/storybookjs/storybook/blob/0f8be9ce02f2e2d8d8730b8b3c7fecb61edc1fd7/code/builders/builder-webpack5/src/presets/custom-webpack-preset.ts
   return {
     ...finalConfig,
     plugins: [
