@@ -369,12 +369,14 @@ export default async (
     },
     source: {
       define: {
+        'process.env': `(${JSON.stringify(envs)})`,
         ...stringifyProcessEnvs(envs),
         'process.env.NODE_ENV': JSON.stringify(
           features?.developmentModeForBuild && isProd
             ? 'development'
             : process.env.NODE_ENV,
         ),
+        ...contentFromConfig.source?.define,
       },
     },
     // Rsbuild v1 compatible: `performance.chunkSplit` is deprecated in Rsbuild v2, use top-level `splitChunks` instead.
@@ -412,9 +414,17 @@ export default async (
     ].filter(Boolean),
     tools: {
       swc: (config) => {
+        const shouldRemoveBugfixes =
+          features &&
+          'babelRemoveBugfixes' in features &&
+          features.babelRemoveBugfixes
+
         config.env ??= {}
-        // Ensure the deconstruction of the in-play function in parameters.
-        config.env.bugfixes = true
+        if (!shouldRemoveBugfixes) {
+          // Transpile broken syntax to the closest non-broken modern syntax so parameter
+          // destructuring in Safari does not break play-function context detection.
+          config.env.bugfixes ??= true
+        }
       },
       rspack: (config, { addRules, appendRules, rspack, mergeConfig }) => {
         addRules([
@@ -460,6 +470,7 @@ export default async (
             ...builtInResolveExtensions,
           ]),
         )
+        config.resolve.modules ??= ['node_modules'].concat(envs.NODE_PATH || [])
         // `'...'` is Rspack's sentinel for "keep the default conditions" — without it the
         // defaults are replaced rather than extended.
         // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/builders/builder-webpack5/src/preview/base-webpack.config.ts#L98-L104
@@ -482,7 +493,8 @@ export default async (
         ]
 
         config.resolve ??= {}
-        config.resolve.fallback ??= {
+        config.resolve.fallback = {
+          crypto: false,
           stream: false,
           path: require.resolve('path-browserify'),
           assert: require.resolve('browser-assert'),
@@ -490,10 +502,12 @@ export default async (
           url: require.resolve('url'),
           fs: false,
           constants: require.resolve('constants-browserify'),
+          ...config.resolve.fallback,
         }
 
         config.optimization ??= {}
         config.optimization.runtimeChunk = true
+        config.optimization.sideEffects = true
         config.optimization.usedExports = options.build?.test
           ?.disableTreeShaking
           ? false

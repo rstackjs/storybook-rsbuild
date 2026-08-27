@@ -69,7 +69,14 @@ const createOptions = (
     ],
     ['framework', {}],
     ['frameworkOptions', { renderer: '@storybook/react', legacyRootApi: true }],
-    ['env', { STORYBOOK_ENV: 'development' }],
+    [
+      'env',
+      {
+        STORYBOOK_ENV: 'development',
+        STORYBOOK_SECOND_ENV: 'defined-per-key',
+        NODE_PATH: ['/workspace/shared', '/workspace/generated'],
+      },
+    ],
     ['logLevel', 'info'],
     ['previewHead', '<!-- head -->'],
     ['previewBody', '<!-- body -->'],
@@ -142,6 +149,24 @@ describe('iframe-rsbuild.config', () => {
 
     expect(config.source?.entry).toEqual({
       main: [storybookEntries[0], expectedDynamicEntry],
+    })
+  })
+
+  it('defines process.env as an object while preserving per-key user defines', async () => {
+    const { options } = createOptions()
+
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+
+    expect(config.source?.define).toMatchObject({
+      'process.env': `(${JSON.stringify({
+        STORYBOOK_ENV: 'development',
+        STORYBOOK_SECOND_ENV: 'defined-per-key',
+        NODE_PATH: ['/workspace/shared', '/workspace/generated'],
+      })})`,
+      'process.env.STORYBOOK_ENV': JSON.stringify('user-defined'),
+      'process.env.STORYBOOK_SECOND_ENV': JSON.stringify('defined-per-key'),
     })
   })
 
@@ -224,6 +249,7 @@ describe('iframe-rsbuild.config', () => {
   const runRspackTool = async (
     lazyCompilation: LazyCompilationOption | 'unset',
     staticDirs: unknown = [],
+    baseConfig: Rspack.Configuration = {},
   ) => {
     const { options } = createOptions(
       lazyCompilation,
@@ -237,7 +263,6 @@ describe('iframe-rsbuild.config', () => {
     const rspackTool = config.tools?.rspack
     expect(typeof rspackTool).toBe('function')
 
-    const baseConfig = {} as any
     const addRules = rs.fn()
     const appendRules = rs.fn()
     let virtualModules: Record<string, string> = {}
@@ -259,6 +284,26 @@ describe('iframe-rsbuild.config', () => {
     }) as any
 
     return { rspackConfig: result, addRules, appendRules, virtualModules }
+  }
+
+  const runSwcTool = async (
+    swcConfig: Record<string, any>,
+    babelRemoveBugfixes = false,
+  ) => {
+    const { options } = createOptions()
+    options.features = {
+      ...options.features,
+      babelRemoveBugfixes,
+    }
+    const config = await createIframeRsbuildConfig(
+      options as RsbuildBuilderOptions,
+    )
+
+    const swcTool = config.tools?.swc
+    expect(typeof swcTool).toBe('function')
+    ;(swcTool as any)(swcConfig)
+
+    return swcConfig
   }
 
   it('uses entries:false when lazyCompilation is unset', async () => {
@@ -324,6 +369,74 @@ describe('iframe-rsbuild.config', () => {
         },
       ]),
     )
+  })
+
+  it('resolves modules from NODE_PATH', async () => {
+    const { rspackConfig } = await runRspackTool(false)
+
+    expect(rspackConfig.resolve.modules).toEqual([
+      'node_modules',
+      '/workspace/shared',
+      '/workspace/generated',
+    ])
+  })
+
+  it('enables side-effects analysis in development', async () => {
+    const { rspackConfig } = await runRspackTool(false)
+
+    expect(rspackConfig.optimization.sideEffects).toBe(true)
+  })
+
+  it('merges fallback defaults without overriding user values', async () => {
+    const { rspackConfig } = await runRspackTool(false, [], {
+      resolve: {
+        fallback: {
+          assert: 'user-assert',
+          custom: 'user-custom',
+        },
+      },
+    })
+
+    expect(rspackConfig.resolve.fallback).toMatchObject({
+      crypto: false,
+      stream: false,
+      path: expect.any(String),
+      assert: 'user-assert',
+      util: expect.any(String),
+      url: expect.any(String),
+      fs: false,
+      constants: expect.any(String),
+      custom: 'user-custom',
+    })
+  })
+
+  it('preserves a user-provided SWC bugfixes value', async () => {
+    const swcConfig = await runSwcTool({
+      env: {
+        targets: ['chrome >= 100'],
+        bugfixes: false,
+      },
+    })
+
+    expect(swcConfig.env).toEqual({
+      targets: ['chrome >= 100'],
+      bugfixes: false,
+    })
+  })
+
+  it('omits the SWC bugfixes default when the feature opts out', async () => {
+    const swcConfig = await runSwcTool(
+      {
+        env: {
+          targets: ['chrome >= 100'],
+        },
+      },
+      true,
+    )
+
+    expect(swcConfig.env).toEqual({
+      targets: ['chrome >= 100'],
+    })
   })
 
   it('appends raw query fallback rule for asset/source imports', async () => {
