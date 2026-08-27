@@ -13,7 +13,7 @@ Storybook Rsbuild 提供了多种自定义构建流程和行为的方式。本�
 该函数接收当前的 Rsbuild 配置和一个 options 对象，并应返回修改后的配置。
 
 :::warning 使用 `mergeRsbuildConfig` 进行修改
-始终使用来自 `@rsbuild/core` 的 [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) 来修改配置。直接修改诸如 `config.tools.rspack = {...}` 之类的属性可能不会生效，因为内部配置可能是函数/对象组成的数组，直接赋值可能会被静默忽略。
+在 `rsbuildFinal` 中应始终使用来自 `@rsbuild/core` 的 [`mergeRsbuildConfig`](https://rsbuild.rs/api/javascript-api/core#mergersbuildconfig) 修改配置；不支持返回全新的配置对象。直接替换 `config.tools.rspack = {...}` 等属性也可能被静默忽略，因为内部配置可能是由函数和对象组成的数组。使用函数形式的 `tools.rspack` 时，请修改并返回传入的配置，或使用回调提供的 `mergeConfig`；返回全新对象会静默丢弃 Storybook 注入的配置，例如 `sb.mock` 机制。
 :::
 
 ```ts twoslash title=".storybook/main.ts"
