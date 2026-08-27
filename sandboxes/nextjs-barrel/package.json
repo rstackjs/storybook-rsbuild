@@ -1,0 +1,13 @@
+{
+  "name": "@sandboxes/nextjs-barrel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "main": "./index.ts",
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+  }
+}

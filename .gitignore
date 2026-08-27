@@ -150,3 +150,6 @@ compiled/
 
 # Storybook scripts
 /code/bench
+
+# Agent tooling state
+.claude/
