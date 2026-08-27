@@ -161,11 +161,11 @@ describe('preset ordering', () => {
       new URL('../templates/preview.ejs', import.meta.url),
     )
     const baseConfig: RsbuildConfig = {
-      source: { alias: { base: '/project/src/base' } },
+      resolve: { alias: { base: '/project/src/base' } },
     }
     const userRsbuildFinal = rs.fn(
       async (_config: RsbuildConfig): Promise<RsbuildConfig> => ({
-        source: { alias: { app: '/project/src/app' } },
+        resolve: { alias: { app: '/project/src/app' } },
       }),
     )
     const userPreviewMainTemplate = rs.fn(
@@ -193,7 +193,7 @@ describe('preset ordering', () => {
       expectedDefaultTemplate,
     )
     expect(previewMainTemplate).toBe('/project/.storybook/preview-template.ejs')
-    expect(config.source?.alias).toEqual({ app: '/project/src/app' })
+    expect(config.resolve?.alias).toEqual({ app: '/project/src/app' })
     expect(config.tools?.rspack).toEqual([expect.any(Function)])
   })
 })
