@@ -3,7 +3,8 @@ import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import * as previewBuilder from '../src/index'
-import { rsbuildFinal as applyMockingPreset } from '../src/preview-preset'
+import { rsbuildFinal as applyMockingPreset } from '../src/override-preset'
+import { previewMainTemplate as applyPreviewMainTemplate } from '../src/preview-preset'
 import { createTestOptions } from './fixtures/options'
 
 const { bail, printDuration, start } = previewBuilder
@@ -152,7 +153,7 @@ describe('printDuration', () => {
 })
 
 describe('preset ordering', () => {
-  it('applies mocking after a replacement-style user rsbuildFinal', async () => {
+  it('preserves a custom template while applying mocking after user config', async () => {
     const { options } = createTestOptions({
       overrides: { configDir: '/project/.storybook' },
     })
@@ -161,10 +162,11 @@ describe('preset ordering', () => {
         overridePresets?: string[]
       }
     let config: RsbuildConfig = {}
+    let previewMainTemplate = ''
 
     for (const preset of corePresets) {
       if (preset.endsWith('preview-preset.js')) {
-        config = await applyMockingPreset(config, options)
+        previewMainTemplate = applyPreviewMainTemplate()
       }
     }
 
@@ -172,13 +174,15 @@ describe('preset ordering', () => {
       source: { alias: { app: '/project/src/app' } },
     }))
     config = await userRsbuildFinal()
+    previewMainTemplate = '/project/.storybook/preview-template.ejs'
 
     for (const preset of overridePresets) {
-      if (preset.endsWith('preview-preset.js')) {
+      if (preset.endsWith('override-preset.js')) {
         config = await applyMockingPreset(config, options)
       }
     }
 
+    expect(previewMainTemplate).toBe('/project/.storybook/preview-template.ejs')
     expect(config.source?.alias).toEqual({ app: '/project/src/app' })
     expect(config.tools?.rspack).toEqual([expect.any(Function)])
   })

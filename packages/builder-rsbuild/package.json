@@ -103,6 +103,7 @@
   "bundler": {
     "entries": [
       "./src/index.ts",
+      "./src/override-preset.ts",
       "./src/preview-preset.ts",
       "./src/loaders/export-order-loader.ts",
       "./src/loaders/storybook-mock-transform-loader.ts",

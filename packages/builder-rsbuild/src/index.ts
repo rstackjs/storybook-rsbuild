@@ -292,8 +292,8 @@ export const build: ({ options }: BuilderStartOptions) => Promise<Stats> =
     return withStatsJsonCompat(stats!)
   }
 
-export const corePresets = []
-export const overridePresets = [join(__dirname, './preview-preset.js')]
+export const corePresets = [join(__dirname, './preview-preset.js')]
+export const overridePresets = [join(__dirname, './override-preset.js')]
 
 export const previewMainTemplate = () =>
   require.resolve('storybook-builder-rsbuild/templates/preview.ejs')
