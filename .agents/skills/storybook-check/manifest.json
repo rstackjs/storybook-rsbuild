@@ -63,7 +63,11 @@
         "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities",
         "build.test.esbuildMinify branch not ported: Rsbuild's output.minify.jsOptions only exposes the built-in SWC minimizer, no clean seam to swap in esbuild (mangle:false/keep_fnames ported in PR #549)",
         "prod minify fragment is injected only when the inherited rsbuild.config has no JS minification customization (no minify: false, minify.js, or minify.jsOptions) — upstream minimizes unconditionally, but the inherited-config path (PR #538) is a local-only feature whose minify settings are user-owned (PR #549 review)",
-        "prod minifier uses mangle: { keep_fnames, keep_classnames } instead of upstream's mangle: false — same name-preservation goal (docs titles, Show code) with ~26% smaller gzip; known accepted boundary: `const X = class {}` binding-inferred names are still mangled (rare form, docgen displayName covers user source) (PR #549)"
+        "prod minifier uses mangle: { keep_fnames, keep_classnames } instead of upstream's mangle: false — same name-preservation goal (docs titles, Show code) with ~26% smaller gzip; known accepted boundary: `const X = class {}` binding-inferred names are still mangled (rare form, docgen displayName covers user source) (PR #549)",
+        "SWC env.targets default comes from Rsbuild's browserslist chain (.browserslistrc / overrideBrowserslist) instead of upstream's hardcoded chrome 100/safari 15/firefox 91 floor — upstream hardcodes only because builder-webpack5 has no browserslist integration; explicit user env.targets wins identically on both sides (PR #556)",
+        "B1/B11 module rules use Rsbuild's addRules() API, whose prepend ordering keeps user-provided rules later in the merged config so they retain upstream-equivalent precedence (PR #556)",
+        "fallback defaults retain the builder's existing browser polyfills while adding upstream's crypto: false, and merge user fallback values last to fix the local ??= all-or-nothing bug while preserving user precedence (PR #556)",
+        "optimization.sideEffects: true is applied through Rsbuild's tools.rspack hook instead of raw webpack config (PR #556)"
       ]
     },
     {
