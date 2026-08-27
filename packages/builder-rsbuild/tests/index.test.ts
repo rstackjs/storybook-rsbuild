@@ -1,10 +1,12 @@
 import { EventEmitter } from 'node:events'
+import { basename } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import * as previewBuilder from '../src/index'
-import { rsbuildFinal as applyMockingPreset } from '../src/override-preset'
-import { previewMainTemplate as applyPreviewMainTemplate } from '../src/preview-preset'
+import * as overridePreset from '../src/override-preset'
+import * as previewPreset from '../src/preview-preset'
 import { createTestOptions } from './fixtures/options'
 
 const { bail, printDuration, start } = previewBuilder
@@ -157,31 +159,68 @@ describe('preset ordering', () => {
     const { options } = createTestOptions({
       overrides: { configDir: '/project/.storybook' },
     })
-    const { corePresets, overridePresets = [] } =
-      previewBuilder as typeof previewBuilder & {
-        overridePresets?: string[]
-      }
-    let config: RsbuildConfig = {}
-    let previewMainTemplate = ''
+    const expectedDefaultTemplate = fileURLToPath(
+      new URL('../templates/preview.ejs', import.meta.url),
+    )
+    const baseConfig: RsbuildConfig = {
+      source: { alias: { base: '/project/src/base' } },
+    }
+    const userRsbuildFinal = rs.fn(
+      async (_config: RsbuildConfig): Promise<RsbuildConfig> => ({
+        source: { alias: { app: '/project/src/app' } },
+      }),
+    )
+    const userPreviewMainTemplate = rs.fn(
+      (_template?: string) => '/project/.storybook/preview-template.ejs',
+    )
+    type PresetModule = {
+      previewMainTemplate?: (template?: string) => string
+      rsbuildFinal?: typeof overridePreset.rsbuildFinal
+    }
+    const presetModules: Record<string, PresetModule> = {
+      'override-preset.js': overridePreset,
+      'preview-preset.js': previewPreset,
+    }
+    const userPreset: PresetModule = {
+      previewMainTemplate: userPreviewMainTemplate,
+      rsbuildFinal: userRsbuildFinal,
+    }
+    const orderedPresets = [
+      ...previewBuilder.corePresets.map(
+        (presetPath) => presetModules[basename(presetPath)],
+      ),
+      userPreset,
+      ...previewBuilder.overridePresets.map(
+        (presetPath) => presetModules[basename(presetPath)],
+      ),
+    ]
 
-    for (const preset of corePresets) {
-      if (preset.endsWith('preview-preset.js')) {
-        previewMainTemplate = applyPreviewMainTemplate()
+    expect(previewPreset).not.toHaveProperty('rsbuildFinal')
+    expect(overridePreset).not.toHaveProperty('previewMainTemplate')
+    expect(previewPreset.previewMainTemplate()).toBe(expectedDefaultTemplate)
+    expect(orderedPresets).not.toContain(undefined)
+
+    let config = baseConfig
+    let previewMainTemplate: string | undefined
+    for (const preset of orderedPresets) {
+      if (!preset) {
+        throw new Error('Builder registered a preset without a test module')
+      }
+      if (preset.rsbuildFinal) {
+        config = await preset.rsbuildFinal(config, options)
+      }
+      if (preset.previewMainTemplate) {
+        previewMainTemplate = preset.previewMainTemplate(previewMainTemplate)
       }
     }
 
-    const userRsbuildFinal = rs.fn(async () => ({
-      source: { alias: { app: '/project/src/app' } },
-    }))
-    config = await userRsbuildFinal()
-    previewMainTemplate = '/project/.storybook/preview-template.ejs'
-
-    for (const preset of overridePresets) {
-      if (preset.endsWith('override-preset.js')) {
-        config = await applyMockingPreset(config, options)
-      }
-    }
-
+    expect(userRsbuildFinal).toHaveBeenCalledExactlyOnceWith(
+      baseConfig,
+      options,
+    )
+    expect(userPreviewMainTemplate).toHaveBeenCalledExactlyOnceWith(
+      expectedDefaultTemplate,
+    )
     expect(previewMainTemplate).toBe('/project/.storybook/preview-template.ejs')
     expect(config.source?.alias).toEqual({ app: '/project/src/app' })
     expect(config.tools?.rspack).toEqual([expect.any(Function)])
