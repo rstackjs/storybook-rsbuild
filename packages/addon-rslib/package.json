@@ -52,7 +52,7 @@
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
-    "@rslib/core": ">= 0.1.1 || >= 0.2",
+    "@rslib/core": ">= 0.1.1 || >= 0.2 || >= 1.0.0-0",
     "storybook-builder-rsbuild": "workspace:^"
   },
   "peerDependenciesMeta": {
