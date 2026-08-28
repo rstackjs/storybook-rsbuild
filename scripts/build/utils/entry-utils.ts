@@ -18,12 +18,3 @@ export type BuildEntries = {
    */
   extraOutputs?: Record<string, string>
 }
-
-export const RUNTIME_EXTERNAL_EXCLUDE = [
-  '@testing-library/jest-dom',
-  '@testing-library/user-event',
-  'chai',
-  '@vitest/expect',
-  '@vitest/spy',
-  '@vitest/utils',
-]

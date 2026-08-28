@@ -3,7 +3,6 @@ import { extname, join } from 'node:path'
 
 import type { RslibConfig, RslibConfigAsyncFn, Rspack } from '@rslib/core'
 import type { BuildEntries, BuildEntry } from './utils/entry-utils.ts'
-import { RUNTIME_EXTERNAL_EXCLUDE } from './utils/entry-utils.ts'
 import { generatePackageJsonFile } from './utils/generate-package-json.ts'
 import {
   BROWSER_TARGETS,
@@ -20,6 +19,7 @@ type CreateRslibConfigOptions = {
 }
 
 const browserSyntax = BROWSER_TARGETS.map(toBrowserslistTarget)
+// Upstream-parity guard for future ported RN-web code; no current in-repo source needs this transform.
 const browserForcedTransforms =
   SUPPORTED_FEATURES['class-static-blocks'] === false
     ? ['transform-class-static-block']
@@ -82,9 +82,7 @@ export function createRslibConfig(
       bundle: true,
       format: 'esm',
       output: {
-        autoExternal: {
-          exclude: RUNTIME_EXTERNAL_EXCLUDE,
-        },
+        autoExternal: true,
         cleanDistPath: !skipDts,
         distPath: {
           root: './dist',
