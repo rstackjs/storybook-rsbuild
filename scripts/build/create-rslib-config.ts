@@ -18,7 +18,6 @@ type CreateRslibConfigOptions = {
   disableUrlParsingFor?: RegExp
 }
 
-const browserSyntax = BROWSER_TARGETS.map(toBrowserslistTarget)
 // Upstream-parity guard for future ported RN-web code; no current in-repo source needs this transform.
 const browserForcedTransforms =
   SUPPORTED_FEATURES['class-static-blocks'] === false
@@ -118,7 +117,7 @@ function createBrowserLibItem(
       target: 'web' as const,
     },
     source: createSourceConfig(entries, options),
-    syntax: browserSyntax,
+    syntax: [...BROWSER_TARGETS],
     tools: {
       swc: {
         env: {
@@ -222,16 +221,6 @@ function toSourceEntries(entries: BuildEntry[]) {
       entryPoint,
     ]),
   )
-}
-
-function toBrowserslistTarget(target: string) {
-  const match = /^(chrome|edge|firefox|safari|ios|opera)([\d.]+)$/.exec(target)
-  if (!match) {
-    throw new Error(`Unsupported browser target: ${target}`)
-  }
-
-  const [, engine, version] = match
-  return `${engine === 'ios' ? 'ios_saf' : engine} >= ${version}`
 }
 
 function createSelfReferenceExternal(packageName: string) {
