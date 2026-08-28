@@ -1232,51 +1232,12 @@ importers:
 
   scripts:
     dependencies:
-      '@fal-works/esbuild-plugin-global-externals':
-        specifier: ^2.1.2
-        version: 2.1.2
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
-      '@types/pretty-hrtime':
-        specifier: ^1.0.3
-        version: 1.0.3
-      esbuild:
-        specifier: ^0.27.0
-        version: 0.27.0
-      exsolve:
-        specifier: ^1.0.7
-        version: 1.0.8
-      jiti:
-        specifier: ^2.4.2
-        version: 2.7.0
-      p-limit:
-        specifier: ^3.1.0
-        version: 3.1.0
       pathe:
         specifier: ^1.1.2
         version: 1.1.2
-      picocolors:
-        specifier: ^1.1.0
-        version: 1.1.1
-      pretty-hrtime:
-        specifier: ^1.0.3
-        version: 1.0.3
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-      rollup:
-        specifier: ^4.21.0
-        version: 4.60.4
-      rollup-plugin-dts:
-        specifier: ^6.1.1
-        version: 6.4.1(rollup@4.60.4)(typescript@5.9.3)
-      ts-dedent:
-        specifier: ^2.2.0
-        version: 2.3.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
@@ -2866,9 +2827,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@fal-works/esbuild-plugin-global-externals@2.1.2':
-    resolution: {integrity: sha512-cEee/Z+I12mZcFJshKcCqC8tuX5hG3s+d+9nZ3LabqKF1vKdF41B92pJVCBggjAGORAeOzyyDDKrZwIkLffeOQ==}
 
   '@floating-ui/core@1.8.0':
     resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
@@ -14814,8 +14772,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.0':
     optional: true
-
-  '@fal-works/esbuild-plugin-global-externals@2.1.2': {}
 
   '@floating-ui/core@1.8.0':
     dependencies:
