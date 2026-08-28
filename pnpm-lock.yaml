@@ -17,6 +17,9 @@ importers:
       '@rstest/core':
         specifier: ^0.11.8
         version: 0.11.8(core-js@3.48.0)(jsdom@20.0.3)
+      '@storybook/scripts':
+        specifier: workspace:*
+        version: link:scripts
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -84,9 +87,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -111,9 +111,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -202,9 +199,6 @@ importers:
       '@storybook/core-webpack':
         specifier: 10.5.10
         version: 10.5.10(storybook@10.5.10(@types/react@19.2.18)(prettier@3.8.3)(react@18.3.1))
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -248,9 +242,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -303,9 +294,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -352,9 +340,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -401,9 +386,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -435,9 +417,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -469,9 +448,6 @@ importers:
       '@rslib/core':
         specifier: ~1.0.0-rc.2
         version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:../../scripts
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -1268,6 +1244,10 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+    devDependencies:
+      '@rslib/core':
+        specifier: ~1.0.0-rc.2
+        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
 
   website:
     dependencies:

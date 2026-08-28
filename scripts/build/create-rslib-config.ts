@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 
+import type { RslibConfig, RslibConfigAsyncFn, Rspack } from '@rslib/core'
 import type { BuildEntries, BuildEntry } from './utils/entry-utils.ts'
 import { RUNTIME_EXTERNAL_EXCLUDE } from './utils/entry-utils.ts'
 import { generatePackageJsonFile } from './utils/generate-package-json.ts'
@@ -18,15 +19,6 @@ type CreateRslibConfigOptions = {
   disableUrlParsingFor?: RegExp
 }
 
-type RspackConfig = {
-  module?: {
-    rules?: Record<string, unknown>[]
-  }
-  output: {
-    chunkFilename?: string
-  }
-}
-
 const browserSyntax = BROWSER_TARGETS.map(toBrowserslistTarget)
 const browserForcedTransforms =
   SUPPORTED_FEATURES['class-static-blocks'] === false
@@ -37,14 +29,17 @@ export function createRslibConfig(
   packageDir: string,
   buildConfig: BuildEntries,
   options: CreateRslibConfigOptions = {},
-) {
+): RslibConfigAsyncFn {
   const browserEntries = buildConfig.entries.browser ?? []
   const nodeEntries = buildConfig.entries.node ?? []
   const hasBrowserEntries = browserEntries.length > 0
-  const skipDts = shouldSkipDtsInWatchMode()
+  const watchMode = isWatchMode()
+  const skipDts = watchMode && process.env.SB_WATCH_DTS !== 'true'
 
-  return async () => {
-    await generatePackageJsonFile(packageDir, buildConfig)
+  return async (): Promise<RslibConfig> => {
+    if (!watchMode) {
+      await generatePackageJsonFile(packageDir, buildConfig)
+    }
 
     const packageJson = JSON.parse(
       await readFile(join(packageDir, 'package.json'), 'utf8'),
@@ -198,7 +193,7 @@ function createNodeTools(
   }
 
   return {
-    rspack(config: RspackConfig) {
+    rspack(config: Rspack.Configuration) {
       if (options.disableUrlParsingFor) {
         config.module ??= {}
         config.module.rules ??= []
@@ -209,6 +204,7 @@ function createNodeTools(
           },
         })
       }
+      config.output ??= {}
       config.output.chunkFilename = 'chunks/[name]-[contenthash:8].js'
     },
   }
@@ -248,9 +244,8 @@ function createPackageExternal(packageName: string) {
   return new RegExp(`^${escapedPackageName}(?:$|[/\\\\])`)
 }
 
-function shouldSkipDtsInWatchMode() {
-  const isWatchMode = process.argv.some(
+function isWatchMode() {
+  return process.argv.some(
     (argument) => argument === '--watch' || argument === '-w',
   )
-  return isWatchMode && process.env.SB_WATCH_DTS !== 'true'
 }
