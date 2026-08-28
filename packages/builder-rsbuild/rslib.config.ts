@@ -4,6 +4,7 @@ import { defineConfig } from '@rslib/core'
 
 import { getExternal } from '../../scripts/build/utils/entry-utils.ts'
 import { generatePackageJsonFile } from '../../scripts/build/utils/generate-package-json.ts'
+import { NODE_TARGET } from '../../scripts/build/utils/rslib-constants.ts'
 import buildConfig from './build-config.ts'
 
 const nodeEntries = buildConfig.entries.node ?? []
@@ -53,7 +54,7 @@ export default defineConfig(async () => {
         require: true,
       },
     },
-    syntax: ['node >= 20.19'],
+    syntax: [NODE_TARGET],
     lib: [
       {
         id: 'node-dts',

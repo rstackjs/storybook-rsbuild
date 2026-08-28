@@ -5,6 +5,7 @@ import { getExternal } from '../../scripts/build/utils/entry-utils.ts'
 import { generatePackageJsonFile } from '../../scripts/build/utils/generate-package-json.ts'
 import {
   BROWSER_TARGETS,
+  NODE_TARGET,
   SUPPORTED_FEATURES,
 } from '../../scripts/build/utils/rslib-constants.ts'
 import buildConfig from './build-config.ts'
@@ -106,7 +107,7 @@ export default defineConfig(async () => {
             nodeEntries.filter(({ dts }) => dts !== false),
           ),
         },
-        syntax: ['node >= 20.19'],
+        syntax: [NODE_TARGET],
         tools: {
           rspack(config) {
             config.output.chunkFilename = 'chunks/[name]-[contenthash:8].js'
@@ -131,7 +132,7 @@ export default defineConfig(async () => {
             nodeEntries.filter(({ dts }) => dts === false),
           ),
         },
-        syntax: ['node >= 20.19'],
+        syntax: [NODE_TARGET],
         tools: {
           rspack(config) {
             config.output.chunkFilename = 'chunks/[name]-[contenthash:8].js'
