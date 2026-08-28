@@ -17,9 +17,6 @@ importers:
       '@rstest/core':
         specifier: ^0.11.8
         version: 0.11.8(core-js@3.48.0)(jsdom@20.0.3)
-      '@storybook/scripts':
-        specifier: workspace:*
-        version: link:scripts
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -50,6 +47,9 @@ importers:
       sort-package-json:
         specifier: ^2.15.1
         version: 2.15.1
+      storybook-rsbuild-scripts:
+        specifier: workspace:*
+        version: link:scripts
       tree-kill:
         specifier: ^1.2.2
         version: 1.2.2

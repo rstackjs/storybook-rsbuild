@@ -1,4 +1,4 @@
-import type { BuildEntries } from '@storybook/scripts/create-rslib-config'
+import type { BuildEntries } from 'storybook-rsbuild-scripts/create-rslib-config'
 
 const config: BuildEntries = {
   entries: {
