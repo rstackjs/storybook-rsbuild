@@ -3,6 +3,9 @@
   "version": "7.0.0-alpha.16",
   "private": true,
   "type": "module",
+  "exports": {
+    "./create-rslib-config": "./build/create-rslib-config.ts"
+  },
   "scripts": {},
   "dependencies": {
     "@types/node": "^22.0.0",
