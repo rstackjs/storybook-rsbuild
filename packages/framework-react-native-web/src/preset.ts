@@ -1,10 +1,10 @@
+import { mergeRsbuildConfig } from '@rsbuild/core'
 import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginReactNativeWeb } from 'rsbuild-plugin-react-native-web'
-import type { PresetProperty } from 'storybook/internal/types'
 import { rsbuildFinal as reactRsbuildFinal } from 'storybook-react-rsbuild/preset'
+import type { PresetProperty } from 'storybook/internal/types'
 import type { FrameworkOptions, StorybookConfig } from './types'
 
 /**

@@ -1,7 +1,7 @@
-import { type AddressInfo, createServer } from 'node:net'
-import { dirname, join, parse } from 'node:path'
 import * as rsbuildReal from '@rsbuild/core'
 import fs from 'fs-extra'
+import { type AddressInfo, createServer } from 'node:net'
+import { dirname, join, parse } from 'node:path'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
 import {
@@ -276,40 +276,41 @@ export const start: RsbuildBuilder['start'] = async ({
 
 // explicit type annotation to bypass TypeScript check
 // see: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
-export const build: ({ options }: BuilderStartOptions) => Promise<Stats> =
-  async ({ options }) => {
-    overrideRsbuildLogger()
-    const { createRsbuild } = await executor.get(options)
-    const config = await getConfig(options)
-    const rsbuildBuild = await createRsbuild({
-      cwd: process.cwd(),
-      rsbuildConfig: config,
-    })
+export const build: ({
+  options,
+}: BuilderStartOptions) => Promise<Stats> = async ({ options }) => {
+  overrideRsbuildLogger()
+  const { createRsbuild } = await executor.get(options)
+  const config = await getConfig(options)
+  const rsbuildBuild = await createRsbuild({
+    cwd: process.cwd(),
+    rsbuildConfig: config,
+  })
 
-    const previewResolvedDir = join(corePath, 'dist/preview')
-    const previewDirOrigin = previewResolvedDir
-    const previewDirTarget = join(options.outputDir || '', 'sb-preview')
-    let stats: Stats
+  const previewResolvedDir = join(corePath, 'dist/preview')
+  const previewDirOrigin = previewResolvedDir
+  const previewDirTarget = join(options.outputDir || '', 'sb-preview')
+  let stats: Stats
 
-    rsbuildBuild.onAfterBuild((params) => {
-      stats = params.stats as Stats
-    })
+  rsbuildBuild.onAfterBuild((params) => {
+    stats = params.stats as Stats
+  })
 
-    const previewFiles = fs.copy(previewDirOrigin, previewDirTarget, {
-      filter: (src) => {
-        const { ext } = parse(src)
-        if (ext) {
-          return ext === '.js'
-        }
-        return true
-      },
-    })
+  const previewFiles = fs.copy(previewDirOrigin, previewDirTarget, {
+    filter: (src) => {
+      const { ext } = parse(src)
+      if (ext) {
+        return ext === '.js'
+      }
+      return true
+    },
+  })
 
-    const [{ close }] = await Promise.all([rsbuildBuild.build(), previewFiles])
+  const [{ close }] = await Promise.all([rsbuildBuild.build(), previewFiles])
 
-    await close()
-    return withStatsJsonCompat(stats!)
-  }
+  await close()
+  return withStatsJsonCompat(stats!)
+}
 
 export const corePresets = [join(__dirname, './preview-preset.js')]
 

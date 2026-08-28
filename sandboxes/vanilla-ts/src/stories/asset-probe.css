@@ -4,6 +4,6 @@
 #asset-probe-background {
   width: 96px;
   height: 96px;
-  background-image: url("./assets/accessibility.png");
+  background-image: url('./assets/accessibility.png');
   background-size: cover;
 }

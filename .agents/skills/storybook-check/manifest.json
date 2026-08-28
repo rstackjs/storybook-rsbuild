@@ -95,7 +95,7 @@
       "upstream": "code/builders/builder-webpack5/src/preview/preview-filename.ts",
       "local": "packages/builder-rsbuild/src/preview/preview-filename.ts",
       "intentionalDivergences": [
-        "biome-ignore suppression for lint/suspicious/noControlCharactersInRegex on the sanitization regex — upstream's control-char range is intentional"
+        "Rslint no-control-regex suppression on the sanitization regex — upstream's control-char range is intentional"
       ]
     },
     {

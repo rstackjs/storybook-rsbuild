@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginBabel } from '@rsbuild/plugin-babel'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from 'storybook-react-native-web-rsbuild'
 
 const getAbsolutePath = (value: string): string => {

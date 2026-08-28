@@ -1,6 +1,6 @@
+import { CDVC } from 'check-dependency-version-consistency'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { CDVC } from 'check-dependency-version-consistency'
 import path from 'pathe'
 
 const __filename = fileURLToPath(import.meta.url)

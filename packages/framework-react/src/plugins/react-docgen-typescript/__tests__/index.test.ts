@@ -1,6 +1,6 @@
+import { describe, expect, it } from '@rstest/core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { describe, expect, it } from '@rstest/core'
 import reactDocgenTypescript from '../index'
 
 const tsconfigPathForTest = resolve(__dirname, 'tsconfig.test.json')

@@ -3,9 +3,9 @@
  * We had to copy this file because there's no rsbuildFinal there.
  */
 
+import type { RsbuildConfig } from '@rsbuild/core'
 import { readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
-import type { RsbuildConfig } from '@rsbuild/core'
 import { resolvePackageDir } from 'storybook/internal/common'
 import type { Options } from 'storybook/internal/types'
 

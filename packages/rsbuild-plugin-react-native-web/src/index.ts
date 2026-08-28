@@ -133,8 +133,7 @@ export function pluginReactNativeWeb(
    * module paths to absolute paths when reactNativeWebPath is provided.
    */
   function createModuleResolver():
-    | ((modulePath: string) => string)
-    | undefined {
+    ((modulePath: string) => string) | undefined {
     if (!reactNativeWebPath) {
       return undefined
     }

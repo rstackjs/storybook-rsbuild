@@ -6,7 +6,6 @@ packages:
   - scripts/**
   - website
 onlyBuiltDependencies:
-  - '@biomejs/biome'
   - '@swc/core'
   - core-js
   - core-js-pure

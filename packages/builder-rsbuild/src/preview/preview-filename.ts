@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto'
 import type { Rspack } from '@rsbuild/core'
+import { createHash } from 'node:crypto'
 
 // Leave headroom below the common 255-byte filesystem component limit.
 const MAX_FILENAME_LENGTH = 200
 const HASH_LENGTH = 16
-// biome-ignore lint/suspicious/noControlCharactersInRegex: Unsafe filenames include ASCII control characters.
-const UNSAFE_FILENAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f[\]]/g
+const UNSAFE_FILENAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f[\]]/g // eslint-disable-line no-control-regex -- Unsafe filenames include ASCII control characters.
 
 const DEVELOPMENT_SUFFIX = '.iframe.bundle.js'
 const PRODUCTION_SUFFIX = '.[contenthash:8].iframe.bundle.js'

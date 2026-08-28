@@ -1,5 +1,5 @@
-import { fileURLToPath } from 'node:url'
 import type { RsbuildPlugin } from '@rsbuild/core'
+import { fileURLToPath } from 'node:url'
 import { RspackInjectMockerRuntimePlugin } from './rspack-inject-mocker-runtime-plugin'
 import { RspackMockPlugin } from './rspack-mock-plugin'
 
@@ -19,9 +19,8 @@ export function pluginStorybookMock({
           use: [
             {
               loader: fileURLToPath(
-                import.meta.resolve(
-                  'storybook-builder-rsbuild/loaders/storybook-mock-transform-loader',
-                ),
+                import.meta
+                  .resolve('storybook-builder-rsbuild/loaders/storybook-mock-transform-loader'),
               ),
             },
           ],

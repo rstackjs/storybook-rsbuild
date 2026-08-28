@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginVue } from '@rsbuild/plugin-vue'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from 'storybook-vue3-rsbuild'
 
 const getAbsolutePath = (value: string): any => {

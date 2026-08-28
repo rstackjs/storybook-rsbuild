@@ -1,84 +1,89 @@
 {
-	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"timezone": "Asia/Shanghai",
-	"extends": ["config:recommended", "schedule:weekly"],
-	"ignorePaths": ["**/tests/**", "**/node_modules/**", "scripts/**"],
-	"packageRules": [
-		// Use chore as semantic commit type for commit messages
-		{
-			"matchPackageNames": ["**"],
-			"semanticCommitType": "chore",
-			// always bump package.json
-			"rangeStrategy": "bump"
-		},
-		{
-			"groupName": "react-16 (allow non-major, block major)",
-			"groupSlug": "react-16-keep-major",
-			"matchFileNames": ["sandboxes/react-16/package.json"],
-			"matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
-			"allowedVersions": "<17.0.0",
-			"rangeStrategy": "replace",
-			"separateMajorMinor": false,
-			"separateMinorPatch": false
-		},
-		{
-			"groupName": "rspress",
-			"matchPackageNames": ["@rspress/**"],
-			"groupSlug": "rspress",
-			"extends": ["schedule:daily"]
-		},
-		{
-			"groupName": "all non-major dependencies",
-			"groupSlug": "all-non-major",
-			"matchUpdateTypes": ["patch", "minor"],
-			// A list of only negative patterns matches every package except the
-			// excluded ones. `**` must not be combined with other patterns here —
-			// Renovate rejects it because `*`/`**` already match all patterns.
-			"matchPackageNames": ["!storybook", "!@storybook/**"]
-		},
-		// Must be placed AFTER `all-non-major` so the groupName override wins.
-		// Ref: https://docs.renovatebot.com/configuration-options/#packagerules
-		{
-			"groupName": "rstack (rspack + rsbuild)",
-			"groupSlug": "rstack",
-			"matchPackageNames": ["@rspack/**", "@rsbuild/**"],
-			"allowedVersions": "/^\\d+\\.\\d+\\.\\d+(-(beta|rc)(\\.\\d+)?)?$/"
-		},
-		// manually update peer dependencies
-		{
-			"matchDepTypes": ["peerDependencies"],
-			"enabled": false
-		},
-		// Storybook group — placed AFTER the global `peerDependencies: enabled: false`
-		// rule so `enabled: true` here overrides it. Bumps dependencies, devDependencies
-		// AND peerDependencies together in a single PR, keeping the `storybook` peer range
-		// aligned with the bundled `@storybook/<renderer>`'s own peer range. Misalignment
-		// causes a pnpm doppelganger (two copies of `storybook` in the virtual store).
-		{
-			"groupName": "storybook",
-			"groupSlug": "storybook",
-			"matchManagers": ["npm"],
-			"matchPackageNames": ["storybook", "@storybook/**"],
-			"matchDepTypes": ["dependencies", "devDependencies", "peerDependencies"],
-			"separateMajorMinor": false,
-			"separateMinorPatch": false,
-			"separateMultipleMajor": false,
-			"enabled": true
-		},
-		// changelogithub omits chore commits, so surface peer dependency range updates
-		// as bug fixes in release notes.
-		{
-			"matchPackageNames": ["storybook"],
-			"matchDepTypes": ["peerDependencies"],
-			"semanticCommitType": "fix"
-		}
-	],
-	"ignoreDeps": [
-		// manually update some packages
-		"pnpm",
-		"esbuild",
-		// align Node.js version minimum requirements
-		"@types/node",
-		"node",
-	]
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  timezone: 'Asia/Shanghai',
+  extends: ['config:recommended', 'schedule:weekly'],
+  ignorePaths: ['**/tests/**', '**/node_modules/**', 'scripts/**'],
+  packageRules: [
+    // Use chore as semantic commit type for commit messages
+    {
+      matchPackageNames: ['**'],
+      semanticCommitType: 'chore',
+      // always bump package.json
+      rangeStrategy: 'bump',
+    },
+    {
+      groupName: 'react-16 (allow non-major, block major)',
+      groupSlug: 'react-16-keep-major',
+      matchFileNames: ['sandboxes/react-16/package.json'],
+      matchPackageNames: [
+        'react',
+        'react-dom',
+        '@types/react',
+        '@types/react-dom',
+      ],
+      allowedVersions: '<17.0.0',
+      rangeStrategy: 'replace',
+      separateMajorMinor: false,
+      separateMinorPatch: false,
+    },
+    {
+      groupName: 'rspress',
+      matchPackageNames: ['@rspress/**'],
+      groupSlug: 'rspress',
+      extends: ['schedule:daily'],
+    },
+    {
+      groupName: 'all non-major dependencies',
+      groupSlug: 'all-non-major',
+      matchUpdateTypes: ['patch', 'minor'],
+      // A list of only negative patterns matches every package except the
+      // excluded ones. `**` must not be combined with other patterns here —
+      // Renovate rejects it because `*`/`**` already match all patterns.
+      matchPackageNames: ['!storybook', '!@storybook/**'],
+    },
+    // Must be placed AFTER `all-non-major` so the groupName override wins.
+    // Ref: https://docs.renovatebot.com/configuration-options/#packagerules
+    {
+      groupName: 'rstack (rspack + rsbuild)',
+      groupSlug: 'rstack',
+      matchPackageNames: ['@rspack/**', '@rsbuild/**'],
+      allowedVersions: '/^\\d+\\.\\d+\\.\\d+(-(beta|rc)(\\.\\d+)?)?$/',
+    },
+    // manually update peer dependencies
+    {
+      matchDepTypes: ['peerDependencies'],
+      enabled: false,
+    },
+    // Storybook group — placed AFTER the global `peerDependencies: enabled: false`
+    // rule so `enabled: true` here overrides it. Bumps dependencies, devDependencies
+    // AND peerDependencies together in a single PR, keeping the `storybook` peer range
+    // aligned with the bundled `@storybook/<renderer>`'s own peer range. Misalignment
+    // causes a pnpm doppelganger (two copies of `storybook` in the virtual store).
+    {
+      groupName: 'storybook',
+      groupSlug: 'storybook',
+      matchManagers: ['npm'],
+      matchPackageNames: ['storybook', '@storybook/**'],
+      matchDepTypes: ['dependencies', 'devDependencies', 'peerDependencies'],
+      separateMajorMinor: false,
+      separateMinorPatch: false,
+      separateMultipleMajor: false,
+      enabled: true,
+    },
+    // changelogithub omits chore commits, so surface peer dependency range updates
+    // as bug fixes in release notes.
+    {
+      matchPackageNames: ['storybook'],
+      matchDepTypes: ['peerDependencies'],
+      semanticCommitType: 'fix',
+    },
+  ],
+  ignoreDeps: [
+    // manually update some packages
+    'pnpm',
+    'esbuild',
+    // align Node.js version minimum requirements
+    '@types/node',
+    'node',
+  ],
 }

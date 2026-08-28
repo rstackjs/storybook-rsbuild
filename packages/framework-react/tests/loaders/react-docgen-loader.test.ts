@@ -2,9 +2,9 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
+import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import * as docgenResolverActual from '../../src/loaders/docgen-resolver' with {
   rstest: 'importActual',
 }

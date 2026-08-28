@@ -1,13 +1,13 @@
 import type {
-  CompatibleString,
-  StorybookConfig as StorybookConfigBase,
-  TypescriptOptions as TypescriptOptionsBase,
-} from 'storybook/internal/types'
-import type {
   BuilderOptions,
   StorybookConfigRsbuild,
   TypescriptOptions as TypescriptOptionsBuilder,
 } from 'storybook-builder-rsbuild'
+import type {
+  CompatibleString,
+  StorybookConfig as StorybookConfigBase,
+  TypescriptOptions as TypescriptOptionsBase,
+} from 'storybook/internal/types'
 
 type FrameworkName = CompatibleString<'storybook-html-rsbuild'>
 type BuilderName = CompatibleString<'storybook-builder-rsbuild'>

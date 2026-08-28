@@ -1,6 +1,6 @@
+import { mergeRsbuildConfig } from '@rsbuild/core'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { mergeRsbuildConfig } from '@rsbuild/core'
 import type { PresetProperty } from 'storybook/internal/types'
 import { rsbuildFinalDocs } from './react-docs'
 import type { FrameworkOptions, StorybookConfig } from './types'

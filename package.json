@@ -7,28 +7,24 @@
     "build:sandboxes": "pnpm --filter \"./sandboxes/*\" run build:storybook",
     "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "bump": "bumpp",
-    "check": "pnpm --parallel --filter \"./packages/**\" run check",
+    "check": "rstack check",
     "check-dependency-version": "pnpm jiti ./scripts/check-dependency-version.mts",
     "dev": "pnpm --parallel --filter \"./packages/**\" run dev",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
-    "format": "biome check --write --unsafe",
-    "lint": "biome check",
+    "format": "rstack fmt --no-cache",
+    "lint": "rstack lint",
     "test": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstest",
-    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstest --watch"
+    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstest --watch",
+    "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check"
   },
   "simple-git-hooks": {
     "pre-commit": "npx nano-staged"
   },
   "nano-staged": {
-    "*.{json,css,less,scss}": "biome check --write",
-    "*.{js,jsx,ts,tsx,mjs,cjs}": "biome check --write",
-    "**/package.json": [
-      "sort-package-json",
-      "biome check --write"
-    ]
+    "*.{json,css,less,scss}": "rstack fmt --no-cache",
+    "*.{js,jsx,ts,tsx,mjs,cjs}": "rstack fmt --no-cache"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.9",
     "@playwright/test": "^1.62.1",
     "@rstest/core": "^0.11.8",
     "@testing-library/jest-dom": "^6.9.1",
@@ -39,8 +35,9 @@
     "jiti": "^2.7.0",
     "nano-staged": "^0.9.0",
     "path-serializer": "^0.6.0",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "rstack": "0.6.5",
     "simple-git-hooks": "^2.13.1",
-    "sort-package-json": "^2.15.1",
     "storybook-rsbuild-scripts": "workspace:*",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^2.3.0",

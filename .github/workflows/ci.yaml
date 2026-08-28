@@ -55,7 +55,7 @@ jobs:
               - '!.gitignore'
               - '!.editorconfig'
 
-  lint-check:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -80,12 +80,12 @@ jobs:
 
       - name: Lint / Type Check / Check Dependency Version
         run: |
-          pnpm lint
           pnpm check
+          pnpm type-check
           pnpm check-dependency-version
   # ======== test ========
   test-build:
-    # Only gated by the path filter — lint-check runs in parallel and is
+    # Only gated by the path filter — check runs in parallel and is
     # still enforced via the ci-passed aggregator.
     needs: [changes]
     # Non-PR events (push to main/v1, merge_group, workflow_dispatch)
@@ -155,16 +155,16 @@ jobs:
   # legitimately skipped by the `changes` filter. Point branch protection
   # at this job instead of individual matrix checks.
   ci-passed:
-    needs: [changes, lint-check, test-build]
+    needs: [changes, check, test-build]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Assert no failures
         env:
           CHANGES: ${{ needs.changes.result }}
-          LINT: ${{ needs.lint-check.result }}
+          CHECK: ${{ needs.check.result }}
           TEST: ${{ needs.test-build.result }}
         run: |
           [[ "$CHANGES" == "success" ]] || { echo "changes: $CHANGES"; exit 1; }
-          [[ "$LINT" == "success" ]] || { echo "lint-check: $LINT"; exit 1; }
+          [[ "$CHECK" == "success" ]] || { echo "check: $CHECK"; exit 1; }
           [[ "$TEST" == "success" || "$TEST" == "skipped" ]] || { echo "test-build: $TEST"; exit 1; }

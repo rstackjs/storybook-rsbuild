@@ -1,5 +1,5 @@
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rstest/core'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   setupFiles: [fileURLToPath(new URL('./rstest-setup.ts', import.meta.url))],
