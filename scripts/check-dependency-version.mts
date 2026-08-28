@@ -23,6 +23,8 @@ if (dep) {
 // === devDependencies ===
 const cdvcDevDep = new CDVC(root, {
   depType: ['devDependencies'],
+  // Migrated packages build with Rslib 1 while sandboxes track the user-facing Rslib 0.x line.
+  ignoreDep: ['@rslib/core'],
   ignorePackage: ['@sandboxes/react-16', 'website'],
 })
 

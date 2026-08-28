@@ -36,14 +36,15 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "pnpm run prep --production",
+    "build": "rslib build",
     "check": "jiti ../../scripts/check/check-package.ts",
-    "prep": "jiti ../../scripts/build/build-package.ts",
+    "prep": "rslib build",
     "prepare": "pnpm run build"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.0",
     "@rsbuild/core": "^2.1.13",
-    "@rslib/core": "^0.23.2",
+    "@rslib/core": "~1.0.0-rc.2",
     "@types/node": "^22.0.0",
     "storybook": "10.5.10",
     "storybook-builder-rsbuild": "workspace:*",
