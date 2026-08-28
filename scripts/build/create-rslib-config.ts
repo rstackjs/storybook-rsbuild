@@ -44,10 +44,7 @@ export function createRslibConfig(
     const packageJson = JSON.parse(
       await readFile(join(packageDir, 'package.json'), 'utf8'),
     ) as { name: string }
-    const externals = [
-      createPackageExternal('sb-original'),
-      createPackageExternal(packageJson.name),
-    ]
+    const externals = [createSelfReferenceExternal(packageJson.name)]
     const lib = [
       createBrowserLibItem(
         'browser-dts',
@@ -239,7 +236,7 @@ function toBrowserslistTarget(target: string) {
   return `${engine === 'ios' ? 'ios_saf' : engine} >= ${version}`
 }
 
-function createPackageExternal(packageName: string) {
+function createSelfReferenceExternal(packageName: string) {
   const escapedPackageName = packageName.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
   return new RegExp(`^${escapedPackageName}(?:$|[/\\\\])`)
 }
