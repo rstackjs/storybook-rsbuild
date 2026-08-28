@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@rsbuild/core": ["./node_modules/@rsbuild/core/dist/types/config.d.ts"],
+      "@rslib/core": ["./node_modules/@rslib/core/dist-types/types/config.d.ts"]
+    }
+  }
+}

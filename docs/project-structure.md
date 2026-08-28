@@ -4,7 +4,7 @@
 - **`packages/framework-*`**: Renderer packages (`html`, `react`, `react-native-web`, `vue3`, `web-components`). Runtime logic stays in `src/`.
 - **`packages/addon-*`**: Storybook addons (`modernjs`, `rslib`).
 - **`packages/rsbuild-plugin-react-native-web`**: Standalone Rsbuild plugin consumed by `framework-react-native-web`.
-- **`scripts/`**: Build/check tooling (`build/build-package.ts`, `check/check-package.ts`, `check-dependency-version.mts`). A `pnpm-workspace.yaml` member — see [release.md](release.md) on `"private": true`.
+- **`scripts/`**: Shared package-build helpers and check tooling (`build/create-rslib-config.ts`, `build/utils/`, `check/check-package.ts`, `check-dependency-version.mts`). A `pnpm-workspace.yaml` member — see [release.md](release.md) on `"private": true`.
 - **`sandboxes/`**: Runnable Storybook apps for regression testing.
 - **`e2e/`**: Playwright e2e — see [testing.md](testing.md).
 - **`tests/`**: Root-level cross-package integration test project — see [testing.md](testing.md).
@@ -12,7 +12,9 @@
 
 ## Package build
 
-- `packages/<pkg>/build-config.ts` is the single source of truth for entry points and the `exports` map. Every build (`prep`, `build`, the watcher, and the `prepare` script that `pnpm install` triggers) rewrites the `exports` field of the **source** `packages/<pkg>/package.json` from it — hand-edited `exports` entries are silently reverted with no error. To add or rename a subpath export, edit `build-config.ts` (`exportEntries` / `entryPoint`, or `extraOutputs` for raw non-JS files) and rebuild. The `files` field is **not** generated: a new non-JS output needs a hand-added `files` entry too, or it is missing from the published tarball.
+- `packages/<pkg>/build-config.ts` is the single source of truth for entry points and the `exports` map. `storybook-rsbuild-scripts/create-rslib-config` derives the Rslib entries and owns shared build semantics such as platform, syntax target, externals, dts, shims, and chunks. The package-local `rslib.config.ts` passes only its `build-config.ts` and explicit package-specific options.
+- Every full build (`build` and the `prepare` script that `pnpm install` triggers) rewrites the `exports` field of the **source** `packages/<pkg>/package.json` from `build-config.ts` — hand-edited `exports` entries are silently reverted with no error. To add or rename a subpath export, edit `build-config.ts` (`exportEntries` / `entryPoint`, or `extraOutputs` for raw non-JS files) and rebuild. Change the shared factory or a package-local factory option only when build semantics change. The `files` field is **not** generated: a new non-JS output needs a hand-added `files` entry too, or it is missing from the published tarball.
+- Watch builds do not rewrite `package.json`; they skip dts generation and preserve the existing `dist/` contents so the last full build's declarations remain resolvable. Set `SB_WATCH_DTS=true` to generate declarations in watch mode when explicitly needed.
 - The `bundler.entries` field in `packages/*/package.json` is dead — nothing in the repo reads it. Never edit it.
 
 ## Ported files are tracked in a manifest

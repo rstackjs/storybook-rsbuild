@@ -43,9 +43,9 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "pnpm run prep --production",
+    "build": "prebundle && rslib build",
     "check": "jiti ../../scripts/check/check-package.ts",
-    "prep": "prebundle && jiti ../../scripts/build/build-package.ts",
+    "dev": "prebundle && rslib build --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {
@@ -69,7 +69,9 @@
     "util-deprecate": "^1.0.2"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.0",
     "@rsbuild/core": "^2.1.13",
+    "@rslib/core": "~1.0.0-rc.2",
     "@storybook/core-webpack": "10.5.10",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",

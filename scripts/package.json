@@ -1,25 +1,18 @@
 {
-  "name": "@storybook/scripts",
+  "name": "storybook-rsbuild-scripts",
   "version": "7.0.0-alpha.16",
   "private": true,
   "type": "module",
+  "exports": {
+    "./create-rslib-config": "./build/create-rslib-config.ts"
+  },
   "scripts": {},
   "dependencies": {
-    "@fal-works/esbuild-plugin-global-externals": "^2.1.2",
     "@types/node": "^22.0.0",
-    "@types/pretty-hrtime": "^1.0.3",
-    "esbuild": "^0.27.0",
-    "exsolve": "^1.0.7",
-    "jiti": "^2.4.2",
-    "p-limit": "^3.1.0",
     "pathe": "^1.1.2",
-    "picocolors": "^1.1.0",
-    "pretty-hrtime": "^1.0.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "rollup": "^4.21.0",
-    "rollup-plugin-dts": "^6.1.1",
-    "ts-dedent": "^2.2.0",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@rslib/core": "~1.0.0-rc.2"
   }
 }

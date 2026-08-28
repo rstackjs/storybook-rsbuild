@@ -41,9 +41,9 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "pnpm run prep --production",
+    "build": "rslib build",
     "check": "jiti ../../scripts/check/check-package.ts",
-    "prep": "jiti ../../scripts/build/build-package.ts",
+    "dev": "rslib build --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {
@@ -53,7 +53,9 @@
     "storybook-react-rsbuild": "workspace:*"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.0",
     "@rsbuild/core": "^2.1.13",
+    "@rslib/core": "~1.0.0-rc.2",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "react": "18.3.1",
