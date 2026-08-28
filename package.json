@@ -9,7 +9,7 @@
     "bump": "bumpp",
     "check": "pnpm --parallel --filter \"./packages/**\" run check",
     "check-dependency-version": "pnpm jiti ./scripts/check-dependency-version.mts",
-    "dev": "pnpm --parallel --filter \"./packages/**\" run prep --watch",
+    "dev": "pnpm --parallel --filter \"./packages/**\" run dev",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
     "format": "biome check --write --unsafe",
     "lint": "biome check",

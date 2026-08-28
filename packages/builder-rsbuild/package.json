@@ -43,9 +43,9 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "pnpm run prep",
+    "build": "prebundle && rslib build",
     "check": "jiti ../../scripts/check/check-package.ts",
-    "prep": "prebundle && rslib build",
+    "dev": "prebundle && rslib build --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {

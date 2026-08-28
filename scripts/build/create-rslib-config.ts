@@ -41,6 +41,7 @@ export function createRslibConfig(
   const browserEntries = buildConfig.entries.browser ?? []
   const nodeEntries = buildConfig.entries.node ?? []
   const hasBrowserEntries = browserEntries.length > 0
+  const skipDts = shouldSkipDtsInWatchMode()
 
   return async () => {
     await generatePackageJsonFile(packageDir, buildConfig)
@@ -57,12 +58,14 @@ export function createRslibConfig(
         'browser-dts',
         browserEntries.filter(({ dts }) => dts !== false),
         true,
+        skipDts,
         options,
       ),
       createBrowserLibItem(
         'browser-js',
         browserEntries.filter(({ dts }) => dts === false),
         false,
+        skipDts,
         options,
       ),
       createNodeLibItem(
@@ -70,6 +73,7 @@ export function createRslibConfig(
         nodeEntries.filter(({ dts }) => dts !== false),
         true,
         hasBrowserEntries,
+        skipDts,
         options,
       ),
       createNodeLibItem(
@@ -77,6 +81,7 @@ export function createRslibConfig(
         nodeEntries.filter(({ dts }) => dts === false),
         false,
         hasBrowserEntries,
+        skipDts,
         options,
       ),
     ].filter((item) => item !== undefined)
@@ -88,7 +93,7 @@ export function createRslibConfig(
         autoExternal: {
           exclude: RUNTIME_EXTERNAL_EXCLUDE,
         },
-        cleanDistPath: true,
+        cleanDistPath: !skipDts,
         distPath: {
           root: './dist',
         },
@@ -109,6 +114,7 @@ function createBrowserLibItem(
   id: 'browser-dts' | 'browser-js',
   entries: BuildEntry[],
   dts: boolean,
+  skipDts: boolean,
   options: CreateRslibConfigOptions,
 ) {
   if (entries.length === 0) {
@@ -117,7 +123,7 @@ function createBrowserLibItem(
 
   return {
     id,
-    dts: dts ? createDtsConfig(options) : false,
+    dts: dts && !skipDts ? createDtsConfig(options) : false,
     output: {
       target: 'web' as const,
     },
@@ -138,6 +144,7 @@ function createNodeLibItem(
   entries: BuildEntry[],
   dts: boolean,
   hasBrowserEntries: boolean,
+  skipDts: boolean,
   options: CreateRslibConfigOptions,
 ) {
   if (entries.length === 0) {
@@ -148,7 +155,7 @@ function createNodeLibItem(
 
   return {
     id,
-    dts: dts ? createDtsConfig(options) : false,
+    dts: dts && !skipDts ? createDtsConfig(options) : false,
     ...(hasBrowserEntries && {
       output: {
         target: 'node' as const,
@@ -239,4 +246,11 @@ function toBrowserslistTarget(target: string) {
 function createPackageExternal(packageName: string) {
   const escapedPackageName = packageName.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
   return new RegExp(`^${escapedPackageName}(?:$|[/\\\\])`)
+}
+
+function shouldSkipDtsInWatchMode() {
+  const isWatchMode = process.argv.some(
+    (argument) => argument === '--watch' || argument === '-w',
+  )
+  return isWatchMode && process.env.SB_WATCH_DTS !== 'true'
 }
