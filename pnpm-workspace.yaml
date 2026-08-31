@@ -10,7 +10,6 @@ onlyBuiltDependencies:
   - core-js
   - core-js-pure
   - esbuild
-  - simple-git-hooks
 hoistPattern:
   # react-native-css-interop/babel uses @babel/plugin-transform-react-jsx as a phantom dependency
   - '@babel/plugin-transform-react-jsx'

@@ -1,4 +1,3 @@
-import { defineConfig } from '@rspress/core'
 import { pluginAlgolia } from '@rspress/plugin-algolia'
 import { pluginSitemap } from '@rspress/plugin-sitemap'
 import { pluginTwoslash } from '@rspress/plugin-twoslash'
@@ -9,13 +8,14 @@ import {
 } from '@shikijs/transformers'
 import { pluginOpenGraph } from 'rsbuild-plugin-open-graph'
 import { pluginFontOpenSans } from 'rspress-plugin-font-open-sans'
+import { define } from 'rstack'
 
 const siteUrl = 'https://storybook.rsbuild.rs'
 const siteDescription = 'Storybook builder and frameworks powered by Rsbuild.'
 const siteDescriptionZh = '由 Rsbuild 驱动的 Storybook builder 与 frameworks。'
 const heroImage = `${siteUrl}/storybook-rsbuild.svg`
 
-export default defineConfig({
+define.doc({
   plugins: [
     pluginAlgolia({
       verificationContent: '8D19FD11BAF8DB11',

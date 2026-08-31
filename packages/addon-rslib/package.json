@@ -36,8 +36,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "rslib build",
-    "dev": "rslib build --watch",
+    "build": "rstack lib",
+    "dev": "rstack lib --watch",
     "prepare": "pnpm run build",
     "type-check": "jiti ../../scripts/check/check-package.ts"
   },

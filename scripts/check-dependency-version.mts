@@ -23,7 +23,7 @@ if (dep) {
 // === devDependencies ===
 const cdvcDevDep = new CDVC(root, {
   depType: ['devDependencies'],
-  // Migrated packages build with Rslib 1 while sandboxes track the user-facing Rslib 0.x line.
+  // addon-rslib keeps a Rslib 1 dev copy for type-check/tests of its peer dependency; sandboxes track Rslib 0.x.
   ignoreDep: ['@rslib/core'],
   ignorePackage: ['@sandboxes/react-16', 'website'],
 })

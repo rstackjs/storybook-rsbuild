@@ -1,4 +1,5 @@
+import { define } from 'rstack'
 import { createRslibConfig } from 'storybook-rsbuild-scripts/create-rslib-config'
 import buildConfig from './build-config.ts'
 
-export default createRslibConfig(import.meta.dirname, buildConfig)
+define.lib(createRslibConfig(import.meta.dirname, buildConfig))

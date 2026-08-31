@@ -13,31 +13,23 @@
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
     "format": "rstack fmt --no-cache",
     "lint": "rstack lint",
-    "test": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstest",
-    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstest --watch",
+    "prepare": "rstack hooks",
+    "test": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test",
+    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test watch",
     "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "npx nano-staged"
-  },
-  "nano-staged": {
-    "*.{json,css,less,scss}": "rstack fmt --no-cache",
-    "*.{js,jsx,ts,tsx,mjs,cjs}": "rstack fmt --no-cache"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@rstest/core": "^0.11.8",
+    "@rstest/core": "~0.11.10",
     "@testing-library/jest-dom": "^6.9.1",
     "bumpp": "^10.4.1",
     "check-dependency-version-consistency": "^5.0.1",
     "cross-env": "^10.1.0",
     "get-port": "^7.2.0",
     "jiti": "^2.7.0",
-    "nano-staged": "^0.9.0",
     "path-serializer": "^0.6.0",
     "prettier-plugin-organize-imports": "^4.3.0",
     "rstack": "0.6.5",
-    "simple-git-hooks": "^2.13.1",
     "storybook-rsbuild-scripts": "workspace:*",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^2.3.0",

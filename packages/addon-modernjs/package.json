@@ -36,8 +36,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "rslib build",
-    "dev": "rslib build --watch",
+    "build": "rstack lib",
+    "dev": "rstack lib --watch",
     "prepare": "pnpm run build",
     "type-check": "jiti ../../scripts/check/check-package.ts"
   },
@@ -50,7 +50,6 @@
     "@modern-js/app-tools": "^3.8.2",
     "@modern-js/plugin": "^3.8.2",
     "@rsbuild/core": "^2.1.13",
-    "@rslib/core": "~1.0.0-rc.2",
     "@types/node": "^22.0.0",
     "storybook": "10.5.10",
     "storybook-builder-rsbuild": "workspace:*",

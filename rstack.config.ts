@@ -11,6 +11,11 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
     '**/storybook-static/**',
   ]),
   js.configs.recommended,
+  // TODO: lint is not type-aware yet (parity with the former Biome setup). Evaluate
+  // ts.configs.recommendedTypeChecked with languageOptions.parserOptions.project (e.g.
+  // ["./packages/*/tsconfig.json"]) or parserOptions.projectService once the diagnostics volume is known. Once
+  // rs check --type-check proves equivalent across the package tsconfigs, delete
+  // scripts/check/check-package.ts and the per-package type-check scripts.
   ts.configs.recommended,
   {
     languageOptions: {
@@ -64,7 +69,20 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
   },
 ])
 
-// TODO: `--no-cache` on the format script and nano-staged entries in package.json works around a
+define.test({
+  projects: [
+    './packages/*/rstest.config.ts',
+    './sandboxes/*/rstest.config.ts',
+    './tests/rstest.config.ts',
+  ],
+})
+
+define.staged({
+  '*.{json,css,less,scss}': 'rstack fmt --no-cache',
+  '*.{js,jsx,ts,tsx,mjs,cjs}': 'rstack fmt --no-cache',
+})
+
+// TODO: `--no-cache` on the format script in package.json and define.staged() entries above works around a
 // Prettier idempotency regression fixed by prettier/prettier#19725 but not yet released as of
 // Prettier 3.9.6. Once a release containing the fix ships and Prettier is bumped, drop the flag.
 define.fmt({

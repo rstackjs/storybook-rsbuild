@@ -1,6 +1,6 @@
 # website/AGENTS.md
 
-Rspress v2 docs site (content in `docs/`, React 19 theme components in `theme/`, site config in `rspress.config.ts`).
+Rspress v2 docs site (content in `docs/`, React 19 theme components in `theme/`, site config registered with `define.doc()` in `rstack.config.ts`).
 
 ## Bilingual sync (mandatory)
 
