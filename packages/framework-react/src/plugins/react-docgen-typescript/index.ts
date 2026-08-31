@@ -74,7 +74,7 @@ const startWatch = async (
 
   return new Promise<[Program, CloseWatch]>((resolve) => {
     const watch = ts.createWatchProgram(host)
-    resolve([watch.getProgram().getProgram(), watch.close])
+    resolve([watch.getProgram().getProgram(), () => watch.close()])
   })
 }
 

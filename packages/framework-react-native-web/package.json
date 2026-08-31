@@ -43,8 +43,7 @@
   "scripts": {
     "build": "rstack lib",
     "dev": "rstack lib --watch",
-    "prepare": "pnpm run build",
-    "type-check": "jiti ../../scripts/check/check-package.ts"
+    "prepare": "pnpm run build"
   },
   "dependencies": {
     "@storybook/react": "^10.5.10",

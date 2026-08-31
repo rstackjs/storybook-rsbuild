@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from 'storybook-react-rsbuild'
 import moduleFederationConfig from '../module-federation.config.ts'
 
-const getAbsolutePath = (value: string): any => {
+const getAbsolutePath = (value: string): string => {
   return path.resolve(
     fileURLToPath(
       new URL(import.meta.resolve(`${value}/package.json`, import.meta.url)),
@@ -32,7 +32,7 @@ const config: StorybookConfig = {
   ],
   framework: {
     // For this repo, you can use `storybook-react-rsbuild` directly.
-    name: getAbsolutePath('storybook-react-rsbuild') as any,
+    name: getAbsolutePath('storybook-react-rsbuild'),
     options: {},
   },
   typescript: {

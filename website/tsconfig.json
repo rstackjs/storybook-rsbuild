@@ -17,7 +17,7 @@
       "@theme": ["./theme/index.tsx"]
     }
   },
-  "include": ["docs", "theme", "rstack.config.ts"],
+  "include": ["docs", "theme", "env.d.ts", "rstack.config.ts"],
   "mdx": {
     "checkMdx": true
   }

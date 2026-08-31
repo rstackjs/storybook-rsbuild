@@ -299,7 +299,7 @@ export function generateDocgenCodeBlock(options: GeneratorOptions): {
       [
         options.setDisplayName ? setDisplayName(d) : null,
         setComponentDocGen(d, options),
-      ].filter((s) => s !== null) as ts.Statement[],
+      ].filter((s) => s !== null),
     ),
   )
 

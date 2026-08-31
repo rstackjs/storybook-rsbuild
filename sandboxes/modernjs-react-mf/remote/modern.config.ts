@@ -7,11 +7,7 @@ export default defineConfig({
     port: 3051,
     ssr: {
       mode: 'stream',
-      disablePrerender: true,
     },
-  },
-  runtime: {
-    router: true,
   },
   output: {
     // Now this configuration is only used in the local when you run modern serve command.

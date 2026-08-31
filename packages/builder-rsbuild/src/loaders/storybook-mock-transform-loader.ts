@@ -15,7 +15,7 @@ const storybookMockTransformLoader = function (
     callback(null, result.code, result.map || undefined, meta)
   } catch (error) {
     logger.debug(
-      `Could not transform sb.mock(import(...)) calls in ${this.resourcePath}: ${error}`,
+      `Could not transform sb.mock(import(...)) calls in ${this.resourcePath}: ${String(error)}`,
     )
     callback(null, source, sourceMap, meta)
   }

@@ -13,7 +13,7 @@ const Index = () => (
       />
     </Helmet>
     <main>
-      <div className="title" onClick={() => get().then(console.log)}>
+      <div className="title" onClick={() => void get().then(console.log)}>
         Welcome to
         <img
           className="logo"
