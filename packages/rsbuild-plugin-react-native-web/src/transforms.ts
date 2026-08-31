@@ -138,7 +138,7 @@ export function transformReanimatedWebUtils(
   for (const m of code.matchAll(
     /try\s*\{[^{}]*?require\([^)]+\)[^{}]*?\}\s*catch[^{}]*?\{[^{}]*?\}/gs,
   )) {
-    const start = m.index!
+    const start = m.index
     const end = start + m[0].length
     ms.remove(start, end)
     changed = true
@@ -146,7 +146,7 @@ export function transformReanimatedWebUtils(
 
   // Remove all export let declarations
   for (const m of code.matchAll(/export let \w+;/g)) {
-    const start = m.index!
+    const start = m.index
     const end = start + m[0].length
     ms.remove(start, end)
     changed = true

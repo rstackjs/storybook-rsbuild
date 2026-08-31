@@ -43,12 +43,13 @@ export function runAssetProbe(root: HTMLElement) {
   root.append(background, image, status)
 
   // The story element is still detached during render(), so getComputedStyle
-  // sees no stylesheet yet — wait a frame before reading the background.
-  requestAnimationFrame(async () => {
+  // sees no stylesheet yet — probe() runs a frame later.
+  const probe = async () => {
     const cssUrl = backgroundUrl(background)
     const cssOk = cssUrl ? await urlLoads(cssUrl) : false
     const svgOk = await urlLoads(image.src)
     const svgAt = svgOk ? outputLocation(image.src) : 'fail'
     status.textContent = `css: ${cssOk ? 'ok' : 'fail'} svg: ${svgAt}`
-  })
+  }
+  requestAnimationFrame(() => void probe())
 }

@@ -37,8 +37,7 @@
   "scripts": {
     "build": "rstack lib",
     "dev": "rstack lib --watch",
-    "prepare": "pnpm run build",
-    "type-check": "jiti ../../scripts/check/check-package.ts"
+    "prepare": "pnpm run build"
   },
   "dependencies": {
     "magic-string": "^1.1.0",

@@ -8,7 +8,9 @@ export function getTSConfigFile(
 ): Partial<ts.ParsedCommandLine> {
   try {
     const basePath = dirname(tsconfigPath)
-    const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
+    const configFile = ts.readConfigFile(tsconfigPath, (p) =>
+      ts.sys.readFile(p),
+    )
 
     return ts.parseJsonConfigFileContent(
       configFile.config,

@@ -16,8 +16,7 @@ storybook-rsbuild is a pnpm monorepo providing an Rsbuild-powered Storybook buil
 pnpm exec rstack fmt path/to/file.tsx       # format a single file (preferred)
 pnpm exec rstack lint path/to/file.tsx      # lint a single file (preferred)
 pnpm exec rstack test path/to/file.test.ts  # run tests for a single file (preferred)
-pnpm check                                  # lint + formatting check
-pnpm type-check                             # type-check all packages
+pnpm check                                  # lint + type check + formatting check
 ```
 
 ## Ask first

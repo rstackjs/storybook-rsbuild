@@ -81,7 +81,6 @@ jobs:
       - name: Lint / Type Check / Check Dependency Version
         run: |
           pnpm check
-          pnpm type-check
           pnpm check-dependency-version
   # ======== test ========
   test-build:

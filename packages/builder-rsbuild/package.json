@@ -45,8 +45,7 @@
   "scripts": {
     "build": "prebundle && rstack lib",
     "dev": "prebundle && rstack lib --watch",
-    "prepare": "pnpm run build",
-    "type-check": "jiti ../../scripts/check/check-package.ts"
+    "prepare": "pnpm run build"
   },
   "dependencies": {
     "@rsbuild/plugin-type-check": "^1.6.0",

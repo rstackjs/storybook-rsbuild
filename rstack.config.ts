@@ -11,14 +11,20 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
     '**/storybook-static/**',
   ]),
   js.configs.recommended,
-  // TODO: lint is not type-aware yet (parity with the former Biome setup). Evaluate
-  // ts.configs.recommendedTypeChecked with languageOptions.parserOptions.project (e.g.
-  // ["./packages/*/tsconfig.json"]) or parserOptions.projectService once the diagnostics volume is known. Once
-  // rs check --type-check proves equivalent across the package tsconfigs, delete
-  // scripts/check/check-package.ts and the per-package type-check scripts.
-  ts.configs.recommended,
+  ts.configs.recommendedTypeChecked,
   {
     languageOptions: {
+      // Type-aware rules and `--type-check` apply to the files included by these
+      // tsconfigs. Files outside them (the root tests/ and e2e/ projects,
+      // per-package config files) only get the rules that need no type information.
+      parserOptions: {
+        project: [
+          './packages/*/tsconfig.json',
+          './sandboxes/*/tsconfig.json',
+          './sandboxes/*/*/tsconfig.json',
+          './website/tsconfig.json',
+        ],
+      },
       globals: {
         ...globals.browser,
         ...globals.node,
@@ -42,6 +48,9 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
         },
       ],
       'dot-notation': 'warn',
+      // Presets, loaders, and test doubles implement async signatures without
+      // awaiting. Kept in this block because the rule also reports `.js` files.
+      '@typescript-eslint/require-await': 'off',
     },
   },
   {
@@ -65,6 +74,13 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
       '@typescript-eslint/no-invalid-void-type': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-optional-chain': 'off',
+      // `any` is allowed (no-explicit-any is off), so the rules that flag values
+      // flowing out of `any` are off as well.
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
 ])

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import remarkGfm from 'remark-gfm'
 import type { StorybookConfig } from 'storybook-react-rsbuild'
 
-const getAbsolutePath = (value: string): any => {
+const getAbsolutePath = (value: string): string => {
   return path.resolve(
     fileURLToPath(
       new URL(import.meta.resolve(`${value}/package.json`, import.meta.url)),
