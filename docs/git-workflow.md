@@ -4,7 +4,8 @@
 
 - Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
 - Subject line under 72 characters.
-- `git commit` fires a `simple-git-hooks` pre-commit hook (`npx nano-staged`) that **rewrites staged files in place**: `rstack fmt` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`. Rstack auto-sorts imports through `prettier-plugin-organize-imports` and package fields through its `sortPackageJson` setting. Invoke Rstack rather than Prettier or ESLint directly. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff, and never bypass with `--no-verify`.
+- `git commit` runs the `rs hooks`-managed `.rstack/hooks/pre-commit` hook, which invokes `rstack staged` and **rewrites staged files in place**: `rstack fmt` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`. Rstack auto-sorts imports through `prettier-plugin-organize-imports` and package fields through its `sortPackageJson` setting. Invoke Rstack rather than Prettier or ESLint directly. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff. `RSTACK_HOOKS=0` is the only sanctioned emergency skip mechanism, but it is forbidden for normal work; never bypass hooks with `--no-verify`.
+- Linked worktrees (for example, `.claude/worktrees/*`) share `core.hooksPath`, but the generated `.rstack/hooks/_` directory is per checkout. Until `pnpm install` or `pnpm exec rstack hooks` has run in that worktree, Git finds no hooks and commits silently without formatting. Run one of them before the first commit in a fresh worktree.
 
 ## Linking upstream storybookjs/storybook
 
@@ -29,5 +30,5 @@ CI runs these on the PR; all must be green before merge (order matches CI — it
 
 Two things the list does not show:
 
-- The lint/type-check job runs in parallel with the test matrix; an Rstack formatting, Rslint, type, or dependency-version failure still blocks the merge through the `ci-passed` aggregator even when every test job is green. Run `pnpm check` first.
+- The check job runs in parallel with the test matrix; an Rstack formatting, Rslint, type, or dependency-version failure still blocks the merge through the `ci-passed` aggregator even when every test job is green. Run `pnpm check` first.
 - A PR whose diff touches only safelisted paths (docs, website, editor config — the exact filter lives in `.github/workflows/ci.yaml`) skips the test matrix, so a green check there proves nothing about tests. `.agents/**` is not safelisted — the agent skills and the port manifest live there, and the safelisted `.claude/skills` is only a symlink to it. The filter applies to `pull_request` events only; pushes to `main`, merge groups, and manual dispatches run the full matrix.

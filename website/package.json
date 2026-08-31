@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rspress build",
-    "dev": "rspress dev",
-    "preview": "rspress preview"
+    "build": "rstack doc build",
+    "dev": "rstack doc",
+    "preview": "rstack doc preview"
   },
   "dependencies": {
     "@rspress/core": "2.0.19",

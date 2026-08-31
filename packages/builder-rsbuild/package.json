@@ -43,8 +43,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "prebundle && rslib build",
-    "dev": "prebundle && rslib build --watch",
+    "build": "prebundle && rstack lib",
+    "dev": "prebundle && rstack lib --watch",
     "prepare": "pnpm run build",
     "type-check": "jiti ../../scripts/check/check-package.ts"
   },
@@ -71,7 +71,6 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.0",
     "@rsbuild/core": "^2.1.13",
-    "@rslib/core": "~1.0.0-rc.2",
     "@storybook/core-webpack": "10.5.10",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",

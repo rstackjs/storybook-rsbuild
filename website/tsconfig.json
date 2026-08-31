@@ -17,7 +17,7 @@
       "@theme": ["./theme/index.tsx"]
     }
   },
-  "include": ["docs", "theme", "rspress.config.ts"],
+  "include": ["docs", "theme", "rstack.config.ts"],
   "mdx": {
     "checkMdx": true
   }

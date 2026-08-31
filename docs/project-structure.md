@@ -9,10 +9,11 @@
 - **`e2e/`**: Playwright e2e — see [testing.md](testing.md).
 - **`tests/`**: Root-level cross-package integration test project — see [testing.md](testing.md).
 - **`docs/`**: Agent topic guides referenced from [AGENTS.md](../AGENTS.md) — not published documentation (that is `website/`).
+- **`website/`**: Rspress documentation, configured through `define.doc()` in `website/rstack.config.ts` and run with `rstack doc`.
 
 ## Package build
 
-- `packages/<pkg>/build-config.ts` is the single source of truth for entry points and the `exports` map. `storybook-rsbuild-scripts/create-rslib-config` derives the Rslib entries and owns shared build semantics such as platform, syntax target, externals, dts, shims, and chunks. The package-local `rslib.config.ts` passes only its `build-config.ts` and explicit package-specific options.
+- `packages/<pkg>/build-config.ts` is the single source of truth for entry points and the `exports` map. `storybook-rsbuild-scripts/create-rslib-config` derives the Rslib entries and owns shared build semantics such as platform, syntax target, externals, dts, shims, and chunks. The package-local `rstack.config.ts` registers that generated config with `define.lib()` and passes only its `build-config.ts` and explicit package-specific options.
 - Every full build (`build` and the `prepare` script that `pnpm install` triggers) rewrites the `exports` field of the **source** `packages/<pkg>/package.json` from `build-config.ts` — hand-edited `exports` entries are silently reverted with no error. To add or rename a subpath export, edit `build-config.ts` (`exportEntries` / `entryPoint`, or `extraOutputs` for raw non-JS files) and rebuild. Change the shared factory or a package-local factory option only when build semantics change. The `files` field is **not** generated: a new non-JS output needs a hand-added `files` entry too, or it is missing from the published tarball.
 - Watch builds do not rewrite `package.json`; they skip dts generation and preserve the existing `dist/` contents so the last full build's declarations remain resolvable. Set `SB_WATCH_DTS=true` to generate declarations in watch mode when explicitly needed.
 - The `bundler.entries` field in `packages/*/package.json` is dead — nothing in the repo reads it. Never edit it.

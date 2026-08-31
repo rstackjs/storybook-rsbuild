@@ -12,8 +12,8 @@ importers:
         specifier: ^1.62.1
         version: 1.62.1
       '@rstest/core':
-        specifier: ^0.11.8
-        version: 0.11.8(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(jsdom@20.0.3)
+        specifier: ~0.11.10
+        version: 0.11.10(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(jsdom@20.0.3)
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -32,9 +32,6 @@ importers:
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
-      nano-staged:
-        specifier: ^0.9.0
-        version: 0.9.0
       path-serializer:
         specifier: ^0.6.0
         version: 0.6.0
@@ -44,9 +41,6 @@ importers:
       rstack:
         specifier: 0.6.5
         version: 0.6.5(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(core-js@3.48.0)(jiti@2.7.0)(jsdom@20.0.3)(typescript@5.9.3)
-      simple-git-hooks:
-        specifier: ^2.13.1
-        version: 2.13.1
       storybook-rsbuild-scripts:
         specifier: workspace:*
         version: link:scripts
@@ -84,9 +78,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -193,9 +184,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@storybook/core-webpack':
         specifier: 10.5.10
         version: 10.5.10(storybook@10.5.10(@types/react@19.2.18)(prettier@3.9.6)(react@18.3.1))
@@ -239,9 +227,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -291,9 +276,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -337,9 +319,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -383,9 +362,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -414,9 +390,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -445,9 +418,6 @@ importers:
       '@rsbuild/core':
         specifier: ^2.1.13
         version: 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@rslib/core':
-        specifier: ~1.0.0-rc.2
-        version: 1.0.0-rc.2(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(typescript@5.9.3)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.1
@@ -5042,19 +5012,6 @@ packages:
       jsdom:
         optional: true
 
-  '@rstest/core@0.11.8':
-    resolution: {integrity: sha512-XworMa277b5Cf4/Box18frFjWGP4dO/NIals+Ck/Q8nhe1z1t8j0P67zh6rv5xTdE3CCEfItICGvdjzz6VRhLg==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      happy-dom: ^20.8.3
-      jsdom: '>=15.0.0'
-    peerDependenciesMeta:
-      happy-dom:
-        optional: true
-      jsdom:
-        optional: true
-
   '@rushstack/node-core-library@5.24.0':
     resolution: {integrity: sha512-g/Z47ZwARn/VkTnHcyJslrR26erRf1G5JbqPlfGZGBCrOcrEt8fTQXXDVhUDDNl/g/v3TXI1dNiAAT5FEks8BA==}
     engines: {node: '>=20.9.0'}
@@ -9511,11 +9468,6 @@ packages:
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
 
-  nano-staged@0.9.0:
-    resolution: {integrity: sha512-0JfyX4i0Vp5HhC9RDtJ1kp7psz8CFuS3Gya3Z6WZv//QCwA9dPzi1S803VdR0c0P6R7sSvweZ5mSJmYQ/N+loQ==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-    hasBin: true
-
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -11573,10 +11525,6 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
-
-  simple-git-hooks@2.13.1:
-    resolution: {integrity: sha512-WszCLXwT4h2k1ufIXAgsbiTOazqqevFCIncOuUBZJ91DdvWcC5+OFkluWRQPrcuSYd8fjq+o2y1QfWqYMoAToQ==}
-    hasBin: true
 
   sirv@2.0.4:
     resolution: {integrity: sha512-94Bdh3cC2PKrbgSOUqTiGPWVZeSiXfKOVZNJniWoqrWrRkB1CJzBU3NEbiTsPcYy1lDsANA/THzS+9WBiy5nfQ==}
@@ -18323,16 +18271,6 @@ snapshots:
       - '@module-federation/runtime-tools'
       - core-js
 
-  '@rstest/core@0.11.8(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(jsdom@20.0.3)':
-    dependencies:
-      '@rsbuild/core': 2.1.13(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
-      '@types/chai': 5.2.3
-    optionalDependencies:
-      jsdom: 20.0.3
-    transitivePeerDependencies:
-      - '@module-federation/runtime-tools'
-      - core-js
-
   '@rushstack/node-core-library@5.24.0(@types/node@22.19.1)':
     dependencies:
       ajv: 8.20.0
@@ -24444,10 +24382,6 @@ snapshots:
       object-assign: 4.1.1
       thenify-all: 1.6.0
 
-  nano-staged@0.9.0:
-    dependencies:
-      picocolors: 1.1.1
-
   nanoid@3.3.18: {}
 
   napi-postinstall@0.3.4: {}
@@ -26938,8 +26872,6 @@ snapshots:
   signal-exit@3.0.7: {}
 
   signal-exit@4.1.0: {}
-
-  simple-git-hooks@2.13.1: {}
 
   sirv@2.0.4:
     dependencies:
