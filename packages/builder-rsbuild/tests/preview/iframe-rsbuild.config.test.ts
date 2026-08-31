@@ -281,7 +281,7 @@ describe('iframe-rsbuild.config', () => {
         ProvidePlugin: class ProvidePlugin {},
       },
       mergeConfig: (c: any) => c,
-    }) as any
+    })
 
     return { rspackConfig: result, addRules, appendRules, virtualModules }
   }

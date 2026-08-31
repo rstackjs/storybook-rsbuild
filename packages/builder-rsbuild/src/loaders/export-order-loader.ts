@@ -22,6 +22,7 @@ export default async function loader(
       try {
         // Do NOT remove await here. The types are wrong! It has to be awaited,
         // otherwise it will return a Promise<Promise<...>> when wasm isn't loaded.
+        // eslint-disable-next-line @typescript-eslint/await-thenable
         const parseResult = await parseEs(source)
         const namedExportsOrder = (parseResult[1] || [])
           .map((e) => source.substring(e.s, e.e))

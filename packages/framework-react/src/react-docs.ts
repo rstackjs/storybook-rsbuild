@@ -81,7 +81,7 @@ export const rsbuildFinalDocs: NonNullable<
       },
     },
     plugins: [
-      await reactDocGenTsPlugin.default({
+      reactDocGenTsPlugin.default({
         ...reactDocgenTypescriptOptions,
         // We *need* this set so that RDT returns default values in the same format as react-docgen
         savePropValueAsString: true,

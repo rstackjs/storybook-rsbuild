@@ -79,29 +79,30 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
       return resolveAddonName(options.configDir, name, addonOptions)
     })
     .filter(nonNullables)
-  const { apply } = await getPresets(resolvedWebpackAddons, options)
-  const webpackAddonsConfig: rsbuildReal.Rspack.Configuration = await apply(
-    'webpackFinal',
-    // TODO: using empty webpack config as base for now. It's better to using the composed rspack
-    // config in `iframe-rsbuild.config.ts` as base config. But when `tools.rspack` is an async function,
-    // the following `tools.rspack` raise an `Promises are not supported` error.
-    {
-      output: {},
-      module: {},
-      plugins: [],
-      resolve: {},
-      // https://github.com/web-infra-dev/rsbuild/blob/8dc35dc1d1500d2f119875d46b6a07e27986d532/packages/core/src/provider/rspackConfig.ts#L167
-      devServer: undefined,
-      optimization: {},
-      performance: {},
-      externals: {},
-      experiments: {},
-      node: {},
-      stats: {},
-      entry: {},
-    },
-    options,
-  )
+  const webpackPresets = await getPresets(resolvedWebpackAddons, options)
+  const webpackAddonsConfig: rsbuildReal.Rspack.Configuration =
+    await webpackPresets.apply(
+      'webpackFinal',
+      // TODO: using empty webpack config as base for now. It's better to using the composed rspack
+      // config in `iframe-rsbuild.config.ts` as base config. But when `tools.rspack` is an async function,
+      // the following `tools.rspack` raise an `Promises are not supported` error.
+      {
+        output: {},
+        module: {},
+        plugins: [],
+        resolve: {},
+        // https://github.com/web-infra-dev/rsbuild/blob/8dc35dc1d1500d2f119875d46b6a07e27986d532/packages/core/src/provider/rspackConfig.ts#L167
+        devServer: undefined,
+        optimization: {},
+        performance: {},
+        externals: {},
+        experiments: {},
+        node: {},
+        stats: {},
+        entry: {},
+      },
+      options,
+    )
   // #endregion
 
   let intrinsicRsbuildConfig = await rsbuildConfig(options, webpackAddonsConfig)
@@ -110,7 +111,7 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
   intrinsicRsbuildConfig = rsbuildReal.mergeRsbuildConfig(
     intrinsicRsbuildConfig,
     shimsConfig,
-  ) as rsbuildReal.RsbuildConfig
+  )
 
   // Preset hooks run in order with the user's main.ts last. Inherited configs have already
   // been stripped, so an explicit rsbuildFinal hook is the escape hatch for restoring fields.

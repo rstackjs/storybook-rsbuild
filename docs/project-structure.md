@@ -4,7 +4,7 @@
 - **`packages/framework-*`**: Renderer packages (`html`, `react`, `react-native-web`, `vue3`, `web-components`). Runtime logic stays in `src/`.
 - **`packages/addon-*`**: Storybook addons (`modernjs`, `rslib`).
 - **`packages/rsbuild-plugin-react-native-web`**: Standalone Rsbuild plugin consumed by `framework-react-native-web`.
-- **`scripts/`**: Shared package-build helpers and check tooling (`build/create-rslib-config.ts`, `build/utils/`, `check/check-package.ts`, `check-dependency-version.mts`). A `pnpm-workspace.yaml` member — see [release.md](release.md) on `"private": true`.
+- **`scripts/`**: Shared package-build helpers and check tooling (`build/create-rslib-config.ts`, `build/utils/`, `check-dependency-version.mts`). A `pnpm-workspace.yaml` member — see [release.md](release.md) on `"private": true`.
 - **`sandboxes/`**: Runnable Storybook apps for regression testing.
 - **`e2e/`**: Playwright e2e — see [testing.md](testing.md).
 - **`tests/`**: Root-level cross-package integration test project — see [testing.md](testing.md).
