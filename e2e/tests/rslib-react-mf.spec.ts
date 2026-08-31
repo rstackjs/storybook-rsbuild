@@ -1,6 +1,6 @@
-import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import getPort from 'get-port'
+import path from 'node:path'
 import { sandboxes } from '../sandboxes'
 import { waitForPreviewReady } from '../utils/assertions'
 import { type DevServerHandle, launchDevServer } from '../utils/devServer'

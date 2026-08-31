@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button } from 'remote/Button'
 
 const Index = (): JSX.Element => {

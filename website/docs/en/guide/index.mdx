@@ -29,8 +29,8 @@ import { PackageManagerTabs } from '@theme'
 
 The `main` branch ships the Storybook v10 Rsbuild builder together with each framework integration. Use the table below to match your Storybook version, and review the [official migration guide](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#from-version-9x-to-1000) before moving to v10.
 
-| Storybook | Storybook Rsbuild                                                     |
-| --------- | --------------------------------------------------------------------- |
+| Storybook | Storybook Rsbuild                                               |
+| --------- | --------------------------------------------------------------- |
 | v10       | [^3.0.0](https://github.com/rstackjs/storybook-rsbuild)         |
 | v9        | [^2.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v2) |
 | v8        | [^1.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v1) |
@@ -42,7 +42,10 @@ Storybook Rsbuild allows you to use [Rsbuild](https://rsbuild.rs) as the build e
 :::tip Using an AI coding agent?
 If you use [Claude Code](https://code.claude.com), [Codex](https://openai.com/codex), [OpenCode](https://opencode.ai), or other AI coding agents, install our agent skills for guided setup and migration:
 
-<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+<PackageManagerTabs
+  command="skills add rstackjs/agent-skills --skill storybook-rsbuild"
+  dlx
+/>
 
 The skills teach your agent how to configure `rsbuildFinal`, set up framework integrations, and migrate from webpack/Vite.
 :::
@@ -77,14 +80,14 @@ See the **[Frameworks](/guide/framework/react)** section for detailed migration 
 
 ## Packages
 
-| Package                                                                                                                             | What it provides                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | The Rsbuild-powered Storybook builder                  |
-| [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-react)                   | React framework integration configured for Rsbuild     |
-| [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-vue3)                     | Vue 3 framework integration configured for Rsbuild     |
-| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | Vanilla JavaScript/TypeScript integration              |
-| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit and Web Components integration                     |
-| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | Addon that reuses Rslib configuration inside Storybook |
+| Package                                                                                                                       | What it provides                                           |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | The Rsbuild-powered Storybook builder                      |
+| [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-react)                   | React framework integration configured for Rsbuild         |
+| [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-vue3)                     | Vue 3 framework integration configured for Rsbuild         |
+| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | Vanilla JavaScript/TypeScript integration                  |
+| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit and Web Components integration                         |
+| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | Addon that reuses Rslib configuration inside Storybook     |
 | [storybook-addon-modernjs](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-modernjs)                   | Addon that reuses Modern.js configuration inside Storybook |
 
 ## Usage

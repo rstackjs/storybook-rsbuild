@@ -29,8 +29,8 @@ import { PackageManagerTabs } from '@theme'
 
 `main` 分支提供面向 Storybook v10 的 Rsbuild builder 以及各 framework 集成。请使用下表匹配你的 Storybook 版本，并在升级到 v10 前阅读[官方迁移指南](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md#from-version-9x-to-1000)。
 
-| Storybook | Storybook Rsbuild                                                     |
-| --------- | --------------------------------------------------------------------- |
+| Storybook | Storybook Rsbuild                                               |
+| --------- | --------------------------------------------------------------- |
 | v10       | [^3.0.0](https://github.com/rstackjs/storybook-rsbuild)         |
 | v9        | [^2.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v2) |
 | v8        | [^1.0.0](https://github.com/rstackjs/storybook-rsbuild/tree/v1) |
@@ -42,7 +42,10 @@ Storybook Rsbuild 让你能够使用 [Rsbuild](https://rsbuild.rs) 作为 Storyb
 :::tip 在使用 AI 编程助手？
 如果你使用 [Claude Code](https://code.claude.com)、[Codex](https://openai.com/codex)、[OpenCode](https://opencode.ai) 或其他 AI 编程助手，可以安装我们的 agent skills 以获得引导式的安装与迁移：
 
-<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+<PackageManagerTabs
+  command="skills add rstackjs/agent-skills --skill storybook-rsbuild"
+  dlx
+/>
 
 这些 skills 会教你的 agent 如何配置 `rsbuildFinal`、设置 framework 集成，以及从 webpack/Vite 迁移。
 :::
@@ -77,14 +80,14 @@ Storybook 会检测到 Rsbuild 并自动为你配置 `storybook-builder-rsbuild`
 
 ## 包
 
-| Package                                                                                                                             | 提供的能力                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | 由 Rsbuild 驱动的 Storybook builder                  |
+| Package                                                                                                                       | 提供的能力                                 |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [storybook-builder-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/builder-rsbuild)                 | 由 Rsbuild 驱动的 Storybook builder        |
 | [storybook-react-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-react)                   | 为 Rsbuild 配置的 React framework 集成     |
 | [storybook-vue3-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-vue3)                     | 为 Rsbuild 配置的 Vue 3 framework 集成     |
-| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | 原生 JavaScript/TypeScript 集成              |
-| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit 与 Web Components 集成                     |
-| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | 在 Storybook 中复用 Rslib 配置的 addon |
+| [storybook-html-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-html)                     | 原生 JavaScript/TypeScript 集成            |
+| [storybook-web-components-rsbuild](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/framework-web-components) | Lit 与 Web Components 集成                 |
+| [storybook-addon-rslib](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-rslib)                         | 在 Storybook 中复用 Rslib 配置的 addon     |
 | [storybook-addon-modernjs](https://github.com/rstackjs/storybook-rsbuild/tree/main/packages/addon-modernjs)                   | 在 Storybook 中复用 Modern.js 配置的 addon |
 
 ## 使用

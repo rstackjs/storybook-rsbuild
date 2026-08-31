@@ -1,6 +1,6 @@
+import { describe, expect, it } from '@rstest/core'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { describe, expect, it } from '@rstest/core'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value != null && typeof value === 'object' && Array.isArray(value) === false

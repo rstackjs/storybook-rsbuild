@@ -81,12 +81,12 @@ const startWatch = async (
 export default (config: Options = {}): RsbuildPlugin => {
   let tsProgram: Program
   let docGenParser: FileParser
-  // biome-ignore format: prevent trailing commas being added.
+  // prettier-ignore
   let generateDocgenCodeBlock: typeof import(
     "./utils/generate"
-  )["generateDocgenCodeBlock"];
+  )["generateDocgenCodeBlock"]
   let generateOptions: ReturnType<
-    typeof import('./utils/options')['getGenerateOptions']
+    (typeof import('./utils/options'))['getGenerateOptions']
   >
   let filter: ReturnType<typeof createFilter>
   const moduleInvalidationQueue: Map<Filepath, InvalidateModule> = new Map()

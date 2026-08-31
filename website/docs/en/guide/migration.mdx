@@ -7,7 +7,10 @@ This guide covers migrating an existing Storybook project from the **webpack5** 
 :::tip Using an AI coding agent?
 Your agent can handle this migration automatically. Install the agent skills and ask it to migrate your project:
 
-<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+<PackageManagerTabs
+  command="skills add rstackjs/agent-skills --skill storybook-rsbuild"
+  dlx
+/>
 
 :::
 
@@ -43,12 +46,12 @@ The framework package (e.g. `storybook-react-rsbuild`) includes `storybook-build
 
 #### Package mapping
 
-| Old (webpack5)                        | New (Rsbuild)                        |
-| ------------------------------------- | ------------------------------------ |
-| `@storybook/react-webpack5`           | `storybook-react-rsbuild`           |
-| `@storybook/vue3-webpack5`            | `storybook-vue3-rsbuild`            |
-| `@storybook/html-webpack5`            | `storybook-html-rsbuild`            |
-| `@storybook/web-components-webpack5`  | `storybook-web-components-rsbuild`  |
+| Old (webpack5)                       | New (Rsbuild)                      |
+| ------------------------------------ | ---------------------------------- |
+| `@storybook/react-webpack5`          | `storybook-react-rsbuild`          |
+| `@storybook/vue3-webpack5`           | `storybook-vue3-rsbuild`           |
+| `@storybook/html-webpack5`           | `storybook-html-rsbuild`           |
+| `@storybook/web-components-webpack5` | `storybook-web-components-rsbuild` |
 
 ### 2. Update `.storybook/main.ts`
 
@@ -121,14 +124,9 @@ const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
   stories: [],
   // Regular addons (framework-agnostic)
-  addons: [
-    '@storybook/addon-docs',
-    '@storybook/addon-onboarding',
-  ],
+  addons: ['@storybook/addon-docs', '@storybook/addon-onboarding'],
   // Addons that depend on webpack loaders/plugins
-  webpackAddons: [
-    '@storybook/addon-coverage',
-  ],
+  webpackAddons: ['@storybook/addon-coverage'],
 }
 
 export default config
@@ -148,18 +146,18 @@ If an addon's name ends in `-webpack` or its docs mention `webpackFinal`, assume
 
 ### 5. Convert common webpack patterns
 
-| webpack pattern                       | Rsbuild equivalent                                      |
-| ------------------------------------- | ------------------------------------------------------- |
-| `config.resolve.alias`                | `resolve.alias` in `rsbuildFinal`                       |
-| `config.resolve.extensions`           | `resolve.extensions` (Rsbuild has sensible defaults)    |
-| `config.module.rules` (loaders)       | `tools.rspack` or Rsbuild plugins                       |
-| `config.plugins` (webpack plugins)    | `tools.rspack` for Rspack plugins                       |
-| `DefinePlugin`                        | `source.define`                                         |
-| `css-loader` / `style-loader`         | Built-in, use `tools.cssLoader` if customizing          |
-| `sass-loader`                         | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
-| `less-loader`                         | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
-| `file-loader` / `url-loader`          | Built-in asset modules                                  |
-| SVGR                                  | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
+| webpack pattern                    | Rsbuild equivalent                                                    |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `config.resolve.alias`             | `resolve.alias` in `rsbuildFinal`                                     |
+| `config.resolve.extensions`        | `resolve.extensions` (Rsbuild has sensible defaults)                  |
+| `config.module.rules` (loaders)    | `tools.rspack` or Rsbuild plugins                                     |
+| `config.plugins` (webpack plugins) | `tools.rspack` for Rspack plugins                                     |
+| `DefinePlugin`                     | `source.define`                                                       |
+| `css-loader` / `style-loader`      | Built-in, use `tools.cssLoader` if customizing                        |
+| `sass-loader`                      | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
+| `less-loader`                      | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
+| `file-loader` / `url-loader`       | Built-in asset modules                                                |
+| SVGR                               | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
 
 :::tip Rspack plugin compatibility
 Not all webpack plugins are compatible with Rspack. Check the [Rspack compatibility guide](https://rspack.rs/guide/compatibility/plugin) for details.
@@ -185,12 +183,12 @@ Then remove the old packages:
 
 #### Package mapping
 
-| Old (Vite)                            | New (Rsbuild)                        |
-| ------------------------------------- | ------------------------------------ |
-| `@storybook/react-vite`              | `storybook-react-rsbuild`           |
-| `@storybook/vue3-vite`               | `storybook-vue3-rsbuild`            |
-| `@storybook/html-vite`               | `storybook-html-rsbuild`            |
-| `@storybook/web-components-vite`     | `storybook-web-components-rsbuild`  |
+| Old (Vite)                       | New (Rsbuild)                      |
+| -------------------------------- | ---------------------------------- |
+| `@storybook/react-vite`          | `storybook-react-rsbuild`          |
+| `@storybook/vue3-vite`           | `storybook-vue3-rsbuild`           |
+| `@storybook/html-vite`           | `storybook-html-rsbuild`           |
+| `@storybook/web-components-vite` | `storybook-web-components-rsbuild` |
 
 ### 2. Update `.storybook/main.ts`
 
@@ -247,14 +245,14 @@ Rsbuild resolves alias values relative to the project root. Use `'./src'`, not `
 
 ### 4. Convert common Vite patterns
 
-| Vite pattern                  | Rsbuild equivalent                                      |
-| ----------------------------- | ------------------------------------------------------- |
-| `resolve.alias`               | `resolve.alias` in `rsbuildFinal`                       |
-| `plugins: [react()]`         | Auto-configured by framework package                    |
-| `css.preprocessorOptions`    | `@rsbuild/plugin-sass` or `@rsbuild/plugin-less`       |
-| `define`                      | `source.define`                                         |
-| `server.proxy`               | `server.proxy`                                          |
-| `build.target`               | `output.target`                                         |
+| Vite pattern              | Rsbuild equivalent                               |
+| ------------------------- | ------------------------------------------------ |
+| `resolve.alias`           | `resolve.alias` in `rsbuildFinal`                |
+| `plugins: [react()]`      | Auto-configured by framework package             |
+| `css.preprocessorOptions` | `@rsbuild/plugin-sass` or `@rsbuild/plugin-less` |
+| `define`                  | `source.define`                                  |
+| `server.proxy`            | `server.proxy`                                   |
+| `build.target`            | `output.target`                                  |
 
 :::tip Vite plugins are not compatible
 Vite plugins cannot be used with Rsbuild. Find equivalent Rsbuild plugins at the [Rsbuild plugin list](https://rsbuild.rs/plugins/list/).

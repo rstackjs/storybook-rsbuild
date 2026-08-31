@@ -1,5 +1,5 @@
-import './style.css'
 import { setupCounter } from './counter.ts'
+import './style.css'
 
 document.querySelector<HTMLDivElement>('#root')!.innerHTML = `
   <div>

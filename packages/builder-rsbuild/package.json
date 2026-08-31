@@ -44,9 +44,9 @@
   ],
   "scripts": {
     "build": "prebundle && rslib build",
-    "check": "jiti ../../scripts/check/check-package.ts",
     "dev": "prebundle && rslib build --watch",
-    "prepare": "pnpm run build"
+    "prepare": "pnpm run build",
+    "type-check": "jiti ../../scripts/check/check-package.ts"
   },
   "dependencies": {
     "@rsbuild/plugin-type-check": "^1.6.0",

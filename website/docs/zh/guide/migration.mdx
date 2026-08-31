@@ -7,7 +7,10 @@ import { PackageManagerTabs } from '@theme'
 :::tip Using an AI coding agent?
 你的 agent 可以自动完成此次迁移。安装 agent skills 并让它迁移你的项目：
 
-<PackageManagerTabs command="skills add rstackjs/agent-skills --skill storybook-rsbuild" dlx />
+<PackageManagerTabs
+  command="skills add rstackjs/agent-skills --skill storybook-rsbuild"
+  dlx
+/>
 
 :::
 
@@ -43,12 +46,12 @@ framework 包（例如 `storybook-react-rsbuild`）已将 `storybook-builder-rsb
 
 #### 包映射关系
 
-| 旧（webpack5）                        | 新（Rsbuild）                        |
-| ------------------------------------- | ------------------------------------ |
-| `@storybook/react-webpack5`           | `storybook-react-rsbuild`           |
-| `@storybook/vue3-webpack5`            | `storybook-vue3-rsbuild`            |
-| `@storybook/html-webpack5`            | `storybook-html-rsbuild`            |
-| `@storybook/web-components-webpack5`  | `storybook-web-components-rsbuild`  |
+| 旧（webpack5）                       | 新（Rsbuild）                      |
+| ------------------------------------ | ---------------------------------- |
+| `@storybook/react-webpack5`          | `storybook-react-rsbuild`          |
+| `@storybook/vue3-webpack5`           | `storybook-vue3-rsbuild`           |
+| `@storybook/html-webpack5`           | `storybook-html-rsbuild`           |
+| `@storybook/web-components-webpack5` | `storybook-web-components-rsbuild` |
 
 ### 2. 更新 `.storybook/main.ts`
 
@@ -121,14 +124,9 @@ const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
   stories: [],
   // Regular addons (framework-agnostic)
-  addons: [
-    '@storybook/addon-docs',
-    '@storybook/addon-onboarding',
-  ],
+  addons: ['@storybook/addon-docs', '@storybook/addon-onboarding'],
   // Addons that depend on webpack loaders/plugins
-  webpackAddons: [
-    '@storybook/addon-coverage',
-  ],
+  webpackAddons: ['@storybook/addon-coverage'],
 }
 
 export default config
@@ -148,18 +146,18 @@ export default config
 
 ### 5. 转换常见的 webpack 模式
 
-| webpack 模式                          | Rsbuild 等价方案                                        |
-| ------------------------------------- | ------------------------------------------------------- |
-| `config.resolve.alias`                | `rsbuildFinal` 中的 `resolve.alias`                     |
-| `config.resolve.extensions`           | `resolve.extensions`（Rsbuild 已有合理的默认值）         |
-| `config.module.rules`（loaders）       | `tools.rspack` 或 Rsbuild plugins                       |
-| `config.plugins`（webpack plugins）    | 对于 Rspack plugins 使用 `tools.rspack`                 |
-| `DefinePlugin`                        | `source.define`                                         |
-| `css-loader` / `style-loader`         | 内置支持，如需自定义可使用 `tools.cssLoader`             |
-| `sass-loader`                         | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
-| `less-loader`                         | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
-| `file-loader` / `url-loader`          | 内置 asset modules                                      |
-| SVGR                                  | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
+| webpack 模式                        | Rsbuild 等价方案                                                      |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `config.resolve.alias`              | `rsbuildFinal` 中的 `resolve.alias`                                   |
+| `config.resolve.extensions`         | `resolve.extensions`（Rsbuild 已有合理的默认值）                      |
+| `config.module.rules`（loaders）    | `tools.rspack` 或 Rsbuild plugins                                     |
+| `config.plugins`（webpack plugins） | 对于 Rspack plugins 使用 `tools.rspack`                               |
+| `DefinePlugin`                      | `source.define`                                                       |
+| `css-loader` / `style-loader`       | 内置支持，如需自定义可使用 `tools.cssLoader`                          |
+| `sass-loader`                       | [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass) |
+| `less-loader`                       | [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less) |
+| `file-loader` / `url-loader`        | 内置 asset modules                                                    |
+| SVGR                                | [`@rsbuild/plugin-svgr`](https://rsbuild.rs/plugins/list/plugin-svgr) |
 
 :::tip Rspack plugin compatibility
 并非所有 webpack plugin 都与 Rspack 兼容。详情请查阅 [Rspack 兼容性指南](https://rspack.rs/guide/compatibility/plugin)。
@@ -185,12 +183,12 @@ export default config
 
 #### 包映射关系
 
-| 旧（Vite）                            | 新（Rsbuild）                        |
-| ------------------------------------- | ------------------------------------ |
-| `@storybook/react-vite`              | `storybook-react-rsbuild`           |
-| `@storybook/vue3-vite`               | `storybook-vue3-rsbuild`            |
-| `@storybook/html-vite`               | `storybook-html-rsbuild`            |
-| `@storybook/web-components-vite`     | `storybook-web-components-rsbuild`  |
+| 旧（Vite）                       | 新（Rsbuild）                      |
+| -------------------------------- | ---------------------------------- |
+| `@storybook/react-vite`          | `storybook-react-rsbuild`          |
+| `@storybook/vue3-vite`           | `storybook-vue3-rsbuild`           |
+| `@storybook/html-vite`           | `storybook-html-rsbuild`           |
+| `@storybook/web-components-vite` | `storybook-web-components-rsbuild` |
 
 ### 2. 更新 `.storybook/main.ts`
 
@@ -247,14 +245,14 @@ Rsbuild 会相对于项目根目录解析 alias 值。请使用 `'./src'`，而�
 
 ### 4. 转换常见的 Vite 模式
 
-| Vite 模式                     | Rsbuild 等价方案                                        |
-| ----------------------------- | ------------------------------------------------------- |
-| `resolve.alias`               | `rsbuildFinal` 中的 `resolve.alias`                     |
-| `plugins: [react()]`         | 由 framework 包自动配置                                  |
-| `css.preprocessorOptions`    | `@rsbuild/plugin-sass` 或 `@rsbuild/plugin-less`       |
-| `define`                      | `source.define`                                         |
-| `server.proxy`               | `server.proxy`                                          |
-| `build.target`               | `output.target`                                         |
+| Vite 模式                 | Rsbuild 等价方案                                 |
+| ------------------------- | ------------------------------------------------ |
+| `resolve.alias`           | `rsbuildFinal` 中的 `resolve.alias`              |
+| `plugins: [react()]`      | 由 framework 包自动配置                          |
+| `css.preprocessorOptions` | `@rsbuild/plugin-sass` 或 `@rsbuild/plugin-less` |
+| `define`                  | `source.define`                                  |
+| `server.proxy`            | `server.proxy`                                   |
+| `build.target`            | `output.target`                                  |
 
 :::tip Vite plugins are not compatible
 Vite plugin 无法与 Rsbuild 一起使用。请在 [Rsbuild plugin 列表](https://rsbuild.rs/plugins/list/) 中查找等价的 Rsbuild plugin。

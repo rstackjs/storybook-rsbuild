@@ -1,5 +1,5 @@
 .storybook-page {
-  font-family: "Nunito Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 24px;
   padding: 48px 20px;
@@ -18,7 +18,7 @@
 }
 
 .storybook-page h2::before {
-  content: url("./assets/context.png");
+  content: url('./assets/context.png');
 }
 
 .storybook-page p {

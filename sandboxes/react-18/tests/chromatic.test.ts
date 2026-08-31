@@ -1,5 +1,5 @@
-import { resolve } from 'node:path'
 import { expect, it } from '@rstest/core'
+import { resolve } from 'node:path'
 
 const previewStatsJsonPath = resolve(
   __dirname,

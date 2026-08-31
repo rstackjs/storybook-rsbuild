@@ -10,7 +10,6 @@
   "dependencies": {
     "@rspress/core": "2.0.19",
     "@rspress/plugin-algolia": "2.0.19",
-
     "@rspress/plugin-sitemap": "2.0.19",
     "@rspress/plugin-twoslash": "2.0.19",
     "rspress-plugin-font-open-sans": "1.0.4"

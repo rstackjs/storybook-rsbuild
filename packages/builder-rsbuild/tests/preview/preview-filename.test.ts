@@ -1,8 +1,8 @@
+import { type Rspack, rspack } from '@rsbuild/core'
+import { describe, expect, it } from '@rstest/core'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type Rspack, rspack } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
 import {
   developmentPreviewChunkFilename,
   productionPreviewChunkFilename,

@@ -130,9 +130,7 @@ export const getVirtualModules = async (
   const configEntryPath = resolve(join(workingDir, 'storybook-config-entry.js'))
   virtualModules[configEntryPath] = (
     await readTemplate(
-      require.resolve(
-        'storybook-builder-rsbuild/templates/virtualModuleModernEntry.js',
-      ),
+      require.resolve('storybook-builder-rsbuild/templates/virtualModuleModernEntry.js'),
     )
   )
     .replaceAll(`'{{storiesFilename}}'`, `'./${storiesFilename}'`)

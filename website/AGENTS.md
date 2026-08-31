@@ -18,7 +18,7 @@ Translating: keep meaning and structure consistent; leave technical terms, comma
 ## Authoring
 
 - Pages are Markdown/MDX under `docs/{en,zh}/`. The page title is the first `#` heading — no frontmatter needed. Frontmatter is used only for Rspress page-level keys (e.g. `pageType: home` on `docs/*/index.md`).
-- Sidebar order and labels live in each directory's `_meta.json`, nav in `_nav.json`. `_meta.json` is **exhaustive** — anything it does not list is silently hidden from the sidebar, and the build raises no warning. A page in a new subdirectory therefore needs two edits per locale: create `<newdir>/_meta.json` listing its pages, *and* add `{ "type": "dir", "name": "<newdir>", "label": "<Label>" }` to the parent's `_meta.json` (see the `framework` / `integrations` entries in `docs/{en,zh}/guide/_meta.json`).
+- Sidebar order and labels live in each directory's `_meta.json`, nav in `_nav.json`. `_meta.json` is **exhaustive** — anything it does not list is silently hidden from the sidebar, and the build raises no warning. A page in a new subdirectory therefore needs two edits per locale: create `<newdir>/_meta.json` listing its pages, _and_ add `{ "type": "dir", "name": "<newdir>", "label": "<Label>" }` to the parent's `_meta.json` (see the `framework` / `integrations` entries in `docs/{en,zh}/guide/_meta.json`).
 - Type-checked code blocks: ` ```ts twoslash title=".storybook/main.ts" ` — every `twoslash` block starts with `// @noErrors`: `website` does not depend on `storybook-*-rsbuild` or `@rsbuild/core`, so those imports raise TS2307 and `pnpm --filter website build` fails (`dev` only logs it).
 
 ## Commands

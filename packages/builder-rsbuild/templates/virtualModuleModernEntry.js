@@ -1,9 +1,9 @@
-import { importFn } from '{{storiesFilename}}'
 import { global } from '@storybook/global'
 import { createBrowserChannel } from 'storybook/internal/channels'
 import { STORY_HOT_UPDATED } from 'storybook/internal/core-events'
 import { isPreview } from 'storybook/internal/csf'
 import { addons, composeConfigs, PreviewWeb } from 'storybook/preview-api'
+import { importFn } from '{{storiesFilename}}'
 
 const getProjectAnnotations = () => {
   const previewAnnotations = ['{{previewAnnotations_requires}}']

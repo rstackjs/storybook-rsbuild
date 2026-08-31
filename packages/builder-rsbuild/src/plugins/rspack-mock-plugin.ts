@@ -1,6 +1,6 @@
+import type { Rspack } from '@rsbuild/core'
 import { dirname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Rspack } from '@rsbuild/core'
 import {
   babelParser,
   extractMockCalls,
@@ -177,9 +177,8 @@ export class RspackMockPlugin {
           replacementResource = redirectPath
         } else {
           const loaderPath = fileURLToPath(
-            import.meta.resolve(
-              'storybook-builder-rsbuild/loaders/rsbuild-automock-loader',
-            ),
+            import.meta
+              .resolve('storybook-builder-rsbuild/loaders/rsbuild-automock-loader'),
           )
           replacementResource = `${loaderPath}?spy=${mock.spy}!${absolutePath}`
         }

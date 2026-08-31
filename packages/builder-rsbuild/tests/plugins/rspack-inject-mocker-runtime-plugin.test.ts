@@ -24,8 +24,7 @@ function applyPlugin(api: HooksApi) {
   const errors: unknown[] = []
   const tappedVia: HooksAccessor[] = []
   let tagHook:
-    | ((data: TagData, cb: (error: unknown) => void) => void)
-    | undefined
+    ((data: TagData, cb: (error: unknown) => void) => void) | undefined
   let startCompilation: ((compilation: unknown) => void) | undefined
 
   // One hooks object per accessor, each recording the route it was reached by, so a plugin that

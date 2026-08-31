@@ -5,7 +5,7 @@ storybook-rsbuild is a pnpm monorepo providing an Rsbuild-powered Storybook buil
 ## Always
 
 - Use **pnpm** — never `npm` or `yarn`.
-- Use **Biome** for formatting and linting — never `Prettier` or `ESLint`, and never sort imports manually (Biome handles it).
+- Use **Rstack CLI** for formatting, import organization, and linting — never invoke Prettier or ESLint directly. `rstack fmt` auto-sorts imports through `prettier-plugin-organize-imports`; never sort them manually.
 - Use **Rstest** for unit testing.
 - Name directories, files, and packages in **kebab-case**. Exempt: tool-mandated names (e.g. Rspress `_nav.json` / `_meta.json`), upstream-ported filenames, test fixture components, and the camelCase helpers in `e2e/utils/` and `tests/helpers/`.
 - Propose a short plan before executing a complex refactor.
@@ -13,9 +13,11 @@ storybook-rsbuild is a pnpm monorepo providing an Rsbuild-powered Storybook buil
 ## Commands
 
 ```bash
-pnpm exec biome check --write path/to/file.tsx  # format + lint a single file (preferred)
-pnpm exec rstest path/to/file.test.ts           # run tests for a single file (preferred)
-pnpm check                                      # type-check all packages
+pnpm exec rstack fmt path/to/file.tsx   # format a single file (preferred)
+pnpm exec rstack lint path/to/file.tsx  # lint a single file (preferred)
+pnpm exec rstest path/to/file.test.ts    # run tests for a single file (preferred)
+pnpm check                               # lint + formatting check
+pnpm type-check                          # type-check all packages
 ```
 
 ## Ask first

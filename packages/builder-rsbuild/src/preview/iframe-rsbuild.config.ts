@@ -1,9 +1,9 @@
-import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { loadConfig, mergeRsbuildConfig, rspack } from '@rsbuild/core'
 import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
+import { createRequire } from 'node:module'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 // @ts-expect-error (I removed this on purpose, because it's incorrect)
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
 import { pluginHtmlMinifierTerser } from 'rsbuild-plugin-html-minifier-terser'
@@ -103,7 +103,6 @@ const globalPath = maybeGetAbsolutePath('@storybook/global')
 // these are not dependencies of the builder anymore, thus resolving them can fail.
 // we should remove the aliases in 8.0, I'm not sure why they are here in the first place.
 const storybookPaths: Record<string, string> = {
-  // biome-ignore lint/complexity/useLiteralKeys: dynamic key required for conditional spread
   ...(globalPath ? { ['@storybook/global']: globalPath } : {}),
 }
 
@@ -434,9 +433,8 @@ export default async (
             enforce: 'post',
             use: [
               {
-                loader: require.resolve(
-                  'storybook-builder-rsbuild/loaders/export-order-loader',
-                ),
+                loader:
+                  require.resolve('storybook-builder-rsbuild/loaders/export-order-loader'),
               },
             ],
           },

@@ -1,7 +1,7 @@
+import { afterEach, describe, expect, it } from '@rstest/core'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { afterEach, describe, expect, it } from '@rstest/core'
 import { getTsconfigPathsBaseDir } from '../../src/loaders/tsconfig-paths'
 
 const tempDirs: string[] = []

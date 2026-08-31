@@ -43,9 +43,9 @@
   ],
   "scripts": {
     "build": "rslib build",
-    "check": "jiti ../../scripts/check/check-package.ts",
     "dev": "rslib build --watch",
-    "prepare": "pnpm run build"
+    "prepare": "pnpm run build",
+    "type-check": "jiti ../../scripts/check/check-package.ts"
   },
   "dependencies": {
     "@storybook/web-components": "^10.5.10",

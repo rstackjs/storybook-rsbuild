@@ -2,9 +2,9 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
+import MagicString from 'magic-string'
 import { existsSync } from 'node:fs'
 import { dirname, sep } from 'node:path'
-import MagicString from 'magic-string'
 import type {
   Documentation,
   Handler,
@@ -27,8 +27,8 @@ import type { LoaderContext } from 'webpack'
 
 import {
   defaultLookupModule,
-  RESOLVE_EXTENSIONS,
   ReactDocgenResolveError,
+  RESOLVE_EXTENSIONS,
 } from './docgen-resolver'
 import { getTsconfigPathsBaseDir } from './tsconfig-paths'
 

@@ -3,7 +3,6 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
 import { join } from 'pathe'
-import sortPackageJson from 'sort-package-json'
 
 import type { BuildEntries } from './entry-utils'
 
@@ -43,14 +42,10 @@ export async function generatePackageJsonFile(cwd: string, data: BuildEntries) {
 
   pkgJson.exports = sortObject(pkgJson.exports)
 
-  await writeFile(
-    location,
-    `${sortPackageJson(JSON.stringify(pkgJson, null, 2))}\n`,
-    {},
-  )
+  await writeFile(location, `${JSON.stringify(pkgJson, null, 2)}\n`, {})
 
-  // Need to run biome to ensure the package.json is properly formatted after build.
-  await exec(`pnpm exec biome check ${location} --write`)
+  // Keep the generated package.json consistent with the repository formatter.
+  await exec(`pnpm exec rstack fmt ${location}`)
 }
 
 function sortObject(obj: Record<string, any>) {

@@ -45,7 +45,7 @@ import { StorybookConfig } from 'storybook-react-rsbuild'
 const config: StorybookConfig = {
   framework: 'storybook-react-rsbuild',
   stories: [],
-  addons: []
+  addons: [],
 }
 
 export default config
@@ -70,7 +70,10 @@ export default config
 import { defineConfig } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
 // import rspackConfig from './rspack.config.cjs'
-const rspackConfig = { resolve: { alias: { '@app': './src' } }, module: { rules: [{}, {}, { loader: 'less-loader' }] } } as any
+const rspackConfig = {
+  resolve: { alias: { '@app': './src' } },
+  module: { rules: [{}, {}, { loader: 'less-loader' }] },
+} as any
 
 export default defineConfig({
   plugins: [pluginReact()],

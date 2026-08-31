@@ -1,11 +1,11 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import {
   mergeRsbuildConfig,
   type RsbuildConfig,
   type Rspack,
 } from '@rsbuild/core'
 import { describe, expect, it, rs } from '@rstest/core'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { getConfig } from '../../src/index'
 import type { RsbuildBuilderOptions } from '../../src/preview/iframe-rsbuild.config'
 import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'

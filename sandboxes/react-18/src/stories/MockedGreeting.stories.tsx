@@ -1,5 +1,3 @@
-import React from 'react'
-
 import { getGreeting } from './utils/greeting'
 
 const Template = () => (

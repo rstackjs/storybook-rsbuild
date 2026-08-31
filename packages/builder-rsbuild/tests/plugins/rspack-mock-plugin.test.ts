@@ -1,6 +1,6 @@
-import { resolve } from 'node:path'
 import type { Rspack } from '@rsbuild/core'
 import { describe, expect, it } from '@rstest/core'
+import { resolve } from 'node:path'
 import { resolve as resolvePosix } from 'pathe'
 import { RspackMockPlugin } from '../../src/plugins/rspack-mock-plugin'
 

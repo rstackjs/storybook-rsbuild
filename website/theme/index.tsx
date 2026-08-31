@@ -1,4 +1,3 @@
-import './index.css'
 import { useLang } from '@rspress/core/runtime'
 import { Layout as BaseLayout } from '@rspress/core/theme-original'
 import {
@@ -6,6 +5,7 @@ import {
   ZH_LOCALES,
 } from '@rspress/plugin-algolia/runtime'
 import { NavIcon } from '@rstack-dev/doc-ui/nav-icon'
+import './index.css'
 
 export * from '@rspress/core/theme-original'
 
