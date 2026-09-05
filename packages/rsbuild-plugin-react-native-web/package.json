@@ -41,7 +41,7 @@
     "type-check": "jiti ../../scripts/check/check-package.ts"
   },
   "dependencies": {
-    "magic-string": "^1.1.0",
+    "magic-string": "^1.2.3",
     "pathe": "^2.0.3"
   },
   "devDependencies": {
