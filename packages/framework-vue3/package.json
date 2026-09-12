@@ -51,12 +51,12 @@
     "vue-docgen-loader": "^2.0.1"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.0",
+    "@microsoft/api-extractor": "^7.59.1",
     "@rsbuild/core": "^2.2.3",
     "@types/node": "^22.0.0",
     "storybook": "10.6.0",
     "typescript": "^5.9.3",
-    "vue": "^3.5.41"
+    "vue": "^3.5.42"
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",

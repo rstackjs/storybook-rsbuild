@@ -42,9 +42,9 @@
     "type-check": "jiti ../../scripts/check/check-package.ts"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.0",
+    "@microsoft/api-extractor": "^7.59.1",
     "@rsbuild/core": "^2.2.3",
-    "@rslib/core": "~1.0.0-rc.2",
+    "@rslib/core": "~1.0.0",
     "@types/node": "^22.0.0",
     "storybook": "10.6.0",
     "storybook-builder-rsbuild": "workspace:*",
