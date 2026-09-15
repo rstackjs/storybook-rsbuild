@@ -18,9 +18,15 @@ import { PackageManagerTabs } from '@theme'
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: ['storybook-addon-rstack'],
 }
+
+export default config
 ```
 
 默认情况下，addon 会加载 `rstack.config.*`。如果 app 和 lib 定义同时存在，它会优先选择 `define.app()`，否则回退到 `define.lib()`。只有选中的定义会被执行。
@@ -31,7 +37,11 @@ export default {
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     {
       name: 'storybook-addon-rstack',
@@ -46,6 +56,8 @@ export default {
     },
   ],
 }
+
+export default config
 ```
 
 | 选项             | 类型与行为                                                                                                            |

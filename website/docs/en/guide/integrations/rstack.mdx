@@ -18,9 +18,15 @@ Use this alongside the framework package from your project's [framework guide](/
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: ['storybook-addon-rstack'],
 }
+
+export default config
 ```
 
 By default, the addon loads `rstack.config.*`, prefers `define.app()` when both app and lib definitions exist, and otherwise falls back to `define.lib()`. Only the selected definition is executed.
@@ -31,7 +37,11 @@ Configure the addon when the defaults do not match your project:
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     {
       name: 'storybook-addon-rstack',
@@ -46,6 +56,8 @@ export default {
     },
   ],
 }
+
+export default config
 ```
 
 | Option           | Type and behavior                                                                                                                    |
