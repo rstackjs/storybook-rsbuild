@@ -48,8 +48,7 @@ const config: StorybookConfig = {
       options: {
         rstack: {
           configFilePath: './rstack.config.ts',
-          configType: 'lib',
-          libIndex: 0,
+          stack: { type: 'lib', libIndex: 0 },
         },
       },
     },
@@ -59,23 +58,14 @@ const config: StorybookConfig = {
 export default config
 ```
 
-| Option           | Type and behavior                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `configFilePath` | Optional `string`. Absolute path, or relative to the current working directory.                                                      |
-| `configType`     | Optional `'app'` or `'lib'`. When omitted, prefer app, then lib. A missing selected definition is an error.                          |
-| `environment`    | Optional `string`. Must name an existing environment; see the [builder's environment option](/guide/configuration#option-reference). |
-| `libIndex`       | `number` or `false`. Defaults to `0`. Use `false` to inherit only top-level library config.                                          |
+- `configFilePath`: Optional `string`. Absolute path, or relative to the current working directory. Names the Rstack config file, which is loaded through Rstack's [`loadRstackConfig()`](https://github.com/rstackjs/rstack-cli/blob/main/packages/rstack/src/config.ts).
+- `stack`: Which definition to inherit. Omit it to prefer `define.app()` and fall back to `define.lib()`.
+  - `{ type: 'app', environment? }`: inherit `define.app()`. `environment` must name an existing environment; see the [builder's environment option](/guide/configuration#option-reference).
+  - `{ type: 'lib', libIndex? }`: inherit `define.lib()`. `libIndex` is a `number` or `false` (default `0`); `false` inherits only top-level library config.
 
-If `lib` is omitted, index `0` is an implicit empty entry. An explicit empty array has no valid entry.
+Setting `stack` requires that definition to exist; a missing definition is an error.
 
-## Function definitions
-
-For function-form `define.app()` and `define.lib()`, the addon passes these params:
-
-- `env` and `envMode`: `process.env.NODE_ENV || ''`, matching Rsbuild's config loader
-- `command`: `'build'` when Storybook's `configType` is `'PRODUCTION'`, otherwise `'dev'`
-
-The selected definition is resolved once. For app config, a selected environment overrides top-level settings. For lib config, the selected `lib[]` entry overrides top-level settings.
+If the selected library config omits its `lib` array, index `0` is an implicit empty entry. An explicit empty array has no valid entry.
 
 ## Inherited configuration boundary
 

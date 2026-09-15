@@ -60,7 +60,7 @@ describe('rsbuildFinal', () => {
 
   it('throws when explicitly selected app config is absent', async () => {
     await expect(
-      runRsbuildFinal({ lib: {} }, { configType: 'app' }),
+      runRsbuildFinal({ lib: {} }, { stack: { type: 'app' } }),
     ).rejects.toThrow('No define.app()')
   })
 
@@ -80,18 +80,21 @@ describe('rsbuildFinal', () => {
     const lib = rs.fn(async () => ({
       source: { define: { SELECTED: '"lib"' } },
     }))
-    const result = await runRsbuildFinal({ app, lib }, { configType: 'lib' })
+    const result = await runRsbuildFinal(
+      { app, lib },
+      { stack: { type: 'lib' } },
+    )
     expect(app).not.toHaveBeenCalled()
     expect(lib).toHaveBeenCalledTimes(1)
     expect(result.source?.define?.SELECTED).toBe('"lib"')
   })
 
-  it('passes params derived independently from Storybook DEVELOPMENT mode', async () => {
+  it('passes the same params as the Rsbuild config loader', async () => {
     process.env.NODE_ENV = 'staging'
     const app = rs.fn(() => ({}))
     await runRsbuildFinal({ app })
     expect(app).toHaveBeenCalledWith({
-      command: 'dev',
+      command: process.argv[2],
       env: 'staging',
       envMode: 'staging',
     })
@@ -113,7 +116,7 @@ describe('rsbuildFinal', () => {
           source: { define: { SELECTED: '"top"' } },
         },
       },
-      { environment: 'web' },
+      { stack: { type: 'app', environment: 'web' } },
       { source: { entry: { preview: './preview.ts' } } },
     )
     expect(result.source?.define?.SELECTED).toBe('"web"')
@@ -131,7 +134,7 @@ describe('rsbuildFinal', () => {
           ],
         },
       },
-      { libIndex: 1 },
+      { stack: { type: 'lib', libIndex: 1 } },
       { source: { define: { STORYBOOK: 'true' } } },
     )
     expect(result.source?.define).toEqual({
@@ -153,7 +156,7 @@ describe('rsbuildFinal', () => {
       rstack: { configFilePath },
     } as unknown as RsbuildFinalOptions)
     expect(result.source?.define).toMatchObject({
-      FIXTURE_COMMAND: JSON.stringify('build'),
+      FIXTURE_COMMAND: JSON.stringify(process.argv[2]),
       FIXTURE_ENV: JSON.stringify('integration'),
       FIXTURE_ENV_MODE: JSON.stringify('integration'),
       FIXTURE_LIB: JSON.stringify('loaded'),

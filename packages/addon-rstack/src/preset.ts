@@ -18,12 +18,7 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   config,
   options: BaseOptions & AddonOptions,
 ) => {
-  const {
-    configFilePath,
-    configType: definitionType,
-    environment,
-    libIndex,
-  } = options.rstack ?? {}
+  const { configFilePath, stack } = options.rstack ?? {}
   const { configs, filePath } = await loadRstackConfig({ configFilePath })
   if (filePath === null) {
     throw new Error(
@@ -32,11 +27,12 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   }
 
   const selectedType =
-    definitionType ?? (configs.app !== undefined ? 'app' : 'lib')
+    stack?.type ?? (configs.app !== undefined ? 'app' : 'lib')
+  // Same params Rsbuild's own config loader builds when no overrides are given.
   const env = process.env.NODE_ENV || ''
   const params: ConfigParams = {
     env,
-    command: options.configType === 'PRODUCTION' ? 'build' : 'dev',
+    command: process.argv[2],
     envMode: env,
   }
 
@@ -46,7 +42,7 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     const resolved =
       typeof definition === 'function' ? await definition(params) : definition
     inherited = resolveInheritedRsbuildConfig(resolved, {
-      environment,
+      environment: stack?.type === 'app' ? stack.environment : undefined,
       source: 'the loaded Rstack app config',
     })
   } else if (selectedType === 'lib' && configs.lib !== undefined) {
@@ -54,12 +50,12 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     const resolved =
       typeof definition === 'function' ? await definition(params) : definition
     inherited = resolveLibRsbuildConfig(resolved, {
-      libIndex,
+      libIndex: stack?.type === 'lib' ? stack.libIndex : undefined,
       source: 'the loaded Rstack lib config',
     })
   } else {
     throw new Error(
-      definitionType === undefined
+      stack === undefined
         ? `No define.app() or define.lib() found in ${filePath}.`
         : `No define.${selectedType}() found in ${filePath}.`,
     )

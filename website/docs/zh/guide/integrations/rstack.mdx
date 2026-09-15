@@ -29,7 +29,9 @@ const config: StorybookConfig = {
 export default config
 ```
 
-默认情况下，addon 会加载 `rstack.config.*`。如果 app 和 lib 定义同时存在，它会优先选择 `define.app()`，否则回退到 `define.lib()`。只有选中的定义会被执行。
+addon 默认在 Storybook 启动的目录尝试加载 Rstack 的配置文件 `rstack.config.*`。如果 app 和 lib 定义同时存在，它会优先选择 `define.app()`，否则回退到 `define.lib()`。
+
+更改配置文件路径或手动指定选中的 Storybook 运行的目标，可以通过 `options.rstack` 配置。
 
 ## 选项
 
@@ -48,8 +50,7 @@ const config: StorybookConfig = {
       options: {
         rstack: {
           configFilePath: './rstack.config.ts',
-          configType: 'lib',
-          libIndex: 0,
+          stack: { type: 'lib', libIndex: 0 },
         },
       },
     },
@@ -59,23 +60,14 @@ const config: StorybookConfig = {
 export default config
 ```
 
-| 选项             | 类型与行为                                                                                                            |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `configFilePath` | 可选的 `string`。绝对路径，或相对于当前工作目录的路径。                                                               |
-| `configType`     | 可选的 `'app'` 或 `'lib'`。未指定时优先选择 app，再回退到 lib。选中的定义不存在时会报错。                             |
-| `environment`    | 可选的 `string`。必须指定已有的 environment 名称；参见 [builder 的 environment 选项](/guide/configuration#选项参考)。 |
-| `libIndex`       | `number` 或 `false`，默认为 `0`。使用 `false` 时只继承顶层 library 配置。                                             |
+- `configFilePath`：可选的 `string`。绝对路径，或相对于当前工作目录的路径，用来指定目标的 Rstack config file，被指定的文件将通过 Rstack 的 [`loadRstackConfig()`](https://github.com/rstackjs/rstack-cli/blob/main/packages/rstack/src/config.ts) 加载。
+- `stack`：指定要继承的定义。不设置时优先选择 `define.app()`，再回退到 `define.lib()`。
+  - `{ type: 'app', environment? }`：继承 `define.app()`。`environment` 必须指定已有的 environment 名称；参见 [builder 的 environment 选项](/guide/configuration#选项参考)。
+  - `{ type: 'lib', libIndex? }`：继承 `define.lib()`。`libIndex` 为 `number` 或 `false`，默认为 `0`；使用 `false` 时只继承顶层 library 配置。
 
-省略 `lib` 时，index `0` 对应一个隐式空 entry。显式空数组则没有有效 entry。
+设置 `stack` 时对应的定义必须存在，否则报错。
 
-## 函数形式的定义
-
-对于函数形式的 `define.app()` 和 `define.lib()`，addon 会传入以下 params：
-
-- `env` 和 `envMode`：`process.env.NODE_ENV || ''`，与 Rsbuild 的 config loader 一致
-- `command`：Storybook 的 `configType` 为 `'PRODUCTION'` 时是 `'build'`，否则是 `'dev'`
-
-选中的定义只会解析一次。对于 app 配置，选中的 environment 会覆盖顶层设置；对于 lib 配置，选中的 `lib[]` entry 会覆盖顶层设置。
+选中的 library 配置省略 `lib` 数组时，index `0` 对应一个隐式空 entry。显式空数组则没有有效 entry。
 
 ## 继承配置边界
 

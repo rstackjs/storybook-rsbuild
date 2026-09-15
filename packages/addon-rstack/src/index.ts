@@ -1,1 +1,1 @@
-export type { AddonOptions } from './types'
+export type { AddonOptions, RstackStackOptions } from './types'
