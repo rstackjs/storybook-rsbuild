@@ -20,9 +20,15 @@ Install `@rsbuild/core` directly so the version that the addon and your framewor
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: ['storybook-addon-rslib'],
 }
+
+export default config
 ```
 
 Before the selected Rslib config is merged into Storybook, it passes through the same inherited-config boundary documented in [Builder Options](/guide/configuration#builder-options). Plugins remain inherited; use the Storybook CLI's `process.env.STORYBOOK` flag to conditionally omit an app-only side-effect plugin. Use `modifyLibRsbuildConfig` to restore a stripped field explicitly for Storybook, or use Storybook's `rsbuildFinal` for final configuration. Both hooks run after inherited fields are stripped.
@@ -31,7 +37,11 @@ Or configure the addon manually:
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     {
       name: 'storybook-addon-rslib',
@@ -41,6 +51,8 @@ export default {
     },
   ],
 }
+
+export default config
 ```
 
 ## Module Federation

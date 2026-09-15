@@ -20,9 +20,15 @@ import { PackageManagerTabs } from '@theme'
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: ['storybook-addon-rslib'],
 }
+
+export default config
 ```
 
 选中的 Rslib 配置在合并到 Storybook 之前，会经过 [Builder 选项](/guide/configuration#builder-选项) 中记录的同一 inherited-config 边界。Plugin 会继续继承；可以使用 Storybook CLI 的 `process.env.STORYBOOK` 标志，有条件地排除仅供应用使用的 side-effect plugin。可以使用 `modifyLibRsbuildConfig` 为 Storybook 显式恢复已剥离的字段，也可以使用 Storybook 的 `rsbuildFinal` 进行最终配置。这两个 hook 都在继承字段被剥离后执行。
@@ -31,7 +37,11 @@ export default {
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
-export default {
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     {
       name: 'storybook-addon-rslib',
@@ -41,6 +51,8 @@ export default {
     },
   ],
 }
+
+export default config
 ```
 
 ## Module Federation
