@@ -15,8 +15,8 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
   {
     languageOptions: {
       // Type-aware rules and `--type-check` apply to the files included by these
-      // tsconfigs. Files outside them (the root tests/ and e2e/ projects,
-      // per-package config files) only get the rules that need no type information.
+      // tsconfigs. Files outside them (root tests/ and e2e/, scripts/, per-package
+      // config files) only get the rules that need no type information.
       parserOptions: {
         project: [
           './packages/*/tsconfig.json',
