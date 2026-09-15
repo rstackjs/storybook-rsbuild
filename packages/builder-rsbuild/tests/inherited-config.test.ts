@@ -1,7 +1,10 @@
 import type { RsbuildConfig } from '@rsbuild/core'
 import { describe, expect, it, rs } from '@rstest/core'
 import { logger } from 'storybook/internal/node-logger'
-import { stripInheritedConfig } from '../src/inherited-config'
+import {
+  resolveInheritedRsbuildConfig,
+  stripInheritedConfig,
+} from '../src/inherited-config'
 
 const inheritedConfig = (): RsbuildConfig =>
   ({
@@ -84,6 +87,80 @@ describe('stripInheritedConfig', () => {
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn).toHaveBeenCalledWith(
       `Stripped incompatible fields from a test config (${strippedFields.join(', ')}) because they can break the Storybook preview build.`,
+    )
+  })
+})
+
+describe('resolveInheritedRsbuildConfig', () => {
+  const source = 'a test config'
+  const web = { source: { define: { SELECTED: '"web"' } } }
+  const node = { source: { define: { SELECTED: '"node"' } } }
+
+  const selectionCases: {
+    environments: RsbuildConfig['environments']
+    environment?: string
+    expected: string
+  }[] = [
+    { environments: undefined, environment: undefined, expected: '"top"' },
+    { environments: {}, environment: undefined, expected: '"top"' },
+    { environments: { web }, environment: undefined, expected: '"web"' },
+    { environments: { web }, environment: 'web', expected: '"web"' },
+    { environments: { node, web }, environment: 'web', expected: '"web"' },
+  ]
+  it.each(selectionCases)(
+    'inherits and strips config for %j',
+    ({ environments, environment, expected }) => {
+      const result = resolveInheritedRsbuildConfig(
+        {
+          environments,
+          source: {
+            entry: { app: './app.ts' },
+            define: { SHARED: 'true', SELECTED: '"top"' },
+          },
+        },
+        { environment, source },
+      )
+
+      expect(result.environments).toBeUndefined()
+      expect(result.source?.entry).toBeUndefined()
+      expect(result.source?.define).toEqual({
+        SHARED: 'true',
+        SELECTED: expected,
+      })
+    },
+  )
+
+  const invalidNameCases: RsbuildConfig['environments'][] = [
+    undefined,
+    {},
+    { web },
+    { node, web },
+  ]
+  it.each(invalidNameCases)(
+    'rejects unknown names with environments %j',
+    (environments) => {
+      expect(() =>
+        resolveInheritedRsbuildConfig(
+          { environments },
+          {
+            environment: 'worker',
+            source,
+          },
+        ),
+      ).toThrow(
+        'The specified environment "worker" is not found in a test config.',
+      )
+    },
+  )
+
+  it('requires a name for multiple environments', () => {
+    expect(() =>
+      resolveInheritedRsbuildConfig(
+        { environments: { node, web } },
+        { source },
+      ),
+    ).toThrow(
+      'You must specify an environment when there are multiple environments in a test config.',
     )
   })
 })

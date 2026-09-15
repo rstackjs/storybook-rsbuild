@@ -96,18 +96,20 @@ export default config
 - `tools.htmlPlugin`
 - `tools.rspack.output.library`、`tools.rspack.output.globalObject` 和 `tools.rspack.output.umdNamedDefine`
 
-此边界也适用于从 `storybook-addon-rslib` 和 `storybook-addon-modernjs` 继承的配置。`tools.rspack` 如果使用函数形式，内部字段将无法被检查和剥离。建议通过 `environment` 选择专用于 Storybook 的 [Rsbuild environment](https://rsbuild.rs/config/environments)。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承配置被剥离后执行。
+此边界也适用于从 `storybook-addon-rslib`、`storybook-addon-rstack` 和 `storybook-addon-modernjs` 继承的配置。`tools.rspack` 如果使用函数形式，内部字段将无法被检查和剥离。建议通过 `environment` 选择专用于 Storybook 的 [Rsbuild environment](https://rsbuild.rs/config/environments)。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承配置被剥离后执行。
 
 Plugin 会继续继承，因为它们通常提供 preview build 所需的 transform。Storybook CLI 会在加载项目配置前将 `process.env.STORYBOOK` 设置为 `'true'`，可以用这个条件排除不应在 Storybook 中运行、仅供应用使用的 plugin。
 
 ### 选项参考
 
-| Option              | Type                                                                               | Default                                                    | Description                                                                         |
-| :------------------ | :--------------------------------------------------------------------------------- | :--------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| `rsbuildConfigPath` | `string`                                                                           | `cwd/rsbuild.config.ts`                                    | 待合并的已有 Rsbuild 配置文件路径。                                                 |
-| `fsCache`           | `boolean`                                                                          | `false`                                                    | 启用 Rspack 的持久化文件系统缓存。                                                  |
-| `lazyCompilation`   | `boolean` \| [`LazyCompilationOptions`](https://rspack.rs/config/lazy-compilation) | `{ entries: false }`（development）；`false`（production） | 配置 Rspack 的 lazy compilation。                                                   |
-| `environment`       | `string`                                                                           | `undefined`                                                | 从 Rsbuild 配置中选择特定的 [environment](https://rsbuild.rs/config/environments)。 |
+| Option              | Type                                                                               | Default                                                    | Description                                                                                           |
+| :------------------ | :--------------------------------------------------------------------------------- | :--------------------------------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| `rsbuildConfigPath` | `string`                                                                           | `cwd/rsbuild.config.ts`                                    | 待合并的已有 Rsbuild 配置文件路径。                                                                   |
+| `fsCache`           | `boolean`                                                                          | `false`                                                    | 启用 Rspack 的持久化文件系统缓存。                                                                    |
+| `lazyCompilation`   | `boolean` \| [`LazyCompilationOptions`](https://rspack.rs/config/lazy-compilation) | `{ entries: false }`（development）；`false`（production） | 配置 Rspack 的 lazy compilation。                                                                     |
+| `environment`       | `string`                                                                           | `undefined`                                                | 从 Rsbuild 配置中选择 [environment](https://rsbuild.rs/config/environments)；显式指定的名称必须存在。 |
+
+未指定 `environment` 时，没有 environment 则使用顶层配置，只有一个则自动选择，多个则必须指定名称。
 
 在 development 中，默认值 `{ entries: false }` 会立即编译 entry chunk，同时对 dynamically imported story module 使用 lazy compilation。在 production 中，此 builder option 不会应用，因此 lazy compilation 默认保持关闭；底层 Rsbuild 或 Rspack 配置仍可覆盖该行为。在 development 中，自动检测到 MSW 也会将默认值改为 `false`，除非你显式配置此选项。这与 Storybook webpack builder 不同，后者的 lazy compilation 是 opt-in，除非显式启用，否则保持关闭。
 

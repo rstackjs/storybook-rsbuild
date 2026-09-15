@@ -17,7 +17,7 @@ const filenameFor = (name: string, isProd = false) => {
 
 const filenameForChunk = (chunk: { id?: string | number; name?: string }) =>
   developmentPreviewChunkFilename({
-    chunk: { ...chunk, hash: '' } as NonNullable<Rspack.PathData['chunk']>,
+    chunk: { ...chunk, hash: '' },
   })
 
 const compile = async (source: string, isProd: boolean) => {

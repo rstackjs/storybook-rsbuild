@@ -27,7 +27,10 @@ import rsbuildConfig, {
 import { applyReactShims } from './react-shims'
 import type { RsbuildBuilder } from './types'
 
-export { stripInheritedConfig } from './inherited-config'
+export {
+  resolveInheritedRsbuildConfig,
+  stripInheritedConfig,
+} from './inherited-config'
 export * from './preview/virtual-module-mapping'
 export * from './types'
 

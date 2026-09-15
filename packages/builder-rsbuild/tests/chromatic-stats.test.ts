@@ -104,9 +104,9 @@ describe('chromatic stats compat', () => {
 
   it('wraps toJson and normalizes the returned stats json', () => {
     const toJson = rs.fn(() => createConcatenatedStatsJson())
-    const compatStats = withStatsJsonCompat({
+    const compatStats = withStatsJsonCompat<StatsWithCallableToJson>({
       toJson,
-    } as StatsWithCallableToJson)
+    })
 
     const normalized = compatStats.toJson?.({
       hash: false,

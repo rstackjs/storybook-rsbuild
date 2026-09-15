@@ -1,0 +1,70 @@
+import { PackageManagerTabs } from '@theme'
+
+# Rstack
+
+该 addon 会从 Rstack 配置中加载 app 或 library 定义，并在 preview build 中复用适合 Storybook 的 Rsbuild 设置。
+
+完整配置请参考 [Rstack React 组件示例](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rstack-react-component)。
+
+## 快速开始
+
+### 安装
+
+<PackageManagerTabs command="install @rsbuild/core rstack storybook-addon-rstack -D" />
+
+请将它与你在项目 [framework 指南](/guide/framework) 中所选的 framework 包配合使用，例如 `storybook-react-rsbuild`。
+
+### 配置 `.storybook/main.ts`
+
+```ts title=".storybook/main.ts"
+export default {
+  addons: ['storybook-addon-rstack'],
+}
+```
+
+默认情况下，addon 会加载 `rstack.config.*`。如果 app 和 lib 定义同时存在，它会优先选择 `define.app()`，否则回退到 `define.lib()`。只有选中的定义会被执行。
+
+## 选项
+
+默认行为不适合项目时，可以手动配置 addon：
+
+```ts title=".storybook/main.ts"
+export default {
+  addons: [
+    {
+      name: 'storybook-addon-rstack',
+      options: {
+        rstack: {
+          cwd: process.cwd(),
+          configFilePath: './rstack.config.ts',
+          configType: 'lib',
+          libIndex: 0,
+        },
+      },
+    },
+  ],
+}
+```
+
+| 选项             | 类型与行为                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `cwd`            | `string`，默认为 `process.cwd()`。用于查找配置和解析相对路径的目录。                                                  |
+| `configFilePath` | 可选的 `string`。绝对配置路径或相对于 `cwd` 的路径。                                                                  |
+| `configType`     | 可选的 `'app'` 或 `'lib'`。未指定时优先选择 app，再回退到 lib。选中的定义不存在时会报错。                             |
+| `environment`    | 可选的 `string`。必须指定已有的 environment 名称；参见 [builder 的 environment 选项](/guide/configuration#选项参考)。 |
+| `libIndex`       | `number` 或 `false`，默认为 `0`。使用 `false` 时只继承顶层 library 配置。                                             |
+
+省略 `lib` 时，index `0` 对应一个隐式空 entry。显式空数组则没有有效 entry。
+
+## 函数形式的定义
+
+对于函数形式的 `define.app()` 和 `define.lib()`，addon 会传入以下 params：
+
+- `env` 和 `envMode`：`process.env.NODE_ENV || ''`，与 Rsbuild 的 config loader 一致
+- `command`：Storybook 的 `configType` 为 `'PRODUCTION'` 时是 `'build'`，否则是 `'dev'`
+
+选中的定义只会解析一次。对于 app 配置，选中的 environment 会覆盖顶层设置；对于 lib 配置，选中的 `lib[]` entry 会覆盖顶层设置。
+
+## 继承配置边界
+
+继承配置遵循相同的 [Rsbuild 配置边界](/guide/configuration#继承的-rsbuild-配置)。

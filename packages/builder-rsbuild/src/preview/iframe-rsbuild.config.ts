@@ -17,7 +17,7 @@ import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import type { Options } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
-import { stripInheritedConfig } from '../inherited-config'
+import { resolveInheritedRsbuildConfig } from '../inherited-config'
 import type { BuilderOptions, TypescriptOptions } from '../types'
 import { isMswActive } from './detect-msw'
 import {
@@ -249,49 +249,16 @@ export default async (
   const { virtualModules: virtualModuleMapping, entries: dynamicEntries } =
     await getVirtualModules(options, isLazyCompilationActive)
 
-  let contentFromConfig: RsbuildConfig = {}
   const { content } = await loadConfig({
     cwd: workingDir,
     path: rsbuildConfigPath,
   })
 
-  const { environments, ...withoutEnv } = content
-  if (content.environments) {
-    const envCount = Object.keys(content.environments).length
-    if (envCount === 0) {
-      // Empty useless environment field.
-      contentFromConfig = withoutEnv
-    } else if (envCount === 1) {
-      // Directly use the unique environment.
-      contentFromConfig = mergeRsbuildConfig(
-        withoutEnv,
-        Object.values(content.environments)[0],
-      )
-    } else {
-      // User need to specify the environment first if more than one provided.
-      const userEnv = builderOptions.environment
-      if (typeof userEnv !== 'string') {
-        throw new Error(
-          'You must specify an environment when there are multiple environments in the Rsbuild config.',
-        )
-      }
-
-      if (Object.keys(content.environments).includes(userEnv)) {
-        contentFromConfig = mergeRsbuildConfig(
-          withoutEnv,
-          content.environments[userEnv],
-        )
-      } else {
-        throw new Error(
-          `The specified environment "${userEnv}" is not found in the Rsbuild config.`,
-        )
-      }
-    }
-  } else {
-    contentFromConfig = content
-  }
-
-  stripInheritedConfig(contentFromConfig, 'the loaded Rsbuild config')
+  // Local Rsbuild inheritance shares environment selection and stripping with addons.
+  const contentFromConfig = resolveInheritedRsbuildConfig(content, {
+    environment: builderOptions.environment,
+    source: 'the loaded Rsbuild config',
+  })
 
   const resourceFilename = isProd
     ? 'static/media/[name].[contenthash:8][ext]'

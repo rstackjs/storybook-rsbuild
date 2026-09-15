@@ -125,7 +125,7 @@ export class RspackMockPlugin {
       } catch {
         logger.debug(`Could not resolve mock for "${resource.request}".`)
       }
-    }).apply(compiler as any)
+    }).apply(compiler)
 
     compiler.hooks.afterCompile.tap(PLUGIN_NAME, (compilation) => {
       compilation.fileDependencies.add(this.options.previewConfigPath)

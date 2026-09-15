@@ -9,7 +9,8 @@
       "intentionalDivergences": [
         "normalizePath() applied to mockMap keys and resolved requests — pathe and require.resolve disagree on Windows path separators",
         "optional `configDir` plugin option not present upstream",
-        "uses compiler.getInfrastructureLogger instead of storybook/internal/node-logger"
+        "uses compiler.getInfrastructureLogger instead of storybook/internal/node-logger",
+        "passes compiler directly to NormalModuleReplacementPlugin.apply; the redundant `as any` assertion is rejected by Rstack 0.7.4 typed lint"
       ]
     },
     {
@@ -69,6 +70,7 @@
       "local": "packages/builder-rsbuild/src/preview/iframe-rsbuild.config.ts",
       "intentionalDivergences": [
         "expressed as Rsbuild config instead of raw webpack config; also absorbs upstream preview/base-webpack.config.ts and presets/custom-webpack-preset.ts responsibilities",
+        "local Rsbuild config inheritance delegates environment selection and stripping to resolveInheritedRsbuildConfig, shared with addons",
         "build.test.esbuildMinify branch not ported: Rsbuild's output.minify.jsOptions only exposes the built-in SWC minimizer, no clean seam to swap in esbuild (mangle:false/keep_fnames ported in PR #549)",
         "prod minify fragment is injected only when the inherited rsbuild.config has no JS minification customization (no minify: false, minify.js, or minify.jsOptions) — upstream minimizes unconditionally, but the inherited-config path (PR #538) is a local-only feature whose minify settings are user-owned (PR #549 review)",
         "prod minifier uses mangle: { keep_fnames, keep_classnames } instead of upstream's mangle: false — same name-preservation goal (docs titles, Show code) with ~26% smaller gzip; known accepted boundary: `const X = class {}` binding-inferred names are still mangled (rare form, docgen displayName covers user source) (PR #549)",

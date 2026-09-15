@@ -1,0 +1,70 @@
+import { PackageManagerTabs } from '@theme'
+
+# Rstack
+
+This addon loads an app or library definition from your Rstack configuration and reuses its Storybook-safe Rsbuild settings in the preview build.
+
+See the [Rstack React component example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rstack-react-component) for a complete setup.
+
+## Getting started
+
+### Installation
+
+<PackageManagerTabs command="install @rsbuild/core rstack storybook-addon-rstack -D" />
+
+Use this alongside the framework package from your project's [framework guide](/guide/framework), such as `storybook-react-rsbuild`.
+
+### Setup `.storybook/main.ts`
+
+```ts title=".storybook/main.ts"
+export default {
+  addons: ['storybook-addon-rstack'],
+}
+```
+
+By default, the addon loads `rstack.config.*`, prefers `define.app()` when both app and lib definitions exist, and otherwise falls back to `define.lib()`. Only the selected definition is executed.
+
+## Options
+
+Configure the addon when the defaults do not match your project:
+
+```ts title=".storybook/main.ts"
+export default {
+  addons: [
+    {
+      name: 'storybook-addon-rstack',
+      options: {
+        rstack: {
+          cwd: process.cwd(),
+          configFilePath: './rstack.config.ts',
+          configType: 'lib',
+          libIndex: 0,
+        },
+      },
+    },
+  ],
+}
+```
+
+| Option           | Type and behavior                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `cwd`            | `string`. Defaults to `process.cwd()`. Directory used to find the config and resolve relative paths.                                 |
+| `configFilePath` | Optional `string`. Absolute config path or a path relative to `cwd`.                                                                 |
+| `configType`     | Optional `'app'` or `'lib'`. When omitted, prefer app, then lib. A missing selected definition is an error.                          |
+| `environment`    | Optional `string`. Must name an existing environment; see the [builder's environment option](/guide/configuration#option-reference). |
+| `libIndex`       | `number` or `false`. Defaults to `0`. Use `false` to inherit only top-level library config.                                          |
+
+If `lib` is omitted, index `0` is an implicit empty entry. An explicit empty array has no valid entry.
+
+## Function definitions
+
+For function-form `define.app()` and `define.lib()`, the addon passes these params:
+
+- `env` and `envMode`: `process.env.NODE_ENV || ''`, matching Rsbuild's config loader
+- `command`: `'build'` when Storybook's `configType` is `'PRODUCTION'`, otherwise `'dev'`
+
+The selected definition is resolved once. For app config, a selected environment overrides top-level settings. For lib config, the selected `lib[]` entry overrides top-level settings.
+
+## Inherited configuration boundary
+
+Inherited configuration follows the same [Rsbuild configuration boundary](/guide/configuration#inherited-rsbuild-configuration).
