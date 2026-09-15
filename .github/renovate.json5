@@ -28,10 +28,7 @@
     },
     {
       groupName: 'rspress',
-      // `@shikijs/transformers` is pinned to the `shiki` version bundled by
-      // `@rspress/core`; two `@shikijs/types` copies make its transformers
-      // type-incompatible with Rspress' `markdown.shiki.transformers`.
-      matchPackageNames: ['@rspress/**', '@shikijs/transformers'],
+      matchPackageNames: ['@rspress/**'],
       groupSlug: 'rspress',
       extends: ['schedule:daily'],
     },
