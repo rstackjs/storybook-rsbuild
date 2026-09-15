@@ -2,7 +2,6 @@ import { define } from 'rstack'
 
 define.lint(({ globalIgnores, globals, js, ts }) => [
   globalIgnores([
-    'scripts/**',
     '**/*.vue',
     '**/.rslib/**',
     '**/compiled/**',
@@ -15,14 +14,17 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
   {
     languageOptions: {
       // Type-aware rules and `--type-check` apply to the files included by these
-      // tsconfigs. Files outside them (root tests/ and e2e/, scripts/, per-package
-      // config files) only get the rules that need no type information.
+      // tsconfigs. Files outside them (per-package build-config.ts / rstack.config.ts
+      // and root rstack.config.ts) only get rules that need no type information.
       parserOptions: {
         project: [
           './packages/*/tsconfig.json',
           './sandboxes/*/tsconfig.json',
           './sandboxes/*/*/tsconfig.json',
           './website/tsconfig.json',
+          './tests/tsconfig.json',
+          './e2e/tsconfig.json',
+          './scripts/tsconfig.json',
         ],
       },
       globals: {

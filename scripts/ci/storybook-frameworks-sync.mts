@@ -71,7 +71,7 @@ const commandOutputFromFile = (
   })
 }
 
-const isValidSha = (value?: string): value is string =>
+const isValidSha = (value?: string): boolean =>
   typeof value === 'string' && SHA_REGEX.test(value)
 
 const getFrameworkNameFromFile = (file: string): string | null => {

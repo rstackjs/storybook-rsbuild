@@ -60,7 +60,7 @@ export async function launchSandbox(
     exitCode = code
   })
   child.on('error', (error) => {
-    spawnError = error as Error
+    spawnError = error
   })
 
   const serverUrl = new URL(`http://127.0.0.1:${port}/`)
