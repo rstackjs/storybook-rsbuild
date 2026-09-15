@@ -16,7 +16,8 @@ Use this alongside the framework package from your project's [framework guide](/
 
 ### Setup `.storybook/main.ts`
 
-```ts title=".storybook/main.ts"
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
 export default {
   addons: ['storybook-addon-rstack'],
 }
@@ -28,14 +29,15 @@ By default, the addon loads `rstack.config.*`, prefers `define.app()` when both 
 
 Configure the addon when the defaults do not match your project:
 
-```ts title=".storybook/main.ts"
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
 export default {
   addons: [
     {
       name: 'storybook-addon-rstack',
       options: {
         rstack: {
-          cwd: process.cwd(),
+          cwd: './packages/ui',
           configFilePath: './rstack.config.ts',
           configType: 'lib',
           libIndex: 0,
