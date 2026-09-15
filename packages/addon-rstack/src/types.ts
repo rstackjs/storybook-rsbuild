@@ -1,8 +1,6 @@
 export interface AddonOptions {
   rstack?: {
-    /** Directory to search for rstack.config.* and resolve relative paths from. Defaults to process.cwd(). */
-    cwd?: string
-    /** Explicit config file path (relative to cwd or absolute). */
+    /** Explicit config file path (absolute, or relative to the current working directory). */
     configFilePath?: string
     /** Which definition to inherit. When omitted, prefers define.app() and falls back to define.lib(). */
     configType?: 'app' | 'lib'

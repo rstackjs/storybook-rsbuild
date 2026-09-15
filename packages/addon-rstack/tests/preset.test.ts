@@ -47,7 +47,7 @@ describe('rsbuildFinal', () => {
     })
     await expect(
       rsbuildFinal!({}, {
-        rstack: { cwd: '/missing' },
+        rstack: { configFilePath: '/missing/rstack.config.ts' },
       } as unknown as RsbuildFinalOptions),
     ).rejects.toThrow(/Rstack config.*not found/i)
   })

@@ -19,16 +19,15 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   options: BaseOptions & AddonOptions,
 ) => {
   const {
-    cwd,
     configFilePath,
     configType: definitionType,
     environment,
     libIndex,
   } = options.rstack ?? {}
-  const { configs, filePath } = await loadRstackConfig({ cwd, configFilePath })
+  const { configs, filePath } = await loadRstackConfig({ configFilePath })
   if (filePath === null) {
     throw new Error(
-      `Rstack config file not found (cwd: ${cwd ?? process.cwd()}, configFilePath: ${configFilePath ?? 'rstack.config.*'}).`,
+      `Rstack config file not found (configFilePath: ${configFilePath ?? 'rstack.config.*'} in ${process.cwd()}).`,
     )
   }
 

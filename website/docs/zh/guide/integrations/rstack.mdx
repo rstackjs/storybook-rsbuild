@@ -47,7 +47,6 @@ const config: StorybookConfig = {
       name: 'storybook-addon-rstack',
       options: {
         rstack: {
-          cwd: './packages/ui',
           configFilePath: './rstack.config.ts',
           configType: 'lib',
           libIndex: 0,
@@ -62,8 +61,7 @@ export default config
 
 | 选项             | 类型与行为                                                                                                            |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `cwd`            | `string`，默认为 `process.cwd()`。用于查找配置和解析相对路径的目录。                                                  |
-| `configFilePath` | 可选的 `string`。绝对配置路径或相对于 `cwd` 的路径。                                                                  |
+| `configFilePath` | 可选的 `string`。绝对路径，或相对于当前工作目录的路径。                                                               |
 | `configType`     | 可选的 `'app'` 或 `'lib'`。未指定时优先选择 app，再回退到 lib。选中的定义不存在时会报错。                             |
 | `environment`    | 可选的 `string`。必须指定已有的 environment 名称；参见 [builder 的 environment 选项](/guide/configuration#选项参考)。 |
 | `libIndex`       | `number` 或 `false`，默认为 `0`。使用 `false` 时只继承顶层 library 配置。                                             |

@@ -47,7 +47,6 @@ const config: StorybookConfig = {
       name: 'storybook-addon-rstack',
       options: {
         rstack: {
-          cwd: './packages/ui',
           configFilePath: './rstack.config.ts',
           configType: 'lib',
           libIndex: 0,
@@ -62,8 +61,7 @@ export default config
 
 | Option           | Type and behavior                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `cwd`            | `string`. Defaults to `process.cwd()`. Directory used to find the config and resolve relative paths.                                 |
-| `configFilePath` | Optional `string`. Absolute config path or a path relative to `cwd`.                                                                 |
+| `configFilePath` | Optional `string`. Absolute path, or relative to the current working directory.                                                      |
 | `configType`     | Optional `'app'` or `'lib'`. When omitted, prefer app, then lib. A missing selected definition is an error.                          |
 | `environment`    | Optional `string`. Must name an existing environment; see the [builder's environment option](/guide/configuration#option-reference). |
 | `libIndex`       | `number` or `false`. Defaults to `0`. Use `false` to inherit only top-level library config.                                          |
