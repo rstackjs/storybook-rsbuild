@@ -2,7 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from 'storybook-react-rsbuild'
 
-const getAbsolutePath = (value: string): any => {
+const getAbsolutePath = (value: string): string => {
   return path.resolve(
     fileURLToPath(
       new URL(import.meta.resolve(`${value}/package.json`, import.meta.url)),
@@ -19,7 +19,7 @@ const config: StorybookConfig = {
     '@chromatic-com/storybook',
   ],
   framework: {
-    name: getAbsolutePath('storybook-react-rsbuild') as any,
+    name: getAbsolutePath('storybook-react-rsbuild'),
     options: {},
   },
   typescript: {

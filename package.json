@@ -7,7 +7,7 @@
     "build:sandboxes": "pnpm --filter \"./sandboxes/*\" run build:storybook",
     "build:test": "cross-env SB_RSBUILD_TEST_MINIMAL_DEV=true pnpm build",
     "bump": "bumpp",
-    "check": "rstack check",
+    "check": "rstack check --type-check",
     "check-dependency-version": "pnpm jiti ./scripts/check-dependency-version.mts",
     "dev": "pnpm --parallel --filter \"./packages/**\" run dev",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
@@ -15,13 +15,13 @@
     "lint": "rstack lint",
     "prepare": "rstack hooks",
     "test": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test",
-    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test watch",
-    "type-check": "pnpm --parallel --filter \"./packages/**\" run type-check"
+    "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test watch"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@rstest/core": "~0.11.10",
     "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "^22.0.0",
     "bumpp": "^10.4.1",
     "check-dependency-version-consistency": "^5.0.1",
     "cross-env": "^10.1.0",

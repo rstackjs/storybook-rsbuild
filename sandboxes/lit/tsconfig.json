@@ -10,7 +10,8 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
-    "useDefineForClassFields": true
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   },
   "include": ["src", ".storybook/*"]
 }

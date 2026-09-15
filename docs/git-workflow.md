@@ -21,7 +21,6 @@ When linking a PR or issue of the upstream `storybookjs/storybook` repository in
 CI runs these on the PR; all must be green before merge (order matches CI — it never runs a bare `pnpm build`; `pnpm build:test` covers it, see [testing.md](testing.md) for its side effect on `dist/`):
 
 - `pnpm check`
-- `pnpm type-check`
 - `pnpm check-dependency-version`
 - `pnpm build:sandboxes`
 - `pnpm test`

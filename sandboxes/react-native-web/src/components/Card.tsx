@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    // @ts-expect-error - elevation is Android-specific but works in RNW
+    // elevation is Android-specific but works in RNW
     elevation: 4,
   },
   title: {

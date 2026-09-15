@@ -74,9 +74,16 @@ define.doc({
       langAlias: {
         shell: 'bash',
       },
+      // `@shikijs/transformers` resolves its own `@shikijs/types` (4.4.x) while
+      // `@rspress/core` still resolves 4.3.x. The two `ShikiTransformer` types
+      // differ only in `includeExplanation` and are runtime-compatible.
+      // Drop the `@ts-expect-error`s once Rspress resolves shiki 4.4+.
       transformers: [
+        // @ts-expect-error -- shiki types version mismatch, see above
         transformerNotationDiff(),
+        // @ts-expect-error -- shiki types version mismatch, see above
         transformerNotationHighlight(),
+        // @ts-expect-error -- shiki types version mismatch, see above
         transformerNotationFocus(),
       ],
     },

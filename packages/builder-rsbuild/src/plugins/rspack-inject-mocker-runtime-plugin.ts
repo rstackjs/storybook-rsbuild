@@ -21,7 +21,7 @@ export class RspackInjectMockerRuntimePlugin {
       compiler
         .getInfrastructureLogger(PLUGIN_NAME)
         .warn(
-          `Unable to locate HTML plugin for mock runtime injection: ${error}`,
+          `Unable to locate HTML plugin for mock runtime injection: ${String(error)}`,
         )
       return null
     }
@@ -33,6 +33,7 @@ export class RspackInjectMockerRuntimePlugin {
     // html-webpack-plugin but not here: rspack's native `HtmlRspackPlugin` dropped that
     // deprecated alias in v2 and offers `getCompilationHooks` alone, so `html.implementation:
     // 'native'` would leave the hook untapped. Both are plain statics that ignore `this`.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const getHtmlHooks = HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks
     if (typeof getHtmlHooks !== 'function') {
       compiler

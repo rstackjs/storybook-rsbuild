@@ -79,6 +79,7 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
       return resolveAddonName(options.configDir, name, addonOptions)
     })
     .filter(nonNullables)
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const { apply } = await getPresets(resolvedWebpackAddons, options)
   const webpackAddonsConfig: rsbuildReal.Rspack.Configuration = await apply(
     'webpackFinal',
@@ -110,7 +111,7 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
   intrinsicRsbuildConfig = rsbuildReal.mergeRsbuildConfig(
     intrinsicRsbuildConfig,
     shimsConfig,
-  ) as rsbuildReal.RsbuildConfig
+  )
 
   // Preset hooks run in order with the user's main.ts last. Inherited configs have already
   // been stripped, so an explicit rsbuildFinal hook is the escape hatch for restoring fields.
