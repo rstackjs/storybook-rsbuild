@@ -10,9 +10,9 @@ import { PackageManagerTabs } from '@theme'
 
 ### 安装
 
-<PackageManagerTabs command="install @rsbuild/core storybook-builder-rsbuild storybook-addon-modernjs -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild storybook-addon-modernjs -D" />
 
-请在同一个 workspace 中安装 `@rsbuild/core`。否则该 addon 无法读取你的 Modern.js 配置。
+请在同一个 workspace 中安装 React framework 包和 `@rsbuild/core`。下面的配置以 `storybook-react-rsbuild` 作为 framework，addon 则需要 `@rsbuild/core` 才能读取你的 Modern.js 配置。
 
 请尽量与 `@modern-js/app-tools` 所使用的版本保持一致。如果你安装了不同的版本，`storybook-addon-modernjs` 会打印一条警告并给出推荐版本。
 
@@ -25,7 +25,7 @@ import type { StorybookConfig } from 'storybook-react-rsbuild'
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: ['storybook-addon-modernjs'],
-  framework: ['storybook-react-rsbuild'],
+  framework: 'storybook-react-rsbuild',
 }
 export default config
 ```
@@ -63,7 +63,7 @@ const config: StorybookConfig = {
       },
     },
   ],
-  framework: ['storybook-react-rsbuild'],
+  framework: 'storybook-react-rsbuild',
 }
 export default config
 ```
