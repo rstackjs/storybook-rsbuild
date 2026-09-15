@@ -23,7 +23,7 @@
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
     "@babel/plugin-transform-react-jsx": "^8.0.1",
     "@babel/preset-typescript": "^8.0.1",
-    "@rsbuild/core": "^2.2.3",
+    "@rsbuild/core": "^2.2.6",
     "@rsbuild/plugin-babel": "^2.1.0",
     "@rsbuild/plugin-react": "^2.1.0",
     "@storybook/addon-docs": "10.6.0",
