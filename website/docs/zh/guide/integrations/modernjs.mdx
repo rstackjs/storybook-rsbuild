@@ -12,7 +12,7 @@ import { PackageManagerTabs } from '@theme'
 
 <PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild storybook-addon-modernjs -D" />
 
-请在同一个 workspace 中安装 React framework 包和 `@rsbuild/core`。下面配置中使用的 `storybook-react-rsbuild` 提供所需的 framework，`@rsbuild/core` 让 addon 能够读取你的 Modern.js 配置。
+请在同一个 workspace 中安装 React framework 包和 `@rsbuild/core`。下面的配置以 `storybook-react-rsbuild` 作为 framework，addon 则需要 `@rsbuild/core` 才能读取你的 Modern.js 配置。
 
 请尽量与 `@modern-js/app-tools` 所使用的版本保持一致。如果你安装了不同的版本，`storybook-addon-modernjs` 会打印一条警告并给出推荐版本。
 
