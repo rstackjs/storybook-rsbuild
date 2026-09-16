@@ -1,8 +1,4 @@
-import {
-  mergeRsbuildConfig,
-  type ConfigParams,
-  type RsbuildConfig,
-} from '@rsbuild/core'
+import { mergeRsbuildConfig, type ConfigParams } from '@rsbuild/core'
 import { loadRstackConfig } from 'rstack/config'
 import { resolveLibRsbuildConfig } from 'storybook-addon-rslib'
 import {
@@ -10,7 +6,7 @@ import {
   type RsbuildFinal,
   type StorybookConfigRsbuild,
 } from 'storybook-builder-rsbuild'
-import type { AddonOptions } from './types'
+import type { AddonOptions, RstackStackOptions } from './types'
 
 type BaseOptions = Parameters<RsbuildFinal>[1]
 
@@ -26,8 +22,18 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     )
   }
 
-  const selectedType =
-    stack?.type ?? (configs.app !== undefined ? 'app' : 'lib')
+  const selected: RstackStackOptions = stack ?? {
+    type: configs.app !== undefined ? 'app' : 'lib',
+  }
+  const definition = configs[selected.type]
+  if (definition === undefined) {
+    throw new Error(
+      stack === undefined
+        ? `No define.app() or define.lib() found in ${filePath}.`
+        : `No define.${selected.type}() found in ${filePath}.`,
+    )
+  }
+
   // Same params Rsbuild's own config loader builds when no overrides are given.
   const env = process.env.NODE_ENV || ''
   const params: ConfigParams = {
@@ -36,30 +42,19 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     envMode: env,
   }
 
-  let inherited: RsbuildConfig
-  if (selectedType === 'app' && configs.app !== undefined) {
-    const definition = configs.app
-    const resolved =
-      typeof definition === 'function' ? await definition(params) : definition
-    inherited = resolveInheritedRsbuildConfig(resolved, {
-      environment: stack?.type === 'app' ? stack.environment : undefined,
-      source: 'the loaded Rstack app config',
-    })
-  } else if (selectedType === 'lib' && configs.lib !== undefined) {
-    const definition = configs.lib
-    const resolved =
-      typeof definition === 'function' ? await definition(params) : definition
-    inherited = resolveLibRsbuildConfig(resolved, {
-      libIndex: stack?.type === 'lib' ? stack.libIndex : undefined,
-      source: 'the loaded Rstack lib config',
-    })
-  } else {
-    throw new Error(
-      stack === undefined
-        ? `No define.app() or define.lib() found in ${filePath}.`
-        : `No define.${selectedType}() found in ${filePath}.`,
-    )
-  }
+  const resolved =
+    typeof definition === 'function' ? await definition(params) : definition
+
+  const inherited =
+    selected.type === 'app'
+      ? resolveInheritedRsbuildConfig(resolved, {
+          environment: selected.environment,
+          source: 'the loaded Rstack app config',
+        })
+      : resolveLibRsbuildConfig(resolved, {
+          libIndex: selected.libIndex,
+          source: 'the loaded Rstack lib config',
+        })
 
   return mergeRsbuildConfig(config, inherited)
 }

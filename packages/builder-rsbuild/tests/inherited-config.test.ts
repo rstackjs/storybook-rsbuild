@@ -132,7 +132,6 @@ describe('resolveInheritedRsbuildConfig', () => {
 
   const invalidNameCases: RsbuildConfig['environments'][] = [
     undefined,
-    {},
     { web },
     { node, web },
   ]

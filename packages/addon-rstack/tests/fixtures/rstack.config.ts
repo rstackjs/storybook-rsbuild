@@ -18,7 +18,3 @@ define.lib(async ({ command, env, envMode }) => ({
     },
   ],
 }))
-
-define.test({
-  include: ['./fixture.test.ts'],
-})

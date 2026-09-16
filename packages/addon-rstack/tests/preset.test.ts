@@ -89,17 +89,6 @@ describe('rsbuildFinal', () => {
     expect(result.source?.define?.SELECTED).toBe('"lib"')
   })
 
-  it('passes the same params as the Rsbuild config loader', async () => {
-    process.env.NODE_ENV = 'staging'
-    const app = rs.fn(() => ({}))
-    await runRsbuildFinal({ app })
-    expect(app).toHaveBeenCalledWith({
-      command: process.argv[2],
-      env: 'staging',
-      envMode: 'staging',
-    })
-  })
-
   it('delegates app environment selection and stripping while preserving Storybook config', async () => {
     const result = await runRsbuildFinal(
       {

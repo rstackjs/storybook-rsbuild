@@ -9,8 +9,11 @@ export function resolveLibRsbuildConfig(
     libIndex = 0,
     modifyLibConfig,
     modifyLibRsbuildConfig,
-    source = 'the loaded Rslib config',
-  }: NonNullable<AddonOptions['rslib']> & { source?: string } = {},
+    source,
+  }: Pick<
+    NonNullable<AddonOptions['rslib']>,
+    'libIndex' | 'modifyLibConfig' | 'modifyLibRsbuildConfig'
+  > & { source: string },
 ): RsbuildConfig {
   const libConfigs = content.lib === undefined ? [{}] : content.lib
   const libConfig =

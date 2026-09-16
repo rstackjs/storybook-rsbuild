@@ -14,12 +14,12 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   options: BaseOptions & AddonOptions,
 ) => {
   const { rslib = {} } = options
-  const { cwd, configPath } = rslib
-  const { content } = await loadConfig({
-    cwd: cwd,
-    path: configPath,
-  })
+  const { cwd, configPath, ...libOptions } = rslib
+  const { content } = await loadConfig({ cwd, path: configPath })
 
-  const mergedLibConfig = resolveLibRsbuildConfig(content, rslib)
+  const mergedLibConfig = resolveLibRsbuildConfig(content, {
+    ...libOptions,
+    source: 'the loaded Rslib config',
+  })
   return mergeRsbuildConfig(config, mergedLibConfig)
 }
