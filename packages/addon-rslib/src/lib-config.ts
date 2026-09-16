@@ -1,5 +1,5 @@
-import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
-import { stripInheritedConfig } from 'storybook-builder-rsbuild'
+import type { RsbuildConfig } from '@rsbuild/core'
+import { resolveInheritedRsbuildConfig } from 'storybook-builder-rsbuild'
 import type { AddonOptions } from './types'
 
 /** Resolve the reusable configuration without running a library build. */
@@ -32,18 +32,17 @@ export function resolveLibRsbuildConfig(
     modifyLibConfig(libConfig)
   }
 
-  const { lib: _lib, ...nonLibConfig } = content
-  const mergedLibConfig: RsbuildConfig = mergeRsbuildConfig(
-    nonLibConfig as RsbuildConfig,
-    libConfig as RsbuildConfig,
+  // Rslib ignores a user-written `environments` key: each lib entry is the environment.
+  const { lib: _lib, environments: _environments, ...topLevel } = content
+  const resolved = resolveInheritedRsbuildConfig(
+    { ...topLevel, environments: { lib: libConfig } },
+    { environment: 'lib', source },
   )
-
-  stripInheritedConfig(mergedLibConfig, source)
 
   // Explicit Storybook configuration is applied after inherited fields are stripped.
   if (typeof modifyLibRsbuildConfig === 'function') {
-    modifyLibRsbuildConfig(mergedLibConfig)
+    modifyLibRsbuildConfig(resolved)
   }
 
-  return mergedLibConfig
+  return resolved
 }
