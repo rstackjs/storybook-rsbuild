@@ -5,9 +5,6 @@ define.app(async () => {
   const { pluginSass } = await import('@rsbuild/plugin-sass')
 
   return {
-    source: {
-      entry: { index: './src/index.tsx' },
-    },
     plugins: [
       pluginReact({ swcReactOptions: { runtime: 'classic' } }),
       pluginSass(),

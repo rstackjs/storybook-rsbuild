@@ -15,14 +15,9 @@ export function resolveLibRsbuildConfig(
     'libIndex' | 'modifyLibConfig' | 'modifyLibRsbuildConfig'
   > & { source: string },
 ): RsbuildConfig {
-  const libConfigs = content.lib === undefined ? [{}] : content.lib
-  const libConfig =
-    libIndex === false
-      ? {}
-      : Array.isArray(libConfigs)
-        ? libConfigs[libIndex]
-        : undefined
-  if (!libConfig) {
+  const libConfigs = Array.isArray(content.lib) ? content.lib : [{}]
+  const libConfig = libIndex === false ? {} : libConfigs[libIndex]
+  if (libConfig === undefined) {
     throw new Error(
       `Lib config not found at index ${libIndex}, expect a lib config but got ${libConfig}`,
     )

@@ -3,8 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "resolveJsonModule": true,
-    "jsx": "react",
-    "outDir": "dist"
+    "jsx": "react"
   },
   "include": ["src/**/*", ".storybook/**/*", "stories/**/*"]
 }
