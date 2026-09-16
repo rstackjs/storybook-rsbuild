@@ -1,14 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { waitForPreviewReady } from '../utils/assertions'
+import { expectDocsTitle } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
-const sandbox = sandboxes.find(
-  (entry) => entry.name === 'rstack-react-component',
-)
+const sandbox = sandboxes.find((entry) => entry.name === 'rstack-react')
 
 if (!sandbox) {
-  throw new Error('Sandbox definition not found: rstack-react-component')
+  throw new Error('Sandbox definition not found: rstack-react')
 }
 
 test.describe(sandbox.name, () => {
@@ -35,13 +33,6 @@ test.describe(sandbox.name, () => {
     // with HMR/WebSocket connections that keep the network active
     await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
 
-    // Use the robust waiting mechanism that handles HMR rebuilds
-    const frame = await waitForPreviewReady(page)
-    const docsRoot = frame.locator('#storybook-docs:not([hidden])')
-
-    await expect(docsRoot).toBeVisible()
-    const title = docsRoot.locator('h1')
-    await expect(title).toBeVisible()
-    await expect(title).toHaveText('CounterButton')
+    await expectDocsTitle(page, 'CounterButton')
   })
 })

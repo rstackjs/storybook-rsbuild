@@ -45,6 +45,15 @@ export async function waitForPreviewReady(page: Page): Promise<FrameLocator> {
   return frame
 }
 
+export async function expectDocsTitle(page: Page, text: string): Promise<void> {
+  const frame = await waitForPreviewReady(page)
+  const docsRoot = frame.locator('#storybook-docs:not([hidden])')
+  await expect(docsRoot).toBeVisible()
+  const title = docsRoot.locator('h1')
+  await expect(title).toBeVisible()
+  await expect(title).toHaveText(text)
+}
+
 export async function expectDocsStorybookTitle(page: Page): Promise<void> {
   // Use the robust waiting mechanism
   const frame = await waitForPreviewReady(page)

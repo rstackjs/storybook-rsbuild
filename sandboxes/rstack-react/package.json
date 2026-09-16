@@ -1,13 +1,12 @@
 {
-  "name": "@sandboxes/rstack-react-component",
+  "name": "@sandboxes/rstack-react",
   "version": "0.0.0",
   "private": true,
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.mjs",
-  "types": "./dist/cjs/index.d.ts",
+  "type": "module",
   "scripts": {
-    "build": "rstack lib",
+    "build": "rstack build",
     "build:storybook": "storybook build",
+    "dev": "rstack dev",
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {

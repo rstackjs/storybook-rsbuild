@@ -1169,7 +1169,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  sandboxes/rstack-react-component:
+  sandboxes/rstack-react:
     dependencies:
       react:
         specifier: 18.3.1
@@ -1308,20 +1308,20 @@ importers:
         version: 2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)
       '@rspress/plugin-algolia':
         specifier: 2.0.19
-        version: 2.0.19(@algolia/client-search@5.49.1)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(@types/react@19.2.18)(algoliasearch@5.49.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)
+        version: 2.0.19(@algolia/client-search@5.49.1)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(@types/react@19.2.18)(algoliasearch@5.49.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)
       '@rspress/plugin-sitemap':
         specifier: 2.0.19
-        version: 2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
+        version: 2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
       '@rspress/plugin-twoslash':
         specifier: 2.0.19
-        version: 2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(react@19.2.8)(typescript@5.9.3)
+        version: 2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(react@19.2.8)(typescript@5.9.3)
       rspress-plugin-font-open-sans:
         specifier: 1.0.4
-        version: 1.0.4(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
+        version: 1.0.4(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
     devDependencies:
       '@rstack-dev/doc-ui':
         specifier: 1.14.8
-        version: 1.14.8(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
+        version: 1.14.8(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))
       '@shikijs/transformers':
         specifier: ^4.4.3
         version: 4.4.3
@@ -18260,7 +18260,7 @@ snapshots:
       - micromark-util-types
       - supports-color
 
-  '@rspress/plugin-algolia@2.0.19(@algolia/client-search@5.49.1)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(@types/react@19.2.18)(algoliasearch@5.49.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)':
+  '@rspress/plugin-algolia@2.0.19(@algolia/client-search@5.49.1)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(@types/react@19.2.18)(algoliasearch@5.49.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)':
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/react': 4.6.3(@algolia/client-search@5.49.1)(@types/react@19.2.18)(algoliasearch@5.49.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)
@@ -18273,11 +18273,11 @@ snapshots:
       - algoliasearch
       - search-insights
 
-  '@rspress/plugin-sitemap@2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))':
+  '@rspress/plugin-sitemap@2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))':
     dependencies:
       '@rspress/core': 2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)
 
-  '@rspress/plugin-twoslash@2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(react@19.2.8)(typescript@5.9.3)':
+  '@rspress/plugin-twoslash@2.0.19(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(react@19.2.8)(typescript@5.9.3)':
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@rspress/core': 2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)
@@ -18304,7 +18304,7 @@ snapshots:
       - core-js
       - supports-color
 
-  '@rstack-dev/doc-ui@1.14.8(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))':
+  '@rstack-dev/doc-ui@1.14.8(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))':
     optionalDependencies:
       '@rspress/core': 2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)
 
@@ -26445,7 +26445,7 @@ snapshots:
       '@rspack/core': 2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23)
       vue: 3.5.41(typescript@5.9.3)
 
-  rspress-plugin-font-open-sans@1.0.4(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)):
+  rspress-plugin-font-open-sans@1.0.4(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)):
     dependencies:
       '@rspress/core': 2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2)
 
