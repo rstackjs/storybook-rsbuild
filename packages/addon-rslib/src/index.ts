@@ -1,2 +1,2 @@
-export { resolveLibRsbuildConfig } from './lib-config'
+export { rslibConfigToRsbuildConfig } from './lib-config'
 export * from './types'

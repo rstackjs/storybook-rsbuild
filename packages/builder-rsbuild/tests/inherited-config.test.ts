@@ -2,7 +2,7 @@ import type { RsbuildConfig } from '@rsbuild/core'
 import { describe, expect, it, rs } from '@rstest/core'
 import { logger } from 'storybook/internal/node-logger'
 import {
-  resolveInheritedRsbuildConfig,
+  pickRsbuildEnvironment,
   stripInheritedConfig,
 } from '../src/inherited-config'
 
@@ -91,7 +91,7 @@ describe('stripInheritedConfig', () => {
   })
 })
 
-describe('resolveInheritedRsbuildConfig', () => {
+describe('pickRsbuildEnvironment', () => {
   const source = 'a test config'
   const web = { source: { define: { SELECTED: '"web"' } } }
   const node = { source: { define: { SELECTED: '"node"' } } }
@@ -108,9 +108,9 @@ describe('resolveInheritedRsbuildConfig', () => {
     { environments: { node, web }, environment: 'web', expected: '"web"' },
   ]
   it.each(selectionCases)(
-    'inherits and strips config for %j',
+    'picks the environment for %j',
     ({ environments, environment, expected }) => {
-      const result = resolveInheritedRsbuildConfig(
+      const result = pickRsbuildEnvironment(
         {
           environments,
           source: {
@@ -122,7 +122,6 @@ describe('resolveInheritedRsbuildConfig', () => {
       )
 
       expect(result.environments).toBeUndefined()
-      expect(result.source?.entry).toBeUndefined()
       expect(result.source?.define).toEqual({
         SHARED: 'true',
         SELECTED: expected,
@@ -139,7 +138,7 @@ describe('resolveInheritedRsbuildConfig', () => {
     'rejects unknown names with environments %j',
     (environments) => {
       expect(() =>
-        resolveInheritedRsbuildConfig(
+        pickRsbuildEnvironment(
           { environments },
           {
             environment: 'worker',
@@ -154,10 +153,7 @@ describe('resolveInheritedRsbuildConfig', () => {
 
   it('requires a name for multiple environments', () => {
     expect(() =>
-      resolveInheritedRsbuildConfig(
-        { environments: { node, web } },
-        { source },
-      ),
+      pickRsbuildEnvironment({ environments: { node, web } }, { source }),
     ).toThrow(
       'You must specify an environment when there are multiple environments in a test config.',
     )

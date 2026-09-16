@@ -17,7 +17,10 @@ import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import type { Options } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
-import { resolveInheritedRsbuildConfig } from '../inherited-config'
+import {
+  pickRsbuildEnvironment,
+  stripInheritedConfig,
+} from '../inherited-config'
 import type { BuilderOptions, TypescriptOptions } from '../types'
 import { isMswActive } from './detect-msw'
 import {
@@ -254,11 +257,12 @@ export default async (
     path: rsbuildConfigPath,
   })
 
-  // Local Rsbuild inheritance shares environment selection and stripping with addons.
-  const contentFromConfig = resolveInheritedRsbuildConfig(content, {
+  // Environment selection is shared with addons; stripping happens here.
+  const contentFromConfig = pickRsbuildEnvironment(content, {
     environment: builderOptions.environment,
     source: 'the loaded Rsbuild config',
   })
+  stripInheritedConfig(contentFromConfig, 'the loaded Rsbuild config')
 
   const resourceFilename = isProd
     ? 'static/media/[name].[contenthash:8][ext]'

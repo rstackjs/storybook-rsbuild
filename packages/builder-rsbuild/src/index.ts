@@ -28,7 +28,7 @@ import { applyReactShims } from './react-shims'
 import type { RsbuildBuilder } from './types'
 
 export {
-  resolveInheritedRsbuildConfig,
+  pickRsbuildEnvironment,
   stripInheritedConfig,
 } from './inherited-config'
 export * from './preview/virtual-module-mapping'

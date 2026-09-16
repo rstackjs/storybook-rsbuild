@@ -77,12 +77,13 @@ export const stripInheritedConfig = (
 }
 
 /**
- * Resolves an environment and strips fields unsafe for the Storybook preview.
+ * Merges the selected environment over the top-level config and drops `environments`.
+ * Stripping is the caller's job; see `stripInheritedConfig`.
  *
  * @internal For use by official Storybook Rsbuild packages only. This API is subject to change at
  * any time and should not be used in user configuration.
  */
-export function resolveInheritedRsbuildConfig(
+export function pickRsbuildEnvironment(
   config: { [K in keyof RsbuildConfig]?: unknown },
   { environment, source }: { environment?: string; source: string },
 ): RsbuildConfig {
@@ -103,6 +104,5 @@ export function resolveInheritedRsbuildConfig(
   const result = selected
     ? mergeRsbuildConfig(topLevel, environments[selected])
     : topLevel
-  stripInheritedConfig(result, source)
   return result
 }

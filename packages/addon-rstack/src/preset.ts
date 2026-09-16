@@ -1,8 +1,9 @@
 import { mergeRsbuildConfig, type ConfigParams } from '@rsbuild/core'
 import { loadRstackConfig } from 'rstack/config'
-import { resolveLibRsbuildConfig } from 'storybook-addon-rslib'
+import { rslibConfigToRsbuildConfig } from 'storybook-addon-rslib'
 import {
-  resolveInheritedRsbuildConfig,
+  pickRsbuildEnvironment,
+  stripInheritedConfig,
   type RsbuildFinal,
   type StorybookConfigRsbuild,
 } from 'storybook-builder-rsbuild'
@@ -45,16 +46,17 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   const resolved =
     typeof definition === 'function' ? await definition(params) : definition
 
+  const source = `the loaded Rstack ${selected.type} config`
   const inherited =
     selected.type === 'app'
-      ? resolveInheritedRsbuildConfig(resolved, {
+      ? pickRsbuildEnvironment(resolved, {
           environment: selected.environment,
-          source: 'the loaded Rstack app config',
+          source,
         })
-      : resolveLibRsbuildConfig(resolved, {
+      : rslibConfigToRsbuildConfig(resolved, {
           libIndex: selected.libIndex,
-          source: 'the loaded Rstack lib config',
         })
+  stripInheritedConfig(inherited, source)
 
   return mergeRsbuildConfig(config, inherited)
 }
