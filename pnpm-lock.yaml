@@ -1221,6 +1221,58 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  sandboxes/rstack-react-component:
+    dependencies:
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: 18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@chromatic-com/storybook':
+        specifier: ^5.3.0
+        version: 5.3.0(storybook@10.6.0(@types/react@18.3.31)(prettier@3.9.6)(react@18.3.1))
+      '@rsbuild/core':
+        specifier: ^2.2.6
+        version: 2.2.6(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0)
+      '@rsbuild/plugin-react':
+        specifier: ^2.1.0
+        version: 2.1.0(@rsbuild/core@2.2.6(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0))(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))
+      '@rsbuild/plugin-sass':
+        specifier: ^1.5.3
+        version: 1.5.3(@rsbuild/core@2.2.6(@module-federation/runtime-tools@2.8.2)(core-js@3.48.0))
+      '@storybook/addon-docs':
+        specifier: 10.6.0
+        version: 10.6.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(storybook@10.6.0(@types/react@18.3.31)(prettier@3.9.6)(react@18.3.1))
+      '@storybook/react':
+        specifier: 10.6.0
+        version: 10.6.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.6.0(@types/react@18.3.31)(prettier@3.9.6)(react@18.3.1))(typescript@5.9.3)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.1
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@18.3.31)
+      rstack:
+        specifier: 0.7.4
+        version: 0.7.4(@microsoft/api-extractor@7.59.0(@types/node@22.19.1))(@module-federation/runtime-tools@2.8.2)(@rspress/core@2.0.19(@module-federation/runtime-tools@2.8.2)(@rspack/core@2.2.4(@module-federation/runtime-tools@2.8.2)(@swc/helpers@0.5.23))(core-js@3.48.0)(micromark-util-types@2.0.2)(micromark@4.0.2))(core-js@3.48.0)(jiti@2.7.0)(jsdom@20.0.3)(typescript@5.9.3)
+      storybook:
+        specifier: 10.6.0
+        version: 10.6.0(@types/react@18.3.31)(prettier@3.9.6)(react@18.3.1)
+      storybook-addon-rstack:
+        specifier: workspace:*
+        version: link:../../packages/addon-rstack
+      storybook-react-rsbuild:
+        specifier: workspace:*
+        version: link:../../packages/framework-react
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   sandboxes/vanilla-ts:
     devDependencies:
       '@chromatic-com/storybook':

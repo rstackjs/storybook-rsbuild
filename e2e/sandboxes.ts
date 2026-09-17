@@ -54,4 +54,9 @@ export const sandboxes: SandboxDefinition[] = [
     relativeDir: 'sandboxes/rstack-react',
     port: 6113,
   },
+  {
+    name: 'rstack-react-component',
+    relativeDir: 'sandboxes/rstack-react-component',
+    port: 6114,
+  },
 ]
