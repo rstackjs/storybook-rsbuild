@@ -118,19 +118,20 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   }
 
   // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
-  stripInheritedConfig(
-    rsbuildConfig as RsbuildConfig,
-    'the loaded Modern.js config',
-  )
+  // Storybook previews the browser build, so only the `client` environment applies.
+  const { environments, ...topLevel } = rsbuildConfig as RsbuildConfig
+  const inherited = environments?.client
+    ? mergeRsbuildConfig(topLevel, environments.client)
+    : topLevel
+  stripInheritedConfig(inherited, 'the loaded Modern.js config')
 
   // Add the integration's required plugins after inherited config is stripped.
-  rsbuildConfig.plugins = [
+  inherited.plugins = [
     ...rsbuildPlugins,
-    ...(rsbuildConfig.plugins || []),
+    ...(inherited.plugins || []),
     builderPluginAdapterBasic(adapterParams),
     builderPluginAdapterHooks(adapterParams),
   ]
 
-  const finalConfig = mergeRsbuildConfig(config, rsbuildConfig as RsbuildConfig)
-  return finalConfig
+  return mergeRsbuildConfig(config, inherited)
 }

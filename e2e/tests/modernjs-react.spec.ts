@@ -74,7 +74,7 @@ test.describe(`${sandbox.name} build output isolation`, () => {
     await writeFile(sentinelPath, sentinelMarker)
 
     // SB_RSBUILD_TEST_LEAK_PROBE activates a guarded plugin in the sandbox's
-    // modern.config.ts that injects assetPrefix and filename overrides. If
+    // modern.config.ts that injects assetPrefix, filename, and environments overrides. If
     // the addon stops stripping these, they'll leak through mergeRsbuildConfig
     // and show up in the built iframe.html.
     //
@@ -99,6 +99,9 @@ test.describe(`${sandbox.name} build output isolation`, () => {
       'utf8',
     )
     expect(iframeHtml).not.toContain('leak-probe-prefix')
+    // environments.client is merged then stripped; server is dropped entirely.
+    expect(iframeHtml).not.toContain('leak-probe-client-prefix')
+    expect(iframeHtml).not.toContain('leak-probe-server-prefix')
     expect(iframeHtml).not.toContain('leak-probe-')
     // Storybook's hardcoded chunk naming pattern survives.
     expect(iframeHtml).toMatch(/iframe\.bundle\.js/)
