@@ -5,14 +5,12 @@ define.lib(async () => {
   const { pluginSass } = await import('@rsbuild/plugin-sass')
 
   return {
-    bundle: false,
-    dts: { bundle: false },
-    source: {
-      entry: { index: ['./src/**', '!./src/env.d.ts'] },
-    },
     lib: [
-      { format: 'esm', output: { distPath: { root: './dist/esm' } } },
-      { format: 'cjs', output: { distPath: { root: './dist/cjs' } } },
+      {
+        bundle: false,
+        format: 'esm',
+        output: { distPath: { root: './dist' } },
+      },
     ],
     plugins: [
       pluginReact({ swcReactOptions: { runtime: 'classic' } }),

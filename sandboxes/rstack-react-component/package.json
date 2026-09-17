@@ -3,9 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.mjs",
-  "types": "./dist/cjs/index.d.ts",
   "scripts": {
     "build": "rstack lib",
     "build:storybook": "storybook build",

@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from './index.module.scss'
 
-export interface CounterButtonProps {
+interface CounterButtonProps {
   onClick: () => void
   label: string
 }
