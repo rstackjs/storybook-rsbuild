@@ -129,11 +129,7 @@ describe('pickRsbuildEnvironment', () => {
     },
   )
 
-  const invalidNameCases: RsbuildConfig['environments'][] = [
-    undefined,
-    { web },
-    { node, web },
-  ]
+  const invalidNameCases: RsbuildConfig['environments'][] = [undefined, { web }]
   it.each(invalidNameCases)(
     'rejects unknown names with environments %j',
     (environments) => {

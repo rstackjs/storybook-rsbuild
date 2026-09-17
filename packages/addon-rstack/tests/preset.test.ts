@@ -89,7 +89,7 @@ describe('rsbuildFinal', () => {
     expect(result.source?.define?.SELECTED).toBe('"lib"')
   })
 
-  it('delegates app environment selection and stripping while preserving Storybook config', async () => {
+  it('merges the selected app environment and keeps Storybook config', async () => {
     const result = await runRsbuildFinal(
       {
         app: {
@@ -113,7 +113,7 @@ describe('rsbuildFinal', () => {
     expect(result.environments).toBeUndefined()
   })
 
-  it('delegates libIndex selection and merges the result', async () => {
+  it('merges the selected lib entry', async () => {
     const result = await runRsbuildFinal(
       {
         lib: {

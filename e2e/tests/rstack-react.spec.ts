@@ -1,6 +1,6 @@
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { sandboxes } from '../sandboxes'
-import { expectDocsTitle } from '../utils/assertions'
+import { waitForPreviewReady } from '../utils/assertions'
 import { launchSandbox } from '../utils/sandboxProcess'
 
 const sandbox = sandboxes.find((entry) => entry.name === 'rstack-react')
@@ -33,6 +33,13 @@ test.describe(sandbox.name, () => {
     // with HMR/WebSocket connections that keep the network active
     await page.goto(currentServer.url, { waitUntil: 'domcontentloaded' })
 
-    await expectDocsTitle(page, 'CounterButton')
+    // Use the robust waiting mechanism that handles HMR rebuilds
+    const frame = await waitForPreviewReady(page)
+    const docsRoot = frame.locator('#storybook-docs:not([hidden])')
+
+    await expect(docsRoot).toBeVisible()
+    const title = docsRoot.locator('h1')
+    await expect(title).toBeVisible()
+    await expect(title).toHaveText('CounterButton')
   })
 })

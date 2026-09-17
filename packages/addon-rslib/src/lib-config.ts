@@ -1,5 +1,4 @@
-import type { RsbuildConfig } from '@rsbuild/core'
-import { pickRsbuildEnvironment } from 'storybook-builder-rsbuild'
+import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import type { AddonOptions } from './types'
 
 /** Convert an Rslib config into the Rsbuild config of one lib entry, without running a library build. */
@@ -23,9 +22,11 @@ export function rslibConfigToRsbuildConfig(
   }
 
   // Rslib ignores a user-written `environments` key: each lib entry is the environment.
-  const { lib: _lib, environments: _environments, ...topLevel } = rslibConfig
-  return pickRsbuildEnvironment(
-    { ...topLevel, environments: { lib: libConfig } },
-    { environment: 'lib', source: 'the loaded Rslib config' },
-  )
+  // Accept configs from another installed Rslib version at this shared boundary.
+  const {
+    lib: _lib,
+    environments: _environments,
+    ...topLevel
+  } = rslibConfig as RsbuildConfig & { lib?: unknown }
+  return mergeRsbuildConfig(topLevel, libConfig)
 }

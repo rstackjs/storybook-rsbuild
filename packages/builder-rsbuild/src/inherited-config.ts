@@ -100,9 +100,8 @@ export function pickRsbuildEnvironment(
       `You must specify an environment when there are multiple environments in ${source}.`,
     )
   }
-  const selected = names.length === 1 ? names[0] : environment
-  const result = selected
+  const selected = environment ?? names[0]
+  return selected
     ? mergeRsbuildConfig(topLevel, environments[selected])
     : topLevel
-  return result
 }
