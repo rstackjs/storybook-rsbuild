@@ -1,0 +1,72 @@
+import { PackageManagerTabs } from '@theme'
+
+# Rstack
+
+This addon loads an app or library definition from your Rstack configuration and reuses its Storybook-safe Rsbuild settings in the preview build.
+
+See the [Rstack React app example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rstack-react) and the [Rstack React component example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/rstack-react-component) for complete setups.
+
+## Getting started
+
+### Installation
+
+<PackageManagerTabs command="install @rsbuild/core rstack storybook-addon-rstack -D" />
+
+Use this alongside the framework package from your project's [framework guide](/guide/framework), such as `storybook-react-rsbuild`.
+
+### Setup `.storybook/main.ts`
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: ['storybook-addon-rstack'],
+}
+
+export default config
+```
+
+By default, the addon loads `rstack.config.*`, prefers `define.app()` when both app and lib definitions exist, and otherwise falls back to `define.lib()`. Only the selected definition is executed.
+
+## Options
+
+Configure the addon when the defaults do not match your project:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  addons: [
+    {
+      name: 'storybook-addon-rstack',
+      options: {
+        rstack: {
+          configFilePath: './rstack.config.ts',
+          stack: { type: 'lib', libIndex: 0 },
+        },
+      },
+    },
+  ],
+}
+
+export default config
+```
+
+- `configFilePath`: Optional `string`. Absolute path, or relative to the current working directory. Names the Rstack config file, which is loaded through Rstack's [`loadRstackConfig()`](https://github.com/rstackjs/rstack-cli/blob/main/packages/rstack/src/config.ts).
+- `stack`: Which definition to inherit. Omit it to prefer `define.app()` and fall back to `define.lib()`.
+  - `{ type: 'app', environment? }`: inherit `define.app()`. `environment` must name an existing environment; see the [builder's environment option](/guide/configuration#option-reference).
+  - `{ type: 'lib', libIndex? }`: inherit `define.lib()`. `libIndex` is a `number` or `false` (default `0`); `false` inherits only top-level library config.
+
+Setting `stack` requires that definition to exist; a missing definition is an error.
+
+If the selected library config omits its `lib` array, index `0` is an implicit empty entry. An explicit empty array has no valid entry.
+
+## Inherited configuration boundary
+
+Inherited configuration follows the same [Rsbuild configuration boundary](/guide/configuration#inherited-rsbuild-configuration).

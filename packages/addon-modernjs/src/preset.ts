@@ -114,7 +114,7 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   const appContext = getAppContext()
   const adapterParams: BuilderAdapterParams = {
     appContext: appContext as BuilderAdapterParams['appContext'],
-    normalizedConfig: resolveConfig as AppNormalizedConfig,
+    normalizedConfig: resolveConfig,
   }
 
   // Modern.js may resolve a different version of @rsbuild/core, cast to align types.

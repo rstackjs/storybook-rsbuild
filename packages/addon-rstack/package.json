@@ -1,0 +1,61 @@
+{
+  "name": "storybook-addon-rstack",
+  "version": "3.4.2",
+  "description": "Storybook addon for loading configuration of Rstack CLI",
+  "keywords": [
+    "storybook",
+    "storybook-addons",
+    "rsbuild",
+    "rspack",
+    "rstack"
+  ],
+  "homepage": "https://storybook.rsbuild.rs",
+  "bugs": {
+    "url": "https://github.com/rstackjs/storybook-rsbuild/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rstackjs/storybook-rsbuild",
+    "directory": "packages/addon-rstack"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./preset": "./dist/preset.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "*.js",
+    "*.d.ts",
+    "!src/**/*"
+  ],
+  "scripts": {
+    "build": "rstack lib",
+    "dev": "rstack lib --watch",
+    "prepare": "pnpm run build"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.0",
+    "@rsbuild/core": "^2.2.6",
+    "@types/node": "^22.0.0",
+    "rstack": "0.7.4",
+    "storybook": "10.6.0",
+    "storybook-addon-rslib": "workspace:*",
+    "storybook-builder-rsbuild": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
+    "rstack": "^0.7.4",
+    "storybook-builder-rsbuild": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

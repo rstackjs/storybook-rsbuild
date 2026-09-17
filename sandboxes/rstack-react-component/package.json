@@ -1,0 +1,31 @@
+{
+  "name": "@sandboxes/rstack-react-component",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rstack lib",
+    "build:storybook": "storybook build",
+    "storybook": "storybook dev -p 6006"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "^5.3.0",
+    "@rsbuild/core": "^2.2.6",
+    "@rsbuild/plugin-react": "^2.1.0",
+    "@rsbuild/plugin-sass": "^1.5.3",
+    "@storybook/addon-docs": "10.6.0",
+    "@storybook/react": "10.6.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "rstack": "0.7.4",
+    "storybook": "10.6.0",
+    "storybook-addon-rstack": "workspace:*",
+    "storybook-react-rsbuild": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

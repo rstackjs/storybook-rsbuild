@@ -1,4 +1,4 @@
-import type { RsbuildConfig } from '@rsbuild/core'
+import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import { logger } from 'storybook/internal/node-logger'
 
 const inheritedConfigFieldPaths = [
@@ -74,4 +74,34 @@ export const stripInheritedConfig = (
   }
 
   return strippedFields
+}
+
+/**
+ * Merges the selected environment over the top-level config and drops `environments`.
+ * Stripping is the caller's job; see `stripInheritedConfig`.
+ *
+ * @internal For use by official Storybook Rsbuild packages only. This API is subject to change at
+ * any time and should not be used in user configuration.
+ */
+export function pickRsbuildEnvironment(
+  config: { [K in keyof RsbuildConfig]?: unknown },
+  { environment, source }: { environment?: string; source: string },
+): RsbuildConfig {
+  // Accept configs from another installed Rsbuild version at this shared boundary.
+  const { environments = {}, ...topLevel } = config as RsbuildConfig
+  const names = Object.keys(environments)
+  if (environment !== undefined && !names.includes(environment)) {
+    throw new Error(
+      `The specified environment "${environment}" is not found in ${source}.`,
+    )
+  }
+  if (names.length > 1 && environment === undefined) {
+    throw new Error(
+      `You must specify an environment when there are multiple environments in ${source}.`,
+    )
+  }
+  const selected = environment ?? names[0]
+  return selected
+    ? mergeRsbuildConfig(topLevel, environments[selected])
+    : topLevel
 }

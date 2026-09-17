@@ -2,7 +2,7 @@
 
 - **`packages/builder-rsbuild`**: The Rsbuild builder — the core package. The `Release` workflow reads the release version from its `package.json`.
 - **`packages/framework-*`**: Renderer packages (`html`, `react`, `react-native-web`, `vue3`, `web-components`). Runtime logic stays in `src/`.
-- **`packages/addon-*`**: Storybook addons (`modernjs`, `rslib`).
+- **`packages/addon-*`**: Storybook addons (`modernjs`, `rslib`, `rstack`).
 - **`packages/rsbuild-plugin-react-native-web`**: Standalone Rsbuild plugin consumed by `framework-react-native-web`.
 - **`scripts/`**: Shared package-build helpers and check tooling (`build/create-rslib-config.ts`, `build/utils/`, `check-dependency-version.mts`). A `pnpm-workspace.yaml` member — see [release.md](release.md) on `"private": true`.
 - **`sandboxes/`**: Runnable Storybook apps for regression testing.

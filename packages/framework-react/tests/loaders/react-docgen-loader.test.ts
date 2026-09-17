@@ -170,7 +170,7 @@ async function runLoader(resourcePath: string) {
       async: () => rs.fn(),
       getOptions: () => ({}),
       resourcePath,
-    } as never,
+    },
     'export const Button = () => null',
     undefined,
   )

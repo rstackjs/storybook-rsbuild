@@ -49,4 +49,14 @@ export const sandboxes: SandboxDefinition[] = [
   },
   { name: 'vanilla-ts', relativeDir: 'sandboxes/vanilla-ts', port: 6111 },
   { name: 'vue3', relativeDir: 'sandboxes/vue3', port: 6112 },
+  {
+    name: 'rstack-react',
+    relativeDir: 'sandboxes/rstack-react',
+    port: 6113,
+  },
+  {
+    name: 'rstack-react-component',
+    relativeDir: 'sandboxes/rstack-react-component',
+    port: 6114,
+  },
 ]

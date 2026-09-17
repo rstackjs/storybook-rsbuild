@@ -72,6 +72,20 @@ describe('rsbuildFinal', () => {
     })
   })
 
+  it('drops top-level environments instead of selecting them', async () => {
+    const result = await runRsbuildFinal({
+      environments: {
+        node: { source: { define: { SELECTED: '"node"' } } },
+        web: {},
+      },
+      source: { define: { SELECTED: '"top"' } },
+      lib: [{ source: { define: { LIB: 'true' } } }],
+    })
+
+    expect(result.source?.define).toEqual({ SELECTED: '"top"', LIB: 'true' })
+    expect(result.environments).toBeUndefined()
+  })
+
   it('ignores explicit libs when libIndex is false', async () => {
     const modifyLibConfig = rs.fn()
     const result = await runRsbuildFinal(

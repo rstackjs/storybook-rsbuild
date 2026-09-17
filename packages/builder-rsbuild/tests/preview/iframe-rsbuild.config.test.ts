@@ -224,6 +224,19 @@ describe('iframe-rsbuild.config', () => {
     })
   })
 
+  it('rejects an unknown name for a single Rsbuild environment', async () => {
+    const { options } = createOptions(false, 'DEVELOPMENT', [], {
+      rsbuildConfigPath: singleEnvironmentRsbuildConfig,
+      environment: 'worker',
+    })
+
+    await expect(
+      createIframeRsbuildConfig(options as RsbuildBuilderOptions),
+    ).rejects.toThrow(
+      'The specified environment "worker" is not found in the loaded Rsbuild config.',
+    )
+  })
+
   it('preserves config explicitly restored by rsbuildFinal', async () => {
     const explicitPlugin = { name: 'explicit-plugin', setup() {} }
     const { options } = createOptions(
