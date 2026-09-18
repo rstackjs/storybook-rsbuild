@@ -72,65 +72,6 @@ function generateDirectExports(
   return exports
 }
 
-/**
- * Rewrites bare 'react-native-web/...' import specifiers in reanimated 4.x's
- * plain-ESM webUtils.js to absolute paths. reanimated 4 does not depend on
- * react-native-web, so under pnpm's isolated node_modules the bare specifiers
- * cannot be resolved from within its virtual store.
- *
- * Returns the original code untouched when no resolver is provided, resolution
- * throws, or nothing needs rewriting.
- */
-function rewriteReanimated4WebUtilsImports(
-  code: string,
-  id: string,
-  opts?: TransformReanimatedOptions,
-): TransformResult {
-  const resolveModule = opts?.resolveModule
-  if (!resolveModule || !code.includes('react-native-web/')) {
-    return { code, map: null, changed: false }
-  }
-
-  const ms = new MagicString(code)
-  let changed = false
-
-  for (const m of code.matchAll(/from '([^']+)'/g)) {
-    const specifier = m[1]
-    if (!specifier.startsWith('react-native-web/')) {
-      continue
-    }
-    let resolvedPath: string
-    try {
-      resolvedPath = resolveModule(specifier)
-    } catch {
-      // Resolution failed: leave the whole file untouched rather than
-      // producing partially rewritten code.
-      return { code, map: null, changed: false }
-    }
-    if (resolvedPath === specifier) {
-      continue
-    }
-    const start = m.index + m[0].indexOf(specifier)
-    ms.overwrite(start, start + specifier.length, resolvedPath)
-    changed = true
-  }
-
-  if (!changed) {
-    return { code, map: null, changed: false }
-  }
-
-  const resultCode = ms.toString()
-  const map = ms
-    .generateMap({
-      source: opts?.source ?? id.split('?')[0],
-      includeContent: true,
-      hires: true,
-    })
-    .toString()
-
-  return { code: resultCode, map, changed: true }
-}
-
 export interface TransformResult {
   code: string
   map: string | null
@@ -171,21 +112,7 @@ export function transformReanimatedWebUtils(
   // Note: In pnpm, the path may be like node_modules/.pnpm/.../node_modules/react-native-reanimated
   if (
     !reanimatedInNodeModules ||
-    !normalizedId.includes('ReanimatedModule/js-reanimated/webUtils')
-  ) {
-    return { code, map: null, changed: false }
-  }
-
-  // reanimated >= 4 ships webUtils.js (no `.web` infix) as plain ESM with bare
-  // 'react-native-web/...' import specifiers that cannot be resolved from
-  // within pnpm's virtual store; rewrite them to absolute paths.
-  if (!normalizedId.includes('ReanimatedModule/js-reanimated/webUtils.web.')) {
-    return rewriteReanimated4WebUtilsImports(code, id, opts)
-  }
-
-  // 3.x webUtils.web.js: only the export let + try/catch + require pattern
-  // needs fixing; anything else is returned unchanged.
-  if (
+    !normalizedId.includes('ReanimatedModule/js-reanimated/webUtils') ||
     !code.includes('export let') ||
     !code.includes('try') ||
     !code.includes('require')
