@@ -19,7 +19,10 @@ import {
   parse,
   utils,
 } from 'react-docgen'
-import { findTsconfigPathForFile } from 'storybook/internal/common'
+import {
+  findTsconfigPathForFile,
+  getTsconfigPathsBaseDir,
+} from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import * as TsconfigPaths from 'tsconfig-paths'
 // @ts-expect-error can not reexport `LoaderContext` from @rsbuild/core
@@ -30,7 +33,6 @@ import {
   ReactDocgenResolveError,
   RESOLVE_EXTENSIONS,
 } from './docgen-resolver'
-import { getTsconfigPathsBaseDir } from './tsconfig-paths'
 
 const { getNameOrValue, isReactForwardRefCall } = utils
 

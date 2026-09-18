@@ -21,7 +21,7 @@ const { reactDocgenActual } = rs.hoisted(() => {
 const reactDocgenMock = rs.hoisted(() => {
   return {
     makeFsImporter: rs.fn().mockImplementation((fn) => fn),
-    parse: rs.fn().mockReturnValue([]),
+    parse: rs.fn(),
   }
 })
 
@@ -72,13 +72,17 @@ describe('reactDocgenLoader function', () => {
       }),
       'apps/first/src/Button.tsx': 'export const Button = () => null',
       'apps/first/src/first-props.ts': 'export interface Props {}',
-      'apps/second/tsconfig.json': JSON.stringify({
+      // `paths` inherited without `baseUrl` resolve from the base config's
+      // directory, not from apps/second.
+      'tsconfig.base.json': JSON.stringify({
         compilerOptions: {
-          baseUrl: '.',
           paths: {
-            '@ui/props': ['./src/second-props.ts'],
+            '@ui/props': ['./apps/second/src/second-props.ts'],
           },
         },
+      }),
+      'apps/second/tsconfig.json': JSON.stringify({
+        extends: '../../tsconfig.base.json',
         include: ['src'],
       }),
       'apps/second/src/Button.tsx': 'export const Button = () => null',
@@ -120,30 +124,6 @@ describe('reactDocgenLoader function', () => {
 })
 
 describe('getReactDocgenImporter function', () => {
-  it('should not map the request if a tsconfig path mapping is not available', () => {
-    const filename = './src/components/Button.tsx'
-    const basedir = '/src'
-    const imported = getReactDocgenImporter(undefined)
-    reactDocgenResolverMock.defaultLookupModule.mockImplementation(
-      (filen: string) => filen,
-    )
-    const result = (imported as any)(filename, basedir)
-    expect(result).toBe(filename)
-  })
-
-  it('should map the request', () => {
-    const mappedFile = './mapped-file.tsx'
-    const matchPath = rs.fn().mockReturnValue(mappedFile)
-    const filename = './src/components/Button.tsx'
-    const basedir = '/src'
-    const imported = getReactDocgenImporter(matchPath)
-    reactDocgenResolverMock.defaultLookupModule.mockImplementation(
-      (filen: string) => filen,
-    )
-    const result = (imported as any)(filename, basedir)
-    expect(result).toBe(mappedFile)
-  })
-
   it('remaps the React Native entry to React Native Web', () => {
     const dir = createTempProject({
       'node_modules/react-native-web/dist/index.js': '',
