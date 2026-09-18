@@ -18,6 +18,7 @@ import type {
   StorybookConfigRaw,
 } from 'storybook/internal/types'
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
+import { createHeadlessRsbuildChangeDetectionAdapter } from './change-detection-adapter/headless'
 import { withStatsJsonCompat } from './chromatic-stats'
 import { overrideRsbuildLogger } from './logger'
 import { pluginStorybookMock } from './plugins/rsbuild-plugin-storybook-mock'
@@ -162,22 +163,23 @@ export async function bail(): Promise<void> {
 }
 
 /**
- * Returns a {@link ChangeDetectionAdapter} bound to the Rspack compiler created by `start()`.
- *
- * Storybook core only invokes this after `start()` has resolved, so `activeCompiler` is populated
- * in practice. The guard is defensive: it fails loudly on an unexpected call-before-start rather
- * than silently binding to an undefined compiler.
+ * Returns a {@link ChangeDetectionAdapter} bound to the Rspack compiler created by `start()`, or a
+ * headless adapter when `options` are passed without a dev server (the `storybook tools` CLI).
+ * Throws if called without options before `start()` has created the compiler.
  */
 export const changeDetectionAdapter: NonNullable<
   RsbuildBuilder['changeDetectionAdapter']
-> = () => {
-  if (!activeCompiler) {
-    // eslint-disable-next-line local-rules/no-uncategorized-errors
-    throw new Error(
-      'builder-rsbuild: changeDetectionAdapter() called before start(); the Rspack compiler is not ready yet.',
-    )
+> = (options) => {
+  if (activeCompiler) {
+    return createRspackChangeDetectionAdapter(activeCompiler)
   }
-  return createRspackChangeDetectionAdapter(activeCompiler)
+  if (options) {
+    return createHeadlessRsbuildChangeDetectionAdapter(options)
+  }
+  // eslint-disable-next-line local-rules/no-uncategorized-errors
+  throw new Error(
+    'builder-rsbuild: changeDetectionAdapter() called before start(); the Rspack compiler is not ready yet.',
+  )
 }
 
 export const start: RsbuildBuilder['start'] = async ({

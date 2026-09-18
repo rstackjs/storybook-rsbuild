@@ -57,7 +57,8 @@
         "progress value resets between compilations so rebuilds report real progress — upstream's monotonic clamp never resets and pins every rebuild at 1 (deliberate fix over upstream, PR #553)",
         "dev start() adopts the builder-vite non-blocking contract: it returns before the first compile finishes so core listens and prints the URL immediately, and first-compile errors surface via overlay/terminal instead of failing the process — upstream builder-webpack5's blocking start + fail-on-error is dead under current core, which only listens after start() resolves (PR #553)",
         "mocking is appended in builder code immediately after presets.apply('rsbuildFinal') via pluginStorybookMock — this vite-style builder-code position replaces upstream builder-webpack5's overridePresets slot; details are recorded on the custom-webpack-preset.ts mapping",
-        "an `eslint-disable-next-line @typescript-eslint/unbound-method` comment precedes upstream's `const { apply } = await getPresets(...)` destructuring; code is otherwise identical"
+        "an `eslint-disable-next-line @typescript-eslint/unbound-method` comment precedes upstream's `const { apply } = await getPresets(...)` destructuring; code is otherwise identical",
+        "changeDetectionAdapter(options) follows builder-vite's src/index.ts instead of builder-webpack5: without a started compiler and with options (the headless `storybook tools` path) it returns the headless adapter from change-detection-adapter/headless.ts"
       ]
     },
     {
@@ -350,8 +351,10 @@
     "code/presets/react-webpack/src/framework-preset-cra.ts"
   ],
   "localOnlyFiles": {
-    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild.",
+    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild. headless.ts and preset.ts follow builder-vite (change-detection-adapter/headless.ts and preset.ts); preset.ts is kept as a re-export of preview-preset.ts rather than merged into it so preview-preset.ts stays 1:1 with builder-webpack5's presets/preview-preset.ts while dist/preset.js satisfies the headless `<builder dir>/preset.js` lookup; builder-vite has no file-level mappings, see the top-level $comment.",
     "files": [
+      "packages/builder-rsbuild/src/change-detection-adapter/headless.ts",
+      "packages/builder-rsbuild/src/preset.ts",
       "packages/builder-rsbuild/src/chromatic-stats.ts",
       "packages/builder-rsbuild/src/inherited-config.ts",
       "packages/builder-rsbuild/src/logger.ts",
