@@ -27,6 +27,7 @@
     "./loaders/rsbuild-automock-loader": "./dist/loaders/rsbuild-automock-loader.js",
     "./loaders/storybook-mock-transform-loader": "./dist/loaders/storybook-mock-transform-loader.js",
     "./package.json": "./package.json",
+    "./preset": "./dist/preset.js",
     "./presets/preview-preset": "./dist/preview-preset.js",
     "./templates/preview.ejs": "./templates/preview.ejs",
     "./templates/virtualModuleEntry.template.js": "./templates/virtualModuleEntry.template.js",
