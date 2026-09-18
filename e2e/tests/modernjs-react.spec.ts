@@ -99,8 +99,10 @@ test.describe(`${sandbox.name} build output isolation`, () => {
       'utf8',
     )
     expect(iframeHtml).not.toContain('leak-probe-prefix')
-    // environments.client is merged then stripped; server is dropped entirely.
+    // The browser environment (`client` on v3, `web` on v2) is merged then
+    // stripped; every other environment is dropped.
     expect(iframeHtml).not.toContain('leak-probe-client-prefix')
+    expect(iframeHtml).not.toContain('leak-probe-web-prefix')
     expect(iframeHtml).not.toContain('leak-probe-server-prefix')
     expect(iframeHtml).not.toContain('leak-probe-')
     // Storybook's hardcoded chunk naming pattern survives.

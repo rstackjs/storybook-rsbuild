@@ -118,10 +118,11 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   }
 
   // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
-  // Storybook previews the browser build, so only the `client` environment applies.
+  // Storybook previews the browser build, which Modern.js names `client` (v3) or `web` (v2).
   const { environments, ...topLevel } = rsbuildConfig as RsbuildConfig
-  const inherited = environments?.client
-    ? mergeRsbuildConfig(topLevel, environments.client)
+  const browserEnvironment = environments?.client ?? environments?.web
+  const inherited = browserEnvironment
+    ? mergeRsbuildConfig(topLevel, browserEnvironment)
     : topLevel
   stripInheritedConfig(inherited, 'the loaded Modern.js config')
 
