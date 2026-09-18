@@ -10,14 +10,14 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
-    "nativewind": "^4.2.6",
+    "nativewind": "^4.2.7",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-native-css-interop": "^0.2.6",
-    "react-native-reanimated": "^3.19.5",
-    "react-native-safe-area-context": "^5.9.0",
+    "react-native-css-interop": "^0.2.7",
+    "react-native-reanimated": "^4.6.0",
+    "react-native-safe-area-context": "^5.10.0",
     "react-native-web": "^0.21.2",
-    "react-native-worklets": "^0.11.4"
+    "react-native-worklets": "^0.12.2"
   },
   "devDependencies": {
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
@@ -31,9 +31,9 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
-    "autoprefixer": "^10.5.4",
-    "postcss": "^8.5.26",
-    "react-native": "0.83.0",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "react-native": "0.87.1",
     "storybook": "10.6.0",
     "storybook-react-native-web-rsbuild": "workspace:*",
     "tailwindcss": "^3.4.19",

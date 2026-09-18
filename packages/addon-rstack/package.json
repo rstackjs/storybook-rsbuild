@@ -41,10 +41,10 @@
     "prepare": "pnpm run build"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.0",
+    "@microsoft/api-extractor": "^7.59.1",
     "@rsbuild/core": "^2.2.6",
     "@types/node": "^22.0.0",
-    "rstack": "0.7.4",
+    "rstack": "0.7.5",
     "storybook": "10.6.0",
     "storybook-addon-rslib": "workspace:*",
     "storybook-builder-rsbuild": "workspace:*",

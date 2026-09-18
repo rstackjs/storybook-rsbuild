@@ -40,11 +40,11 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "magic-string": "^1.1.0",
+    "magic-string": "^1.4.1",
     "pathe": "^2.0.3"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.0",
+    "@microsoft/api-extractor": "^7.59.1",
     "@rsbuild/core": "^2.2.6",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"
