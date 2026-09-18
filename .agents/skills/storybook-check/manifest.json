@@ -350,7 +350,7 @@
     "code/presets/react-webpack/src/framework-preset-cra.ts"
   ],
   "localOnlyFiles": {
-    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild. loaders/tsconfig-paths.ts backfills getTsconfigPathsBaseDir from storybook core (code/core/src/common/utils/tsconfig.ts, not exported in 10.5.10); remove once the installed storybook exports it.",
+    "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild.",
     "files": [
       "packages/builder-rsbuild/src/chromatic-stats.ts",
       "packages/builder-rsbuild/src/inherited-config.ts",
@@ -358,7 +358,6 @@
       "packages/builder-rsbuild/src/preview/detect-msw.ts",
       "packages/builder-rsbuild/src/react-shims.ts",
       "packages/framework-react/src/requirer.ts",
-      "packages/framework-react/src/loaders/tsconfig-paths.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/index.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/generate.ts",
