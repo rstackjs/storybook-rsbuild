@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url'
 import type { PresetProperty } from 'storybook/internal/types'
 import type { FrameworkOptions } from './types'
 
+export {
+  experimental_docgenProvider,
+  experimental_manifests,
+} from './docgen/preset'
 export { rsbuildFinal } from './framework-preset-vue3'
 
 export const core: PresetProperty<'core'> = async (config, options) => {
