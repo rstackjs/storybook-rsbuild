@@ -297,6 +297,17 @@ This framework provides built-in support for [React Native Reanimated](https://d
 
 <PackageManagerTabs command="install react-native-reanimated react-native-worklets" />
 
+:::info pnpm hoisting
+With pnpm's default hoisting (`hoistPattern: ['*']`), nothing extra is needed. If your project sets `hoist: false` or a restricted `hoistPattern` in `pnpm-workspace.yaml`, add `react-native-web` to `hoistPattern`: `react-native-reanimated` 4 imports `react-native-web` internals (such as `react-native-web/dist/cjs/...`) without declaring `react-native-web` as a dependency, so without hoisting those imports fail to resolve in pnpm's isolated `node_modules`.
+
+```yaml
+# pnpm-workspace.yaml
+hoistPattern:
+  - react-native-web
+```
+
+:::
+
 ### What the framework handles
 
 The framework automatically:

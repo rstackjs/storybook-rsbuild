@@ -13,7 +13,6 @@ onlyBuiltDependencies:
 hoistPattern:
   # react-native-css-interop/babel uses @babel/plugin-transform-react-jsx as a phantom dependency
   - '@babel/plugin-transform-react-jsx'
-  # react-native-worklets/plugin uses these as phantom dependencies
-  - '@babel/types'
-  - '@babel/generator'
-  - '@babel/traverse'
+  # react-native-reanimated 4's js-reanimated/webUtils.js imports
+  # react-native-web/dist/cjs/... without declaring react-native-web as a dependency
+  - react-native-web

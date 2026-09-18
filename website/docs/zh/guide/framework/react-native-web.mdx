@@ -297,6 +297,17 @@ export function Card({ title, children }) {
 
 <PackageManagerTabs command="install react-native-reanimated react-native-worklets" />
 
+:::info pnpm hoisting
+使用 pnpm 默认的 hoisting 配置（`hoistPattern: ['*']`）时无需额外操作。如果你的项目在 `pnpm-workspace.yaml` 中设置了 `hoist: false` 或受限的 `hoistPattern`，请将 `react-native-web` 加入 `hoistPattern`：`react-native-reanimated` 4 在未声明 `react-native-web` 依赖的情况下直接导入其内部模块（如 `react-native-web/dist/cjs/...`），若不做 hoisting，这些导入在 pnpm 的隔离 `node_modules` 中将无法解析。
+
+```yaml
+# pnpm-workspace.yaml
+hoistPattern:
+  - react-native-web
+```
+
+:::
+
 ### Framework 会处理的内容
 
 该 framework 会自动：
