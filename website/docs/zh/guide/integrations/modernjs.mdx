@@ -30,7 +30,7 @@ const config: StorybookConfig = {
 export default config
 ```
 
-解析后的 Modern.js config 在合并到 Storybook 之前，会经过 [Builder 选项](/guide/configuration#builder-选项) 中记录的 inherited-config 边界。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承字段被剥离后执行。
+解析后的 Modern.js config 在合并到 Storybook 之前，会经过 [Builder 选项](/guide/configuration#builder-选项) 中记录的 inherited-config 边界。如果确实需要恢复某个已剥离的字段，请在 Storybook 的 `rsbuildFinal` 中显式添加；显式配置会在继承字段被剥离后执行。Modern.js 的 `environments` 配置中只有浏览器 environment（v3 为 `client`，v2 为 `web`）会应用到 preview，其他 environment 会被忽略。
 
 ## 结合 Module Federation
 
