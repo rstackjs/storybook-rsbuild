@@ -70,6 +70,8 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 ## Workflow
 
+`<skill-dir>` below means `.agents/skills/storybook-sync` (use an absolute path when the command is copied into a subagent prompt). Shell variables do not persist between tool calls: run each step's commands in one shell, or re-inline the values.
+
 Every run covers the range from ANCHOR through TARGET on upstream `next`. Both ends are git refs (tag or sha, treated identically) and must be reachable from `origin/next`: patch tags live on `main` via cherry-picks; their source commits are on `next`. The range includes the anchor itself; re-triaging one commit beats leaving a gap.
 
 ### 1. Determine the range
@@ -78,13 +80,15 @@ Every run covers the range from ANCHOR through TARGET on upstream `next`. Both e
 
 **ANCHOR (start ref) — continue from the last sync report by default.** The `storybook sync report` label is fixed and used for every report this skill publishes.
 
-1. Find the most recent sync report issue (any state — the newest one is the previous endpoint, regardless of whether it's been closed yet). Recover the issue number and anchor from its machine-readable marker:
+1. `TARGET=<the ref the user named>` (a tag or commit sha).
+2. Recover the previous report's anchor:
    ```bash
    read -r PREV_ISSUE_NUMBER ANCHOR < <(gh issue list --repo rstackjs/storybook-rsbuild \
      --state all --label "storybook sync report" --limit 1 --json number,body \
-     --jq '.[0] | "\(.number) \(.body | capture("<!-- storybook-sync: target=(?<sha>[a-f0-9]{40}) -->").sha)"')
+     --jq '.[0] | select(.) | "\(.number) \((.body | capture("<!-- storybook-sync: target=(?<sha>[a-f0-9]{40}) -->").sha) // "")"')
    ```
-2. If the user names a start ref explicitly ("from v10.6.0", "between v10.6.0 and v11.0.0"), that overrides the parsed anchor and `PREV_ISSUE_NUMBER` is left empty. If no anchor is recovered (no prior report or a report older than the marker) and the user gave no start ref, stop and ask for one.
+   Three outcomes: both set → continue; `PREV_ISSUE_NUMBER` set but `ANCHOR` empty → the newest report (#N) predates the marker; nothing set → no prior report exists.
+3. If the user named a start ref, `ANCHOR=<that ref>` and clear `PREV_ISSUE_NUMBER` (the report is not continuing from an issue). Otherwise, if `ANCHOR` is empty, stop and ask the user for a start ref, saying which of the two empty cases applies.
 
 **Resolve both ends** (this also fetches the cache and validates the refs):
 
@@ -270,7 +274,7 @@ Commits within each priority section should be in chronological order (oldest fi
 
 Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous anchor automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
 
-- The Range label part has two shapes: `v10.6.0 → v11.0.0-alpha.3`, or `since #544 → v10.6.0` when continuing from a report.
+- The label part is `<ANCHOR_LABEL> → <TARGET_LABEL>` (e.g. `v10.6.0 → v11.0.0-alpha.3`, `aa5790bb → v10.6.0`); when continuing from a report, the anchor label is `since #<PREV_ISSUE_NUMBER>` instead (e.g. `since #544 → v10.6.0`).
 
 Never describe the range by author dates — the range is defined by reachability, and long-lived branches merged after the anchor carry author dates that predate it.
 
