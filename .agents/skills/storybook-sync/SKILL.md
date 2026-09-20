@@ -70,65 +70,53 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 ## Workflow
 
-### 1. Preparation
+Every run covers the range from ANCHOR through TARGET on upstream `next`. Both ends are git refs (tag or sha, treated identically) and must be reachable from `origin/next`: patch tags live on `main` via cherry-picks; their source commits are on `next`. The range includes the anchor itself; re-triaging one commit beats leaving a gap.
 
-Generate the report filename (anchored to system clock):
+### 1. Determine the range
+
+**TARGET (end ref) — always user-specified.** Every run is user-triggered and the user names the target: a tag (`v11.0.0`, `v11.0.0-alpha.3`) or a commit sha. Never pick a target yourself; if the user gave none, ask for one.
+
+**ANCHOR (start ref) — continue from the last sync report by default.** The `storybook sync report` label is fixed and used for every report this skill publishes.
+
+1. Find the most recent sync report issue (any state — the newest one is the previous endpoint, regardless of whether it's been closed yet). Recover the issue number and anchor from its machine-readable marker:
+   ```bash
+   read -r PREV_ISSUE_NUMBER ANCHOR < <(gh issue list --repo rstackjs/storybook-rsbuild \
+     --state all --label "storybook sync report" --limit 1 --json number,body \
+     --jq '.[0] | "\(.number) \(.body | capture("<!-- storybook-sync: target=(?<sha>[a-f0-9]{40}) -->").sha)"')
+   ```
+2. If the user names a start ref explicitly ("from v10.6.0", "between v10.6.0 and v11.0.0"), that overrides the parsed anchor and `PREV_ISSUE_NUMBER` is left empty. If no anchor is recovered (no prior report or a report older than the marker) and the user gave no start ref, stop and ask for one.
+
+**Resolve both ends** (this also fetches the cache and validates the refs):
 
 ```bash
-REPORT_NAME=$(bash <skill-dir>/scripts/fetch_upstream.sh --report-name)
+{ IFS=$'\t' read -r ANCHOR_SHA ANCHOR_LABEL; IFS=$'\t' read -r TARGET_SHA TARGET_LABEL; } \
+  < <(bash <skill-dir>/scripts/fetch_upstream.sh --resolve "$ANCHOR" "$TARGET")
+REPORT_NAME="upstream-sync-report-${ANCHOR_LABEL}-${TARGET_LABEL}.md"
 ```
 
-Determine the commit range.
-
-**Default (no user-specified range)** — continue from the last sync report. The `storybook sync report` label is fixed and used for every report this skill publishes.
-
-1. Find the most recent sync report issue (any state — the newest one is the previous endpoint, regardless of whether it's been closed yet). Capture both the issue number and the body so the later range/title can reference it:
-   ```bash
-   LAST_REPORT=$(gh issue list --repo rstackjs/storybook-rsbuild --state all \
-     --label "storybook sync report" --limit 1 --json number,body \
-     --jq '.[0] | "\(.number)\n\(.body)"')
-   PREV_ISSUE_NUMBER=$(printf '%s' "$LAST_REPORT" | head -1)
-   LAST_BODY=$(printf '%s' "$LAST_REPORT" | tail -n +2)
-   ```
-2. Extract the previous END_SHA — it's the last `storybookjs/storybook/commit/<sha>` URL in the Range line:
-   ```bash
-   PREV_END_SHA=$(printf '%s' "$LAST_BODY" \
-     | grep -oE 'storybookjs/storybook/commit/[a-f0-9]+' | tail -1 | sed 's|.*/||')
-   ```
-3. Pass `--from "${PREV_END_SHA}^"` so the boundary is **closed** (inclusive of PREV_END_SHA). The script uses git's `A..B` syntax, which is exclusive of A; the trailing `^` (parent) makes the new range re-include PREV_END_SHA. Re-processing that one commit is intentional — prefer running it twice over leaving a gap if upstream history shifted or boundary semantics are unclear at execution time.
-4. If no prior report exists (empty `LAST_BODY` or no SHA parsed), fall back to `--days 30` and leave `PREV_ISSUE_NUMBER` empty.
-
-**User-specified range** — overrides the default:
-
-- **Relative days**: "past 20 days", "last 30 days" → use `--days N`
-- **Absolute date range**: "since 2025-12-01", "Dec 1 to Dec 20" → use `--since` / `--until`
-- **Version tags**: "between v8.4.0 and v8.5.0" → use `--from` / `--to`
-
-For relative date ranges, always use `--days N` — the script reads the system clock to compute exact dates, avoiding date miscalculation.
+Labels come from the script: the ref as written, or an 8-char sha for a bare commit.
 
 ### 2. Get commit summary and decide strategy
 
 Fetch the commit list with diff line counts:
 
 ```bash
-bash <skill-dir>/scripts/fetch_upstream.sh --summary --days <N>
+bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --summary --from "$ANCHOR_SHA" --to "$TARGET_SHA"
 ```
 
 Output: `HASH|DATE|AUTHOR|SUBJECT|LINES_ADDED+LINES_DELETED` (one per line, oldest first — the script uses `--reverse`).
 
-**Capture the range bounds from the summary output** — the first line's hash is `START_SHA` (oldest commit in range), the last line's hash is `END_SHA` (newest). These are the actual commits the report covers, regardless of whether the user asked for a date range, tag range, or commit range.
-
-This is critical for reproducibility: `END_SHA` is exactly where the next sync run should start from, and `START_SHA` anchors the beginning to a precise ref even when the user specified a fuzzy bound like `--days 30` or `--since 2026-03-12`.
-
-Based on the commit count:
+If the summary is empty, skip analysis and go to step 4. Otherwise, based on the commit count:
 
 - **≤ 8 commits** → step 3a (direct analysis)
 - **> 8 commits** → step 3b (subagent analysis)
 
 ### 3a. Direct analysis (≤ 8 commits)
 
+Use the hashes from step 2:
+
 ```bash
-bash <skill-dir>/scripts/fetch_upstream.sh --diff-all --days <N>
+bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --diff-all --hashes <H1,H2,...>
 ```
 
 For each commit in the output:
@@ -150,7 +138,7 @@ Then proceed to step 4.
 
 **Spawn subagents** — one per batch. Launch all Agent calls in a single message without `run_in_background`, so they execute in parallel as foreground calls and their results all arrive together — no sleeping or polling needed.
 
-Use this prompt template for each subagent (note `--no-fetch` — the primary agent already fetched in step 2):
+Use this prompt template for each subagent (note `--no-fetch` — the primary agent already fetched in step 1):
 
 ```
 Analyze upstream Storybook commits for sync relevance to storybook-rsbuild.
@@ -217,7 +205,7 @@ Save to `$REPORT_NAME` in the project root.
 ```markdown
 # Storybook Upstream Sync Report
 
-- **Range**: <range-label> ([`<START_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<START_SHA>) → [`<END_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<END_SHA>))
+- **Range**: <ANCHOR_LABEL> → <TARGET_LABEL> ([`<ANCHOR_LABEL>`](https://github.com/storybookjs/storybook/commit/<ANCHOR_SHA>) → [`<TARGET_LABEL>`](https://github.com/storybookjs/storybook/commit/<TARGET_SHA>))
 - **Generated**: YYYY-MM-DD
 - **Upstream branch**: next
 - **Commits scanned**: N (after filtering out version bumps and merges)
@@ -275,23 +263,16 @@ Save to `$REPORT_NAME` in the project root.
 </details>
 
 _Generated by the [`storybook-sync`](https://github.com/rstackjs/storybook-rsbuild/tree/main/.agents/skills/storybook-sync) skill._
+<!-- storybook-sync: target=<TARGET_SHA> -->
 ```
 
 Commits within each priority section should be in chronological order (oldest first).
 
-Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous endpoint automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
+Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous anchor automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
 
-**Range line**: always pin both ends to precise linked SHAs — never leave "HEAD" or a bare date. Use `START_SHA` and `END_SHA` from step 2 (the first and last hashes of the `--summary` output). The `<range-label>` is a human-readable description of how the user specified the range:
+- The Range label part has two shapes: `v10.6.0 → v11.0.0-alpha.3`, or `since #544 → v10.6.0` when continuing from a report.
 
-- **Default (continue from #N)** → `since #N ([\`<PREV_END_SHA_SHORT>\`](...) → [\`<END_SHA_SHORT>\`](...))`
-  - Example: `since #480 ([b9549a6e](...) → [363433bc](...))`
-  - Don't use `START_SHA`'s author date as the lower bound here. The `--from PREV_END_SHA^` range filters by **reachability**, not by date. Commits authored on long-lived feature branches and merged into `next` after the previous report will appear in the new range with author dates that predate the previous report's endpoint — labeling the start with that author date falsely suggests we're re-scanning a period already covered. The previous report's issue number is the only honest lower bound.
-- `--from v10.0.0 --to v10.1.0` → `v10.0.0..v10.1.0 ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--from v10.0.0` (open end) → `v10.0.0..next ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--since 2026-03-12 --until 2026-04-11` → `2026-03-12..2026-04-11 ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--days 30` → `last 30 days (2026-03-12..2026-04-11) ([\`abc1234\`](...) → [\`def5678\`](...))`
-
-This precision is critical for follow-up syncs — `END_SHA` becomes the exact starting ref (`--from <END_SHA>`) for the next run, regardless of whether the range ended at HEAD, a tag, or a past date.
+Never describe the range by author dates — the range is defined by reachability, and long-lived branches merged after the anchor carry author dates that predate it.
 
 ### 5. Offer to create an issue
 
@@ -301,8 +282,4 @@ After writing the report, ask the user if they want to publish it as a GitHub is
 gh issue create --title "<TITLE>" --body-file "$REPORT_NAME" --label "storybook sync report"
 ```
 
-**Title format**: `Storybook Sync: <range>` — where `<range>` matches the range used in the report. Examples:
-
-- Continue from prior report: `Storybook Sync: since #480` (use `since #<PREV_ISSUE_NUMBER>`; do not put commit author dates in the title — same reason as the Range line note above)
-- Date range: `Storybook Sync: 2026-03-12 – 2026-04-11`
-- Version range: `Storybook Sync: v8.4.0 – v8.5.0`
+**Title format**: `Storybook Sync: <label part of the Range line>`.
