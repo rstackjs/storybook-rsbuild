@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
 Usage: fetch_upstream.sh [OPTIONS]
 
 Range options (shared across modes; REF is a tag, commit sha, or branch; branches resolve to origin/<branch>):
-  --from REF      Start ref, inclusive
+  --from REF      Start ref, exclusive (the commit itself is not listed)
   --to REF        End ref, inclusive
 
 Modes:
@@ -147,7 +147,7 @@ if [ -z "$FILTER_HASHES" ] || { [ "$SUMMARY" = false ] && [ "$DIFF_ALL" = false 
   TO_SHA=${TO_SHA%%$'\t'*}
   git -C "$CACHE_DIR" merge-base --is-ancestor "$FROM_SHA" "$TO_SHA" \
     || { echo ":: --to $TO_REF does not come after --from $FROM_REF" >&2; exit 1; }
-  RANGE_ARGS=("$TO_SHA" --not "${FROM_SHA}^@")
+  RANGE_ARGS=("${FROM_SHA}..${TO_SHA}")
 fi
 
 build_log_cmd() {

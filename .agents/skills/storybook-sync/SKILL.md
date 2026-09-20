@@ -61,7 +61,9 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 **Skip**:
 
-- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals). This label makes a factual claim — that no local counterpart exists — so earn it before using it: look up every touched file in `.agents/skills/storybook-check/manifest.json` (`mappings`), and for files the manifest doesn't list, check for a same-purpose local file. If any touched file has a counterpart, the claim is false and the commit is at least medium (high for bug fixes). Commit messages and file paths are not evidence here: files under `builder-webpack5/src/plugins/` and `src/loaders/` read as webpack-specific by path, yet are ported 1:1 into this repo.
+- Already present in the local counterpart — the local file already carries the same change (ported ahead of the sync or via another upstream commit). Cite the local file:line in the report entry.
+- Covered by a still-valid intentional divergence — the touched file's manifest entry has an `intentionalDivergences` item that names this behavior, AND you re-verified against the current local file that the divergence's stated reason still holds (e.g. "no rspack counterpart" is still true). Quote the divergence in the report entry. If the reason no longer holds, this is not a skip: classify normally and say the manifest entry is stale and must be updated in the port PR.
+- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals). This label makes a factual claim — that no local counterpart exists — so earn it before using it: look up every touched file in `.agents/skills/storybook-check/manifest.json` (`mappings`) and `ignoredUpstreamFiles` (files intentionally never ported — the strongest skip evidence). A `mappings` entry with `local: null` is not an absence of coverage: its `reviewWith` and `note` fields name the local package and what to review. For files the manifest doesn't list, check for a same-purpose local file. If any touched file has a counterpart, the "no Rsbuild parallel" claim is false; unless another Skip criterion applies, the commit is at least medium (high for bug fixes). Commit messages and file paths are not evidence here: files under `builder-webpack5/src/plugins/` and `src/loaders/` read as webpack-specific by path, yet are ported 1:1 into this repo.
 - Documentation-only changes
 - CI/tooling changes internal to the Storybook repo
 - Changes to `storybook/internal/*` APIs (these arrive via the `storybook` npm dependency, not by manual sync)
@@ -72,7 +74,7 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 `<skill-dir>` below means `.agents/skills/storybook-sync` (use an absolute path when the command is copied into a subagent prompt). Shell variables do not persist between tool calls: run each step's commands in one shell, or re-inline the values.
 
-Every run covers the range from ANCHOR through TARGET on upstream `next`. Both ends are git refs (tag or sha, treated identically) and must be reachable from `origin/next`: patch tags live on `main` via cherry-picks; their source commits are on `next`. The range includes the anchor itself; re-triaging one commit beats leaving a gap.
+Every run covers the range from ANCHOR through TARGET on upstream `next`. Both ends are git refs (tag or sha, treated identically) and must be reachable from `origin/next`: patch tags live on `main` via cherry-picks; their source commits are on `next`. The anchor is the last commit the previous report covered, so the range excludes it (`ANCHOR..TARGET`).
 
 ### 1. Determine the range
 
@@ -126,9 +128,10 @@ bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --diff-all --hashes <H1,H2
 For each commit in the output:
 
 1. **Read the diff** — this is the ground truth. Never skip a commit based on its message or file list alone.
-2. **Read the corresponding local source file** — resolve it at file granularity via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package table only for files the manifest doesn't list. Open the file rather than inferring from its name: a skip verdict of "no Rsbuild parallel" is only as good as the search that failed to find one.
-3. **Classify** using the sync priority criteria above.
-4. **Check for revert chains** — if a commit and its revert both appear, check if the net effect is zero. If so, classify both as skip.
+2. **Read the corresponding local source file** — resolve it at file granularity via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package table only for files the manifest doesn't list. Open the file rather than inferring from its name: a skip verdict of "no Rsbuild parallel" is only as good as the search that failed to find one. For a commit touching only `*.test.ts` files, use the local counterpart of the file under test; there are no test-file mappings. Classify Low if the test pins a contract the local port must also satisfy, otherwise Skip as a pure test change.
+3. **Check the manifest's `intentionalDivergences` for the touched file** — if one covers this change, re-verify its reason against the current local code before choosing Skip (see the Skip criteria).
+4. **Classify** using the sync priority criteria above.
+5. **Check for revert or supersede chains** — when several commits in the range rewrite the same lines, judge only the end state; list the earlier commits under Skipped as superseded by the last one.
 
 Then proceed to step 4.
 
@@ -181,9 +184,17 @@ Priority criteria:
 A skipped commit is never revisited by this workflow, so "no Rsbuild parallel"
 must be earned: it is only valid if none of the commit's touched files has a
 local counterpart — in the manifest or by same-purpose inspection. If any
-touched file maps to a local file, the commit is at least medium (high for bug
-fixes). Commit messages and file paths are not evidence; plugin and loader
+touched file maps to a local file, the "no Rsbuild parallel" claim is false;
+unless another skip criterion applies, the commit is at least medium (high for
+bug fixes). Commit messages and file paths are not evidence; plugin and loader
 files that read as webpack-specific by path are ported 1:1 into this repo.
+Skip changes already present locally, citing the local file:line.
+Skip a still-valid intentional divergence only after re-verifying its stated
+reason against current local code and quoting it; if the reason no longer holds,
+classify normally and flag the stale manifest entry for update in the port PR.
+Check ignoredUpstreamFiles for files intentionally never ported — the strongest
+skip evidence; a mappings entry with local: null is not an absence of coverage:
+its reviewWith and note fields name the local package and what to review.
 
 Return format (one block per commit, separated by ---):
 
@@ -200,7 +211,7 @@ KEY_FILES: <comma-separated list of relevant changed files>
 ---
 ```
 
-**Aggregate results**: Collect all subagent responses. Group commits by priority level. For revert chains where both the original and revert appear, check if the net effect is zero — if so, move both to skip.
+**Aggregate results**: Collect all subagent responses. Group commits by priority level. Check for revert or supersede chains — when several commits in the range rewrite the same lines, judge only the end state; list the earlier commits under Skipped as superseded by the last one.
 
 ### 4. Write the report
 
