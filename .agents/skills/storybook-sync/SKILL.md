@@ -81,14 +81,14 @@ Every run covers the range from ANCHOR through TARGET on upstream `next`. Both e
 **ANCHOR (start ref) — continue from the last sync report by default.** The `storybook sync report` label is fixed and used for every report this skill publishes.
 
 1. `TARGET=<the ref the user named>` (a tag or commit sha).
-2. Recover the previous report's anchor:
+2. If the user also named a start ref: `ANCHOR=<that ref>`, leave `PREV_ISSUE_NUMBER` empty (the report is not continuing from an issue), and skip step 3.
+3. Otherwise recover the previous report's anchor:
    ```bash
    read -r PREV_ISSUE_NUMBER ANCHOR < <(gh issue list --repo rstackjs/storybook-rsbuild \
      --state all --label "storybook sync report" --limit 1 --json number,body \
      --jq '.[0] | select(.) | "\(.number) \((.body | capture("<!-- storybook-sync: target=(?<sha>[a-f0-9]{40}) -->").sha) // "")"')
    ```
-   Three outcomes: both set → continue; `PREV_ISSUE_NUMBER` set but `ANCHOR` empty → the newest report (#N) has no parseable marker (it predates the marker, or the line was edited); nothing set → no prior report exists.
-3. If the user named a start ref, `ANCHOR=<that ref>` and clear `PREV_ISSUE_NUMBER` (the report is not continuing from an issue). Otherwise, if `ANCHOR` is empty, stop and ask the user for a start ref, saying which of the two empty cases applies.
+   Three outcomes: both set → continue; `PREV_ISSUE_NUMBER` set but `ANCHOR` empty → the newest report (#N) has no parseable marker (it predates the marker, or the line was edited); nothing set → no prior report exists. In either empty case, stop and ask the user for a start ref, saying which case applies.
 
 **Resolve both ends** (this also fetches the cache and validates the refs):
 
