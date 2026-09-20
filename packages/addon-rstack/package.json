@@ -1,6 +1,6 @@
 {
   "name": "storybook-addon-rstack",
-  "version": "3.4.2",
+  "version": "3.6.0",
   "description": "Storybook addon for loading configuration of Rstack CLI",
   "keywords": [
     "storybook",
