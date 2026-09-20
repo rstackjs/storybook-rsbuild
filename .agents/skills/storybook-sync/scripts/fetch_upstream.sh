@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
       cat <<'HELP'
 Usage: fetch_upstream.sh [OPTIONS]
 
-Range options (shared across modes; REF is a tag, commit sha, or branch):
+Range options (shared across modes; REF is a tag, commit sha, or branch; branches resolve to origin/<branch>):
   --from REF      Start ref, inclusive
   --to REF        End ref, inclusive
 
@@ -105,7 +105,8 @@ fi
 # LABEL is the ref as written, or the 8-char short form of a full 40-hex sha.
 resolve_ref() {
   local sha
-  sha=$(git -C "$CACHE_DIR" rev-parse --verify --quiet "${1}^{commit}") \
+  sha=$(git -C "$CACHE_DIR" rev-parse --verify --quiet "origin/${1}^{commit}" \
+    || git -C "$CACHE_DIR" rev-parse --verify --quiet "${1}^{commit}") \
     || { echo ":: Unknown ref: $1" >&2; exit 1; }
   git -C "$CACHE_DIR" merge-base --is-ancestor "$sha" "origin/$UPSTREAM_BRANCH" \
     || { echo ":: Ref not reachable from origin/$UPSTREAM_BRANCH: $1" >&2; exit 1; }
@@ -144,6 +145,8 @@ if [ -z "$FILTER_HASHES" ] || { [ "$SUMMARY" = false ] && [ "$DIFF_ALL" = false 
   FROM_SHA=${FROM_SHA%%$'\t'*}
   TO_SHA=$(resolve_ref "$TO_REF")
   TO_SHA=${TO_SHA%%$'\t'*}
+  git -C "$CACHE_DIR" merge-base --is-ancestor "$FROM_SHA" "$TO_SHA" \
+    || { echo ":: --to $TO_REF does not come after --from $FROM_REF" >&2; exit 1; }
   RANGE_ARGS=("$TO_SHA" --not "${FROM_SHA}^@")
 fi
 
