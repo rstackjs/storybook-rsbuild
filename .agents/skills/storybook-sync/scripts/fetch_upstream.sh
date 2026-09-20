@@ -93,7 +93,7 @@ done
 if [ -d "$CACHE_DIR/.git" ]; then
   if [ "$NO_FETCH" = false ]; then
     echo ":: Fetching latest upstream ($UPSTREAM_BRANCH)..." >&2
-    git -C "$CACHE_DIR" fetch --prune --tags origin "$UPSTREAM_BRANCH" 2>/dev/null
+    git -C "$CACHE_DIR" fetch --prune --tags origin 2>/dev/null
   fi
 else
   echo ":: First run — cloning storybookjs/storybook (blobless, ~1-2 min)..." >&2

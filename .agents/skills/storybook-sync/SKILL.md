@@ -98,7 +98,7 @@ Every run covers the range from ANCHOR through TARGET on upstream `next`. Both e
 ```bash
 { IFS=$'\t' read -r ANCHOR_SHA ANCHOR_LABEL; IFS=$'\t' read -r TARGET_SHA TARGET_LABEL; } \
   < <(bash <skill-dir>/scripts/fetch_upstream.sh --resolve "$ANCHOR" "$TARGET")
-REPORT_NAME="upstream-sync-report-${ANCHOR_LABEL}-${TARGET_LABEL}.md"
+REPORT_NAME="upstream-sync-report-${ANCHOR_LABEL//\//-}-${TARGET_LABEL//\//-}.md"
 ```
 
 Labels come from the script: the ref as written, or an 8-char sha for a bare commit.
