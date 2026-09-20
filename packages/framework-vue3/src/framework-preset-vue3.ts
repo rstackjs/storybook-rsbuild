@@ -1,26 +1,36 @@
 import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
-import { logger } from 'storybook/internal/node-logger'
-import type { FrameworkOptions, StorybookConfig } from './types'
+import { deprecate } from 'storybook/internal/node-logger'
+import {
+  resolveDocgenContext,
+  VUE_COMPONENT_META,
+  VUE_DOCGEN_API_DEPRECATION,
+} from './docgen/options'
+import {
+  vueComponentMeta,
+  type VueDocgenEngine,
+} from './plugins/vue-component-meta'
+import type { StorybookConfig } from './types'
 
 const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
   _config,
   options,
 ): Promise<RsbuildConfig> => {
-  const frameworkOptions = await options.presets.apply<FrameworkOptions | null>(
-    'frameworkOptions',
-  )
-  if (frameworkOptions?.docgen === false) {
+  const { docgen, docgenServerActive } = await resolveDocgenContext(options)
+
+  // Server-side docgen (features.experimentalDocgenServer) extracts docgen for every
+  // `docgen` value through the @storybook/vue3 docgen worker; skip the loader to avoid double docgen.
+  if (docgen === false || docgenServerActive) {
     return {}
   }
-  if (
-    frameworkOptions?.docgen === 'vue-component-meta' ||
-    (typeof frameworkOptions?.docgen === 'object' &&
-      frameworkOptions.docgen.plugin === 'vue-component-meta')
-  ) {
-    logger.warn(
-      'vue-component-meta is not yet supported by storybook-rsbuild; falling back to vue-docgen-api.',
-    )
+  const engine = await options.presets.apply<VueDocgenEngine>(
+    'experimental_vueDocgenEngine',
+  )
+
+  if (docgen.plugin === VUE_COMPONENT_META) {
+    return { plugins: [await vueComponentMeta(engine, docgen.tsconfig)] }
   }
+
+  deprecate(VUE_DOCGEN_API_DEPRECATION)
 
   // Intentional divergence: keep the documented legacy addon-docs vueDocgenOptions user channel.
   // A future sync must not remove this scan.
