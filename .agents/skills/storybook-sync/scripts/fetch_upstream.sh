@@ -4,7 +4,8 @@
 #
 # Noise filtering:
 #   - Merge commits are excluded (--no-merges)
-#   - "Bump version from ..." commits are excluded (--invert-grep)
+#   - "Bump version from ..." commits are excluded (--invert-grep). Every tag on
+#     `next` points at one of these, so a tag..tag range is naturally clean.
 #   - The upstream branch is `next` (Storybook's primary development branch)
 set -euo pipefail
 
@@ -26,13 +27,11 @@ PATHS=(
   "code/lib/core-webpack"
 )
 
-SINCE=""
-UNTIL=""
-DAYS=""
 FROM_REF=""
 TO_REF=""
 DIFF_HASH=""
 FILES_HASH=""
+RESOLVE_REFS=()
 DIFF_ALL=false
 SUMMARY=false
 FILTER_HASHES=""
@@ -40,28 +39,32 @@ NO_FETCH=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --since) SINCE="$2"; shift 2 ;;
-    --until) UNTIL="$2"; shift 2 ;;
-    --days) DAYS="$2"; shift 2 ;;
     --from) FROM_REF="$2"; shift 2 ;;
     --to) TO_REF="$2"; shift 2 ;;
     --diff) DIFF_HASH="$2"; shift 2 ;;
     --files) FILES_HASH="$2"; shift 2 ;;
+    --resolve)
+      shift
+      if [[ $# -eq 0 || $1 == --* ]]; then
+        echo ":: --resolve needs at least one ref" >&2
+        exit 1
+      fi
+      while [[ $# -gt 0 && $1 != --* ]]; do
+        RESOLVE_REFS+=("$1")
+        shift
+      done
+      ;;
     --diff-all) DIFF_ALL=true; shift ;;
     --summary) SUMMARY=true; shift ;;
     --hashes) FILTER_HASHES="$2"; shift 2 ;;
     --no-fetch) NO_FETCH=true; shift ;;
-    --report-name) echo "upstream-sync-report-$(date +%Y%m%d-%H%M%S).md"; exit 0 ;;
     -h|--help)
       cat <<'HELP'
 Usage: fetch_upstream.sh [OPTIONS]
 
-Range options (shared across modes):
-  --days N        Look back N days from today (uses system clock, recommended)
-  --since DATE    Start date (e.g. 2025-12-01)
-  --until DATE    End date (defaults to today)
-  --from REF      Start ref/tag (e.g. v8.4.0)
-  --to REF        End ref/tag (e.g. v8.5.0)
+Range options (shared across modes; REF is a tag, commit sha, or branch; branches resolve to origin/<branch>):
+  --from REF      Start ref, exclusive (the commit itself is not listed)
+  --to REF        End ref, inclusive
 
 Modes:
   (default)       List commits: HASH|DATE|AUTHOR|SUBJECT
@@ -69,7 +72,7 @@ Modes:
   --diff-all      Output metadata + file list + diff for every commit in range
   --diff HASH     Show diff for one commit (monitored paths only)
   --files HASH    List monitored files changed by one commit
-  --report-name   Print a timestamped report filename and exit
+  --resolve REF...  Validate refs (exist, reachable from origin/next); print SHA<TAB>LABEL per ref
 
 Filtering:
   --hashes H1,H2  Limit --diff-all or --summary to specific commits (skip range query)
@@ -86,25 +89,38 @@ HELP
   esac
 done
 
-# ── Resolve --days into --since/--until from system clock ─────────────
-if [ -n "$DAYS" ]; then
-  UNTIL=$(date +%Y-%m-%d)
-  # macOS date syntax, with GNU fallback
-  SINCE=$(date -v-"${DAYS}"d +%Y-%m-%d 2>/dev/null || date -d "${DAYS} days ago" +%Y-%m-%d)
-  echo ":: System time: $(date '+%Y-%m-%d %H:%M:%S %Z')" >&2
-  echo ":: Resolved --days $DAYS → --since $SINCE --until $UNTIL" >&2
-fi
-
 # ── Ensure cache ──────────────────────────────────────────────────────
 if [ -d "$CACHE_DIR/.git" ]; then
   if [ "$NO_FETCH" = false ]; then
     echo ":: Fetching latest upstream ($UPSTREAM_BRANCH)..." >&2
-    git -C "$CACHE_DIR" fetch --all --tags --prune 2>/dev/null
+    git -C "$CACHE_DIR" fetch --prune --tags origin 2>/dev/null
   fi
 else
   echo ":: First run — cloning storybookjs/storybook (blobless, ~1-2 min)..." >&2
   mkdir -p "$(dirname "$CACHE_DIR")"
   git clone --filter=blob:none --no-checkout "$REPO_URL" "$CACHE_DIR" 2>&1 | tail -1 >&2
+fi
+
+# Validate REF (exists, reachable from origin/next) and print "SHA<TAB>LABEL".
+# LABEL is the ref as written, or the 8-char short form of a full 40-hex sha.
+resolve_ref() {
+  local sha
+  sha=$(git -C "$CACHE_DIR" rev-parse --verify --quiet "origin/${1}^{commit}" \
+    || git -C "$CACHE_DIR" rev-parse --verify --quiet "${1}^{commit}") \
+    || { echo ":: Unknown ref: $1" >&2; exit 1; }
+  git -C "$CACHE_DIR" merge-base --is-ancestor "$sha" "origin/$UPSTREAM_BRANCH" \
+    || { echo ":: Ref not reachable from origin/$UPSTREAM_BRANCH: $1" >&2; exit 1; }
+  local label=$1
+  [[ $1 =~ ^[a-f0-9]{40}$ ]] && label=${1:0:8}
+  printf '%s\t%s\n' "$sha" "$label"
+}
+
+# ── Resolve refs ─────────────────────────────────────────────────────
+if [ ${#RESOLVE_REFS[@]} -gt 0 ]; then
+  for ref in "${RESOLVE_REFS[@]}"; do
+    resolve_ref "$ref"
+  done
+  exit 0
 fi
 
 # ── Single-commit: show diff ─────────────────────────────────────────
@@ -120,13 +136,18 @@ if [ -n "$FILES_HASH" ]; then
 fi
 
 # ── Build range args (shared by list, summary, and diff-all) ─────────
-RANGE_ARGS=()
-if [ -n "$FROM_REF" ] && [ -n "$TO_REF" ]; then
-  RANGE_ARGS+=("${FROM_REF}..${TO_REF}")
-elif [ -n "$FROM_REF" ]; then
-  RANGE_ARGS+=("${FROM_REF}..origin/${UPSTREAM_BRANCH}")
-else
-  RANGE_ARGS+=("origin/${UPSTREAM_BRANCH}")
+if [ -z "$FILTER_HASHES" ] || { [ "$SUMMARY" = false ] && [ "$DIFF_ALL" = false ]; }; then
+  if [ -z "$FROM_REF" ] || [ -z "$TO_REF" ]; then
+    echo ":: Range modes need both --from and --to" >&2
+    exit 1
+  fi
+  FROM_SHA=$(resolve_ref "$FROM_REF")
+  FROM_SHA=${FROM_SHA%%$'\t'*}
+  TO_SHA=$(resolve_ref "$TO_REF")
+  TO_SHA=${TO_SHA%%$'\t'*}
+  git -C "$CACHE_DIR" merge-base --is-ancestor "$FROM_SHA" "$TO_SHA" \
+    || { echo ":: --to $TO_REF does not come after --from $FROM_REF" >&2; exit 1; }
+  RANGE_ARGS=("${FROM_SHA}..${TO_SHA}")
 fi
 
 build_log_cmd() {
@@ -134,8 +155,6 @@ build_log_cmd() {
   LOG_CMD+=(--no-merges)
   LOG_CMD+=(--invert-grep --grep='Bump version from')
   LOG_CMD+=(--reverse)
-  [ -n "$SINCE" ] && LOG_CMD+=("--since=${SINCE}")
-  [ -n "$UNTIL" ] && LOG_CMD+=("--until=${UNTIL}")
 }
 
 # ── Resolve hash list (from --hashes or git log) ─────────────────────

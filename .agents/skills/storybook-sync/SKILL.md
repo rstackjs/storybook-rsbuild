@@ -61,7 +61,10 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 **Skip**:
 
-- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals). This label makes a factual claim — that no local counterpart exists — so earn it before using it: look up every touched file in `.agents/skills/storybook-check/manifest.json` (`mappings`), and for files the manifest doesn't list, check for a same-purpose local file. If any touched file has a counterpart, the claim is false and the commit is at least medium (high for bug fixes). Commit messages and file paths are not evidence here: files under `builder-webpack5/src/plugins/` and `src/loaders/` read as webpack-specific by path, yet are ported 1:1 into this repo.
+- Superseded by a later commit in this range — its lines were rewritten by a commit that is reported; the Skipped entry must name that commit. Test cases it added survive into the end state and are judged with the reported commit.
+- Already present in the local counterpart — the local file already carries the same change (ported ahead of the sync or via another upstream commit). Cite the local file:line in the report entry.
+- Covered by a still-valid intentional divergence — the touched file's manifest entry has an `intentionalDivergences` item that names this behavior, AND you re-verified against the current local file that the divergence's stated reason still holds (e.g. "no rspack counterpart" is still true). Quote the divergence in the report entry. If the reason no longer holds, this is not a skip: classify normally and say the manifest entry is stale and must be updated in the port PR.
+- Webpack/Vite internal plumbing with no Rsbuild parallel (e.g. webpack plugin hooks, Vite-specific HMR wiring, Vite module graph internals). This label makes a factual claim — that no local counterpart exists — so earn it before using it: look up every touched file in `.agents/skills/storybook-check/manifest.json` (`mappings`) and `ignoredUpstreamFiles` (files intentionally never ported — the strongest skip evidence). A `mappings` entry with `local: null` is not an absence of coverage: its `reviewWith` and `note` fields name the local package and what to review. For files the manifest doesn't list, check for a same-purpose local file. If any touched file has a counterpart, the "no Rsbuild parallel" claim is false; unless another Skip criterion applies, the commit is at least medium (high for bug fixes). Commit messages and file paths are not evidence here: files under `builder-webpack5/src/plugins/` and `src/loaders/` read as webpack-specific by path, yet are ported 1:1 into this repo.
 - Documentation-only changes
 - CI/tooling changes internal to the Storybook repo
 - Changes to `storybook/internal/*` APIs (these arrive via the `storybook` npm dependency, not by manual sync)
@@ -70,73 +73,70 @@ A wrong skip is the most expensive mistake this workflow can make: the next run 
 
 ## Workflow
 
-### 1. Preparation
+`<skill-dir>` below means `.agents/skills/storybook-sync` (use an absolute path when the command is copied into a subagent prompt). Shell variables do not persist between tool calls: run each step's commands in one shell, or re-inline the values (including `REPORT_NAME`, which steps 4 and 5 reuse). Snippets are bash (process substitution, `$'\t'`); run them under `bash`, not the login shell.
 
-Generate the report filename (anchored to system clock):
+Every run covers the range from ANCHOR through TARGET on upstream `next`. Both ends are git refs (tag or sha, treated identically) and must be reachable from `origin/next`: patch tags live on `main` via cherry-picks; their source commits are on `next`. The anchor is the last commit the previous report covered, so the range excludes it (`ANCHOR..TARGET`).
+
+### 1. Determine the range
+
+**TARGET (end ref) — always user-specified.** Every run is user-triggered and the user names the target: a tag (`v11.0.0`, `v11.0.0-alpha.3`) or a commit sha. Never pick a target yourself; if the user gave none, ask for one.
+
+**ANCHOR (start ref) — continue from the last sync report by default.** The `storybook sync report` label is fixed and used for every report this skill publishes.
+
+1. `TARGET=<the ref the user named>` (a tag or commit sha).
+2. If the user also named a start ref: `ANCHOR=<that ref>`, leave `PREV_ISSUE_NUMBER` empty (the report is not continuing from an issue), and skip item 3 below (anchor recovery).
+3. Otherwise recover the previous report's anchor:
+   ```bash
+   read -r PREV_ISSUE_NUMBER ANCHOR < <(gh issue list --repo rstackjs/storybook-rsbuild \
+     --state all --label "storybook sync report" --limit 1 --json number,body \
+     --jq '.[0] | select(.) | "\(.number) \((.body | capture("<!-- storybook-sync: target=(?<sha>[a-f0-9]{40}) -->").sha) // "")"')
+   ```
+   Three outcomes: both set → continue; `PREV_ISSUE_NUMBER` set but `ANCHOR` empty → the newest report (#N) has no parseable marker (it predates the marker, or the line was edited); nothing set → no prior report exists. In either empty case, stop and ask the user for a start ref, saying which case applies.
+
+**Resolve both ends** (this also fetches the cache and validates the refs):
 
 ```bash
-REPORT_NAME=$(bash <skill-dir>/scripts/fetch_upstream.sh --report-name)
+{ IFS=$'\t' read -r ANCHOR_SHA ANCHOR_LABEL; IFS=$'\t' read -r TARGET_SHA TARGET_LABEL; } \
+  < <(bash <skill-dir>/scripts/fetch_upstream.sh --resolve "$ANCHOR" "$TARGET")
+REPORT_NAME="upstream-sync-report-${ANCHOR_LABEL//\//-}-${TARGET_LABEL//\//-}.md"
 ```
 
-Determine the commit range.
-
-**Default (no user-specified range)** — continue from the last sync report. The `storybook sync report` label is fixed and used for every report this skill publishes.
-
-1. Find the most recent sync report issue (any state — the newest one is the previous endpoint, regardless of whether it's been closed yet). Capture both the issue number and the body so the later range/title can reference it:
-   ```bash
-   LAST_REPORT=$(gh issue list --repo rstackjs/storybook-rsbuild --state all \
-     --label "storybook sync report" --limit 1 --json number,body \
-     --jq '.[0] | "\(.number)\n\(.body)"')
-   PREV_ISSUE_NUMBER=$(printf '%s' "$LAST_REPORT" | head -1)
-   LAST_BODY=$(printf '%s' "$LAST_REPORT" | tail -n +2)
-   ```
-2. Extract the previous END_SHA — it's the last `storybookjs/storybook/commit/<sha>` URL in the Range line:
-   ```bash
-   PREV_END_SHA=$(printf '%s' "$LAST_BODY" \
-     | grep -oE 'storybookjs/storybook/commit/[a-f0-9]+' | tail -1 | sed 's|.*/||')
-   ```
-3. Pass `--from "${PREV_END_SHA}^"` so the boundary is **closed** (inclusive of PREV_END_SHA). The script uses git's `A..B` syntax, which is exclusive of A; the trailing `^` (parent) makes the new range re-include PREV_END_SHA. Re-processing that one commit is intentional — prefer running it twice over leaving a gap if upstream history shifted or boundary semantics are unclear at execution time.
-4. If no prior report exists (empty `LAST_BODY` or no SHA parsed), fall back to `--days 30` and leave `PREV_ISSUE_NUMBER` empty.
-
-**User-specified range** — overrides the default:
-
-- **Relative days**: "past 20 days", "last 30 days" → use `--days N`
-- **Absolute date range**: "since 2025-12-01", "Dec 1 to Dec 20" → use `--since` / `--until`
-- **Version tags**: "between v8.4.0 and v8.5.0" → use `--from` / `--to`
-
-For relative date ranges, always use `--days N` — the script reads the system clock to compute exact dates, avoiding date miscalculation.
+Labels come from the script: the ref as written, or an 8-char sha for a bare commit.
 
 ### 2. Get commit summary and decide strategy
 
 Fetch the commit list with diff line counts:
 
 ```bash
-bash <skill-dir>/scripts/fetch_upstream.sh --summary --days <N>
+bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --summary --from "$ANCHOR_SHA" --to "$TARGET_SHA"
 ```
 
 Output: `HASH|DATE|AUTHOR|SUBJECT|LINES_ADDED+LINES_DELETED` (one per line, oldest first — the script uses `--reverse`).
 
-**Capture the range bounds from the summary output** — the first line's hash is `START_SHA` (oldest commit in range), the last line's hash is `END_SHA` (newest). These are the actual commits the report covers, regardless of whether the user asked for a date range, tag range, or commit range.
-
-This is critical for reproducibility: `END_SHA` is exactly where the next sync run should start from, and `START_SHA` anchors the beginning to a precise ref even when the user specified a fuzzy bound like `--days 30` or `--since 2026-03-12`.
-
-Based on the commit count:
+If the summary is empty, skip analysis and go to step 4. Otherwise, based on the commit count:
 
 - **≤ 8 commits** → step 3a (direct analysis)
 - **> 8 commits** → step 3b (subagent analysis)
 
 ### 3a. Direct analysis (≤ 8 commits)
 
+Use the hashes from step 2:
+
 ```bash
-bash <skill-dir>/scripts/fetch_upstream.sh --diff-all --days <N>
+bash <skill-dir>/scripts/fetch_upstream.sh --no-fetch --diff-all --hashes <H1,H2,...>
 ```
 
 For each commit in the output:
 
-1. **Read the diff** — this is the ground truth. Never skip a commit based on its message or file list alone.
-2. **Read the corresponding local source file** — resolve it at file granularity via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package table only for files the manifest doesn't list. Open the file rather than inferring from its name: a skip verdict of "no Rsbuild parallel" is only as good as the search that failed to find one.
-3. **Classify** using the sync priority criteria above.
-4. **Check for revert chains** — if a commit and its revert both appear, check if the net effect is zero. If so, classify both as skip.
+1. **Read the diff** — this is the ground truth. Never skip a commit based on its message or file list alone. Diffs of commits authored on long-lived branches show pre-merge context that never existed at the target. When a chain's diffs disagree about surrounding code, read the end state directly: `git -C ~/.cache/storybook-upstream show <TARGET_SHA>:<upstream path>`.
+2. **Read the corresponding local source file** — resolve it at file granularity via `.agents/skills/storybook-check/manifest.json` (`mappings`), falling back to the package table only for files the manifest doesn't list.
+   ```bash
+   jq -r --arg f <upstream path> '.mappings[] | select(.upstream==$f)' .agents/skills/storybook-check/manifest.json
+   ```
+   Open the file rather than inferring from its name: a skip verdict of "no Rsbuild parallel" is only as good as the search that failed to find one. For a commit touching only `*.test.ts` files, use the local counterpart of the file under test; there are no test-file mappings. Classify Low if the test pins a contract the local port must also satisfy, otherwise Skip as a pure test change.
+3. **Check the manifest's `intentionalDivergences` for the touched file** — if one covers this change, re-verify its reason against the current local code before choosing Skip (see the Skip criteria). Re-verifying a reason such as "no rspack counterpart" may require reading the installed loader or plugin that produces the local module shape (under `node_modules/.pnpm/`), not only the local source file.
+4. **Classify** using the sync priority criteria above.
+5. **Check for revert or supersede chains** — when several commits in the range rewrite the same lines, judge only the end state; list the earlier commits under Skipped, naming the reported commit that supersedes them. Judge test cases they added that survive into the end state with the reported commit.
 
 Then proceed to step 4.
 
@@ -150,7 +150,7 @@ Then proceed to step 4.
 
 **Spawn subagents** — one per batch. Launch all Agent calls in a single message without `run_in_background`, so they execute in parallel as foreground calls and their results all arrive together — no sleeping or polling needed.
 
-Use this prompt template for each subagent (note `--no-fetch` — the primary agent already fetched in step 2):
+Use this prompt template for each subagent (note `--no-fetch` — the primary agent already fetched in step 1):
 
 ```
 Analyze upstream Storybook commits for sync relevance to storybook-rsbuild.
@@ -189,9 +189,17 @@ Priority criteria:
 A skipped commit is never revisited by this workflow, so "no Rsbuild parallel"
 must be earned: it is only valid if none of the commit's touched files has a
 local counterpart — in the manifest or by same-purpose inspection. If any
-touched file maps to a local file, the commit is at least medium (high for bug
-fixes). Commit messages and file paths are not evidence; plugin and loader
+touched file maps to a local file, the "no Rsbuild parallel" claim is false;
+unless another skip criterion applies, the commit is at least medium (high for
+bug fixes). Commit messages and file paths are not evidence; plugin and loader
 files that read as webpack-specific by path are ported 1:1 into this repo.
+Skip changes already present locally, citing the local file:line.
+Skip a still-valid intentional divergence only after re-verifying its stated
+reason against current local code and quoting it; if the reason no longer holds,
+classify normally and flag the stale manifest entry for update in the port PR.
+Check ignoredUpstreamFiles for files intentionally never ported — the strongest
+skip evidence; a mappings entry with local: null is not an absence of coverage:
+its reviewWith and note fields name the local package and what to review.
 
 Return format (one block per commit, separated by ---):
 
@@ -208,16 +216,16 @@ KEY_FILES: <comma-separated list of relevant changed files>
 ---
 ```
 
-**Aggregate results**: Collect all subagent responses. Group commits by priority level. For revert chains where both the original and revert appear, check if the net effect is zero — if so, move both to skip.
+**Aggregate results**: Collect all subagent responses. Group commits by priority level. Check for revert or supersede chains — when several commits in the range rewrite the same lines, judge only the end state; list the earlier commits under Skipped, naming the reported commit that supersedes them. Judge test cases they added that survive into the end state with the reported commit.
 
 ### 4. Write the report
 
-Save to `$REPORT_NAME` in the project root.
+Save to the `REPORT_NAME` computed in step 1, in the project root.
 
 ```markdown
 # Storybook Upstream Sync Report
 
-- **Range**: <range-label> ([`<START_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<START_SHA>) → [`<END_SHA_SHORT>`](https://github.com/storybookjs/storybook/commit/<END_SHA>))
+- **Range**: <ANCHOR_LABEL> → <TARGET_LABEL> ([`<ANCHOR_LABEL>`](https://github.com/storybookjs/storybook/commit/<ANCHOR_SHA>) → [`<TARGET_LABEL>`](https://github.com/storybookjs/storybook/commit/<TARGET_SHA>))
 - **Generated**: YYYY-MM-DD
 - **Upstream branch**: next
 - **Commits scanned**: N (after filtering out version bumps and merges)
@@ -275,23 +283,18 @@ Save to `$REPORT_NAME` in the project root.
 </details>
 
 _Generated by the [`storybook-sync`](https://github.com/rstackjs/storybook-rsbuild/tree/main/.agents/skills/storybook-sync) skill._
+<!-- storybook-sync: target=<TARGET_SHA> -->
 ```
+
+X is the sum of high, medium and low; skipped commits are not counted.
 
 Commits within each priority section should be in chronological order (oldest first).
 
-Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous endpoint automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
+Don't add a "Next sync" / how-to-rerun section to the report body. Re-running the skill is its own concern (see Workflow step 1, which finds the previous anchor automatically from the last issue tagged `storybook sync report`). Putting rerun instructions inside the report duplicates the contract and rots when the skill changes.
 
-**Range line**: always pin both ends to precise linked SHAs — never leave "HEAD" or a bare date. Use `START_SHA` and `END_SHA` from step 2 (the first and last hashes of the `--summary` output). The `<range-label>` is a human-readable description of how the user specified the range:
+- The label part is `<ANCHOR_LABEL> → <TARGET_LABEL>`; when continuing from a report, the leading plain label becomes `since #<PREV_ISSUE_NUMBER>` (e.g. `since #544 → v10.6.0`) while the two linked labels and `REPORT_NAME` keep the sha/tag labels.
 
-- **Default (continue from #N)** → `since #N ([\`<PREV_END_SHA_SHORT>\`](...) → [\`<END_SHA_SHORT>\`](...))`
-  - Example: `since #480 ([b9549a6e](...) → [363433bc](...))`
-  - Don't use `START_SHA`'s author date as the lower bound here. The `--from PREV_END_SHA^` range filters by **reachability**, not by date. Commits authored on long-lived feature branches and merged into `next` after the previous report will appear in the new range with author dates that predate the previous report's endpoint — labeling the start with that author date falsely suggests we're re-scanning a period already covered. The previous report's issue number is the only honest lower bound.
-- `--from v10.0.0 --to v10.1.0` → `v10.0.0..v10.1.0 ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--from v10.0.0` (open end) → `v10.0.0..next ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--since 2026-03-12 --until 2026-04-11` → `2026-03-12..2026-04-11 ([\`abc1234\`](...) → [\`def5678\`](...))`
-- `--days 30` → `last 30 days (2026-03-12..2026-04-11) ([\`abc1234\`](...) → [\`def5678\`](...))`
-
-This precision is critical for follow-up syncs — `END_SHA` becomes the exact starting ref (`--from <END_SHA>`) for the next run, regardless of whether the range ended at HEAD, a tag, or a past date.
+Never describe the range by author dates — the range is defined by reachability, and long-lived branches merged after the anchor carry author dates that predate it.
 
 ### 5. Offer to create an issue
 
@@ -301,8 +304,4 @@ After writing the report, ask the user if they want to publish it as a GitHub is
 gh issue create --title "<TITLE>" --body-file "$REPORT_NAME" --label "storybook sync report"
 ```
 
-**Title format**: `Storybook Sync: <range>` — where `<range>` matches the range used in the report. Examples:
-
-- Continue from prior report: `Storybook Sync: since #480` (use `since #<PREV_ISSUE_NUMBER>`; do not put commit author dates in the title — same reason as the Range line note above)
-- Date range: `Storybook Sync: 2026-03-12 – 2026-04-11`
-- Version range: `Storybook Sync: v8.4.0 – v8.5.0`
+**Title format**: `Storybook Sync: <label part of the Range line>`.
