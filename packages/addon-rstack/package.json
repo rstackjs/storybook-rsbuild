@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.1",
-    "@rsbuild/core": "^2.2.6",
+    "@rsbuild/core": "^2.2.9",
     "@types/node": "^22.0.0",
     "rstack": "0.7.5",
     "storybook": "10.6.0",

@@ -48,7 +48,7 @@
     "@microsoft/api-extractor": "^7.59.1",
     "@modern-js/app-tools": "^3.9.2",
     "@modern-js/plugin": "^3.9.2",
-    "@rsbuild/core": "^2.2.6",
+    "@rsbuild/core": "^2.2.9",
     "@types/node": "^22.0.0",
     "storybook": "10.6.0",
     "storybook-builder-rsbuild": "workspace:*",
