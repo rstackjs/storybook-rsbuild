@@ -49,7 +49,7 @@
     "storybook-builder-rsbuild": "workspace:*"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.1",
+    "@microsoft/api-extractor": "^7.59.2",
     "@rsbuild/core": "^2.2.6",
     "@types/node": "^22.0.0",
     "storybook": "10.6.0",

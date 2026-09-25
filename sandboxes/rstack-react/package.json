@@ -23,7 +23,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
-    "rstack": "0.7.5",
+    "rstack": "0.8.0",
     "storybook": "10.6.0",
     "storybook-addon-rstack": "workspace:*",
     "storybook-react-rsbuild": "workspace:*",

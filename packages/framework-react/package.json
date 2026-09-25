@@ -54,15 +54,15 @@
     "@rollup/pluginutils": "^5.4.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-docgen-typescript-plugin": "^1.0.1",
-    "magic-string": "^1.4.1",
-    "react-docgen": "^8.0.3",
+    "magic-string": "^1.4.2",
+    "react-docgen": "^8.0.4",
     "react-docgen-typescript": "^2.4.0",
     "resolve": "^1.22.12",
     "storybook-builder-rsbuild": "workspace:*",
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.1",
+    "@microsoft/api-extractor": "^7.59.2",
     "@rsbuild/core": "^2.2.6",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
