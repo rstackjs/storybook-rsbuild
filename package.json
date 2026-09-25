@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@rstest/core": "~0.12.0",
+    "@rstest/core": "~0.12.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "^22.0.0",
     "bumpp": "^10.4.1",
@@ -29,7 +29,7 @@
     "jiti": "^2.7.0",
     "path-serializer": "^0.7.0",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "rstack": "0.7.5",
+    "rstack": "0.8.0",
     "storybook-rsbuild-scripts": "workspace:*",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^2.3.0",
