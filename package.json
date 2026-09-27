@@ -20,7 +20,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@rstest/core": "~0.12.0",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@types/node": "^22.0.0",
     "bumpp": "^10.4.1",
     "check-dependency-version-consistency": "^5.0.1",
