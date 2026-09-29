@@ -6,7 +6,8 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "react": ["./node_modules/@types/react"]
     }
   },
   "include": ["src", "shared", "config", "modern.config.ts"],
