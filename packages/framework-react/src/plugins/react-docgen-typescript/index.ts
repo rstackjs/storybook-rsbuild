@@ -33,8 +33,9 @@ const getDocgen = async (config: Options) => {
   )
 }
 
-const startWatch = async (
+const startProgram = async (
   config: Options,
+  isBuild: boolean,
   onProgramCreatedOrUpdated: (program: Program) => void,
 ) => {
   const { default: ts } = await import('typescript')
@@ -56,6 +57,19 @@ const startWatch = async (
   } else {
     const { options: tsOptions } = getTSConfigFile(tsconfigPath)
     compilerOptions = { ...compilerOptions, ...tsOptions }
+  }
+
+  // A static build reads each file once, so a one-shot program is enough. The watch program
+  // registers a file watcher per source file and directory, which exhausts file descriptors
+  // in large projects.
+  if (isBuild) {
+    const tsConfig = getTSConfigFile(tsconfigPath)
+    const program = ts.createProgram({
+      rootNames: tsConfig.fileNames ?? [],
+      options: { ...tsConfig.options, ...compilerOptions },
+      projectReferences: tsConfig.projectReferences,
+    })
+    return [program, () => {}] as [Program, CloseWatch]
   }
 
   const host = ts.createWatchCompilerHost(
@@ -102,17 +116,21 @@ export default (config: Options = {}): RsbuildPlugin => {
 
         docGenParser = await getDocgen(config)
         generateOptions = getGenerateOptions(config)
-        ;[tsProgram, closeWatch] = await startWatch(config, (program) => {
-          tsProgram = program
+        ;[tsProgram, closeWatch] = await startProgram(
+          config,
+          api.context.action === 'build',
+          (program) => {
+            tsProgram = program
 
-          for (const [
-            filepath,
-            invalidateModule,
-          ] of moduleInvalidationQueue.entries()) {
-            invalidateModule()
-            moduleInvalidationQueue.delete(filepath)
-          }
-        })
+            for (const [
+              filepath,
+              invalidateModule,
+            ] of moduleInvalidationQueue.entries()) {
+              invalidateModule()
+              moduleInvalidationQueue.delete(filepath)
+            }
+          },
+        )
 
         filter = createFilter(
           config.include ?? ['**/**.tsx'],
