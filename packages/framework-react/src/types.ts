@@ -31,6 +31,7 @@ type TypescriptOptionsReact = {
    * Sets the type of Docgen when working with React and TypeScript
    *
    * @default `'react-docgen'`
+   * @deprecated Builder docgen is removed in Storybook 12. Use `features.docgenServer`.
    */
   reactDocgen: 'react-docgen-typescript' | 'react-docgen' | false
   /**
@@ -38,6 +39,7 @@ type TypescriptOptionsReact = {
    *
    * @default
    * @see https://github.com/storybookjs/storybook/blob/next/code/builders/builder-webpack5/src/config/defaults.js#L4-L6
+   * @deprecated Builder docgen is removed in Storybook 12. Use `features.docgenServer`.
    */
   reactDocgenTypescriptOptions: ReactDocgenTypescriptOptions
 }

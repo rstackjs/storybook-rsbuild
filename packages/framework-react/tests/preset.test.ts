@@ -11,7 +11,7 @@ const createOptions = (developmentModeForBuild: boolean) =>
   ({
     features: { developmentModeForBuild },
     presets: {
-      apply: async () => ({ experimentalDocgenServer: true }),
+      apply: async () => ({ docgenServer: true }),
     },
   }) as unknown as RsbuildFinalOptions
 

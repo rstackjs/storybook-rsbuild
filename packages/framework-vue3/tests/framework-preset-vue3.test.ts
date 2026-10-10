@@ -3,7 +3,7 @@ import * as nodeLoggerActual from 'storybook/internal/node-logger' with {
   rstest: 'importActual',
 }
 import { deprecate } from 'storybook/internal/node-logger'
-import { VUE_DOCGEN_API_DEPRECATION } from '../src/docgen/options'
+import { VUE_BUILDER_DOCGEN_DEPRECATION } from '../src/docgen/options'
 import { rsbuildFinal } from '../src/framework-preset-vue3'
 import type { FrameworkOptions } from '../src/types'
 
@@ -24,7 +24,7 @@ const vueDocgenEngine = {
 
 const createOptions = (
   docgen?: FrameworkOptions['docgen'],
-  features: { experimentalDocgenServer?: boolean } = {},
+  features: { docgenServer?: boolean } = {},
 ) =>
   ({
     presets: {
@@ -57,12 +57,12 @@ describe('rsbuildFinal', () => {
   })
 
   it.each([undefined, true, 'vue-docgen-api'] as const)(
-    'injects the Vue docgen loader and deprecates vue-docgen-api when docgen is %s',
+    'injects the Vue docgen loader and deprecates builder docgen when docgen is %s',
     async (docgen) => {
       const config = await rsbuildFinal!({}, createOptions(docgen))
 
       expect(config.tools?.rspack).toEqual(expect.any(Function))
-      expect(deprecate).toHaveBeenCalledWith(VUE_DOCGEN_API_DEPRECATION)
+      expect(deprecate).toHaveBeenCalledWith(VUE_BUILDER_DOCGEN_DEPRECATION)
     },
   )
 
@@ -71,13 +71,26 @@ describe('rsbuildFinal', () => {
     async (docgen) => {
       const config = await rsbuildFinal!(
         {},
-        createOptions(docgen, { experimentalDocgenServer: true }),
+        createOptions(docgen, { docgenServer: true }),
       )
 
       expect(config.tools?.rspack).toBeUndefined()
       expect(deprecate).not.toHaveBeenCalled()
     },
   )
+
+  it('runs no builder docgen and stays quiet in a test build, which turns the server off', async () => {
+    const config = await rsbuildFinal!(
+      {},
+      {
+        ...createOptions(undefined, { docgenServer: false }),
+        build: { test: { disableDocgen: true } },
+      },
+    )
+
+    expect(config.tools?.rspack).toBeUndefined()
+    expect(deprecate).not.toHaveBeenCalled()
+  })
 
   it('adds the vue-component-meta plugin built from docgen.tsconfig', async () => {
     const config = await rsbuildFinal!(
@@ -96,6 +109,6 @@ describe('rsbuildFinal', () => {
     expect(createVueComponentMetaChecker).toHaveBeenCalledWith(
       'tsconfig.app.json',
     )
-    expect(deprecate).not.toHaveBeenCalled()
+    expect(deprecate).toHaveBeenCalledWith(VUE_BUILDER_DOCGEN_DEPRECATION)
   })
 })

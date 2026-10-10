@@ -252,7 +252,7 @@
       "upstream": "code/frameworks/vue3-vite/src/docgen/options.ts",
       "local": "packages/framework-vue3/src/docgen/options.ts",
       "intentionalDivergences": [
-        "VUE_DOCGEN_API_DEPRECATION names framework 'storybook-vue3-rsbuild' instead of '@storybook/vue3-vite'"
+        "VUE_BUILDER_DOCGEN_DEPRECATION names framework 'storybook-vue3-rsbuild' instead of '@storybook/vue3-vite'"
       ]
     },
     {
@@ -266,7 +266,7 @@
       "local": "packages/framework-vue3/src/framework-preset-vue3.ts",
       "intentionalDivergences": [
         "vite plugin adapted as an rsbuildFinal preset applying vue-docgen-loader; compare the docgen behavior (options, file matching), not the plugin mechanics",
-        "the loader resolves vue-docgen-api through vue-docgen-loader instead of experimental_vueDocgenEngine().vueDocgenApi(); it is skipped when docgen is false or features.experimentalDocgenServer is true, matching upstream viteFinal gating",
+        "the loader resolves vue-docgen-api through vue-docgen-loader instead of experimental_vueDocgenEngine().vueDocgenApi(); it is skipped when docgen is false, features.docgenServer is true, or a test build disables docgen, matching upstream viteFinal gating",
         "aliases vue$ (exact match) where upstream vue-template.ts aliases vue — equivalent under Rspack resolve semantics",
         "framework-vue3 keeps the vueDocgenOptions addon-docs preset scan because it is a user-supplied options channel still documented upstream at addons/docs/docs/frameworks/VUE3.md:47-58; Storybook core preserves addon options, so removing it would break documented configuration"
       ]
