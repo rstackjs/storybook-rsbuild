@@ -22,6 +22,7 @@ const defaultPropValueFixture = fixtureTests.find(
 const createMockApi = (fixture: any, action?: 'dev' | 'build') => {
   const preHandlers: any[] = []
   const closeHandlers: any[] = []
+  const closeDevServerHandlers: any[] = []
   let resultHandler: any
 
   const api = {
@@ -35,10 +36,13 @@ const createMockApi = (fixture: any, action?: 'dev' | 'build') => {
     onCloseBuild: (fn: any) => {
       closeHandlers.push(fn)
     },
+    onCloseDevServer: (fn: any) => {
+      closeDevServerHandlers.push(fn)
+    },
   }
 
-  const close = () => {
-    for (const handler of closeHandlers) {
+  const fire = (handlers: any[]) => () => {
+    for (const handler of handlers) {
       handler()
     }
   }
@@ -56,7 +60,12 @@ const createMockApi = (fixture: any, action?: 'dev' | 'build') => {
     return res
   }
 
-  return { api, runTasks, close }
+  return {
+    api,
+    runTasks,
+    close: fire(closeHandlers),
+    closeDevServer: fire(closeDevServerHandlers),
+  }
 }
 
 const isUnix = process.platform !== 'win32'
@@ -93,24 +102,42 @@ describe.runIf(isUnix)('file watchers', () => {
     rs.restoreAllMocks()
   })
 
-  const run = async (action: 'dev' | 'build') => {
-    const watchFile = rs.spyOn(ts.sys, 'watchFile')
-    const watchDirectory = rs.spyOn(ts.sys, 'watchDirectory')
+  // Runs the plugin on one fixture and reports how many ts.sys watchers it
+  // opened and how many are still open after the given close hook fired.
+  const run = async (
+    action: 'dev' | 'build',
+    closeHook: 'close' | 'closeDevServer' = 'close',
+  ) => {
+    const open = new Set<ts.FileWatcher>()
+    let opened = 0
+    const track = (watcher: ts.FileWatcher): ts.FileWatcher => {
+      opened++
+      const tracked: ts.FileWatcher = {
+        close: () => {
+          open.delete(tracked)
+          watcher.close()
+        },
+      }
+      open.add(tracked)
+      return tracked
+    }
+    const { watchFile, watchDirectory } = ts.sys
+    rs.spyOn(ts.sys, 'watchFile').mockImplementation((...args) =>
+      track(watchFile!(...args)),
+    )
+    rs.spyOn(ts.sys, 'watchDirectory').mockImplementation((...args) =>
+      track(watchDirectory!(...args)),
+    )
     const plugin = reactDocgenTypescript({
       tsconfigPath: tsconfigPathForTest,
     })
 
-    const { api, runTasks, close } = createMockApi(
-      defaultPropValueFixture,
-      action,
-    )
-    plugin.setup(api as any)
-    const res = await runTasks()
-    const watchers =
-      watchFile.mock.calls.length + watchDirectory.mock.calls.length
-    close()
+    const mock = createMockApi(defaultPropValueFixture, action)
+    plugin.setup(mock.api as any)
+    const res = await mock.runTasks()
+    mock[closeHook]()
 
-    return { res, watchers }
+    return { res, opened, stillOpen: open.size }
   }
 
   it('creates no file watchers during a static build', async () => {
@@ -118,8 +145,15 @@ describe.runIf(isUnix)('file watchers', () => {
     rs.restoreAllMocks()
     const build = await run('build')
 
-    expect(dev.watchers).toBeGreaterThan(0)
-    expect(build.watchers).toBe(0)
+    expect(dev.opened).toBeGreaterThan(0)
+    expect(build.opened).toBe(0)
     expect(build.res).toEqual(dev.res)
+  })
+
+  it('closes every file watcher when the dev server closes', async () => {
+    const dev = await run('dev', 'closeDevServer')
+
+    expect(dev.opened).toBeGreaterThan(0)
+    expect(dev.stillOpen).toBe(0)
   })
 })

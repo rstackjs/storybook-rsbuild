@@ -104,7 +104,7 @@ export default (config: Options = {}): RsbuildPlugin => {
   >
   let filter: ReturnType<typeof createFilter>
   const moduleInvalidationQueue: Map<Filepath, InvalidateModule> = new Map()
-  let closeWatch: CloseWatch
+  let closeWatch: CloseWatch | undefined
 
   return {
     name: 'rsbuild-plugin-react-docgen-typescript',
@@ -169,9 +169,10 @@ export default (config: Options = {}): RsbuildPlugin => {
         },
       )
 
-      api.onCloseBuild(() => {
-        closeWatch()
-      })
+      // Rsbuild splits Vite's `closeBundle` into `onCloseBuild` and `onCloseDevServer`.
+      const close = () => closeWatch?.()
+      api.onCloseBuild(close)
+      api.onCloseDevServer(close)
     },
   }
 }
