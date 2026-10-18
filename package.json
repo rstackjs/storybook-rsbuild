@@ -18,8 +18,8 @@
     "test:watch": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rstack test watch"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@rstest/core": "~0.12.2",
+    "@playwright/test": "^1.64.1",
+    "@rstest/core": "~0.12.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@types/node": "^22.0.0",
     "bumpp": "^10.4.1",
@@ -29,7 +29,7 @@
     "jiti": "^2.7.0",
     "path-serializer": "^0.7.0",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "rstack": "0.8.0",
+    "rstack": "0.8.4",
     "storybook-rsbuild-scripts": "workspace:*",
     "tree-kill": "^1.2.2",
     "ts-dedent": "^2.3.0",
