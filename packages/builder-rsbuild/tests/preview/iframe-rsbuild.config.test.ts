@@ -48,6 +48,7 @@ const createOptions = (
   developmentModeForBuild = false,
   disableSourcemaps = false,
   rsbuildFinal?: (config: RsbuildConfig) => RsbuildConfig,
+  presetOverrides: Record<string, unknown> = {},
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
@@ -92,6 +93,7 @@ const createOptions = (
     ['previewAnnotations', []],
     ['staticDirs', staticDirs],
     ['typescript', { check: false, skipCompiler: true }],
+    ...Object.entries(presetOverrides),
   ])
 
   const apply = rs.fn(
@@ -149,6 +151,49 @@ describe('iframe-rsbuild.config', () => {
 
     expect(config.source?.entry).toEqual({
       main: [storybookEntries[0], expectedDynamicEntry],
+    })
+  })
+
+  describe('security.insecureIframeMessaging', () => {
+    const getTemplateGlobals = (config: RsbuildConfig) =>
+      (
+        config.tools?.htmlPlugin as {
+          templateParameters: { globals: Record<string, unknown> }
+        }
+      ).templateParameters.globals
+
+    it('flags the preview when security.insecureIframeMessaging is enabled', async () => {
+      const { options } = createOptions(
+        false,
+        'DEVELOPMENT',
+        [],
+        {},
+        false,
+        false,
+        undefined,
+        { security: { insecureIframeMessaging: true } },
+      )
+
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(getTemplateGlobals(config)).toHaveProperty(
+        'INSECURE_IFRAME_MESSAGING',
+        true,
+      )
+    })
+
+    it('leaves the preview unflagged by default', async () => {
+      const { options } = createOptions()
+
+      const config = await createIframeRsbuildConfig(
+        options as RsbuildBuilderOptions,
+      )
+
+      expect(getTemplateGlobals(config)).not.toHaveProperty(
+        'INSECURE_IFRAME_MESSAGING',
+      )
     })
   })
 

@@ -15,7 +15,7 @@ import {
 } from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
-import type { Options } from 'storybook/internal/types'
+import type { Options, SecurityConfig } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import {
   pickRsbuildEnvironment,
@@ -191,6 +191,7 @@ export default async (
     nonNormalizedStories,
     build,
     tagsOptions,
+    security,
     htmlLang,
   ] = await Promise.all([
     presets.apply('core'),
@@ -205,6 +206,7 @@ export default async (
     presets.apply('stories', []),
     options.presets.apply('build'),
     presets.apply('tags', {}),
+    presets.apply<SecurityConfig | undefined>('security'),
     presets.apply<string>('htmlLang', 'en'),
   ])
 
@@ -575,6 +577,9 @@ export default async (
             TAGS_OPTIONS: tagsOptions,
             ...(build?.test?.disableBlocks
               ? { __STORYBOOK_BLOCKS_EMPTY_MODULE__: {} }
+              : {}),
+            ...(security?.insecureIframeMessaging
+              ? { INSECURE_IFRAME_MESSAGING: true }
               : {}),
           },
           htmlLang,
