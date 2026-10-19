@@ -117,9 +117,15 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
     normalizedConfig: resolveConfig,
   }
 
-  // Modern.js may resolve a different version of @rsbuild/core, cast to align types.
+  // Modern.js may resolve a different copy of @rsbuild/core than this package.
+  // When the copies differ, the assertion aligns the two type identities; when
+  // they match, a plain `as RsbuildConfig` is reported by
+  // @typescript-eslint/no-unnecessary-type-assertion. rslint also reports
+  // `as unknown as RsbuildConfig`, so widen to `unknown` through a typed binding
+  // first and assert once, which passes in both states.
   // Storybook previews the browser build, which Modern.js names `client` (v3) or `web` (v2).
-  const { environments, ...topLevel } = rsbuildConfig as RsbuildConfig
+  const modernRsbuildConfig: unknown = rsbuildConfig
+  const { environments, ...topLevel } = modernRsbuildConfig as RsbuildConfig
   const browserEnvironment = environments?.client ?? environments?.web
   const inherited = browserEnvironment
     ? mergeRsbuildConfig(topLevel, browserEnvironment)
