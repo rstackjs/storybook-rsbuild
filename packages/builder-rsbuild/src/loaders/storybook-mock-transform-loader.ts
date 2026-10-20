@@ -11,8 +11,13 @@ const storybookMockTransformLoader = function (
   const callback = this.async()
 
   try {
-    const result = rewriteSbMockImportCalls(source)
-    callback(null, result.code, result.map || undefined, meta)
+    const result = rewriteSbMockImportCalls(source, this.resourcePath)
+    callback(
+      null,
+      result.code,
+      result.map ? { ...result.map, file: this.resourcePath } : sourceMap,
+      meta,
+    )
   } catch (error) {
     logger.debug(
       `Could not transform sb.mock(import(...)) calls in ${this.resourcePath}: ${String(error)}`,

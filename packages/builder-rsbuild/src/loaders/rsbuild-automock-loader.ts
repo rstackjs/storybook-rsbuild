@@ -1,5 +1,5 @@
 import type { Rspack } from '@rsbuild/core'
-import { babelParser, getAutomockCode } from 'storybook/internal/mocking-utils'
+import { getAutomockCode } from 'storybook/internal/mocking-utils'
 
 interface AutomockLoaderOptions {
   spy?: string
@@ -12,7 +12,7 @@ export default function rsbuildAutomockLoader(
   const options = this.getOptions()
   const isSpy = options.spy === 'true'
 
-  const mocked = getAutomockCode(source, isSpy, babelParser as any)
+  const mocked = getAutomockCode(source, isSpy, this.resourcePath)
 
   return mocked.toString()
 }
