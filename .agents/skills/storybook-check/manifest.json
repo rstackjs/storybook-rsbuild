@@ -236,7 +236,7 @@
       "upstream": "code/frameworks/vue3-vite/src/preset.ts",
       "local": "packages/framework-vue3/src/preset.ts",
       "intentionalDivergences": [
-        "vite plugin wiring (templateCompilation, vueDocgen, vueComponentMeta) replaced by rsbuildFinal in framework-preset-vue3.ts, which returns the vue-component-meta Rsbuild plugin or the vue-docgen-api loader; experimental_docgenProvider/experimental_manifests are re-exported from docgen/preset.ts like upstream",
+        "vite plugin wiring (templateCompilation, vueDocgen, vueComponentMeta) replaced by rsbuildFinal in framework-preset-vue3.ts, which returns the vue-component-meta Rsbuild plugin or the vue-docgen-api loader; experimental_docgenProvider/experimental_manifests come from the @storybook/vue3 renderer preset and are not re-exported here",
         "core expressed as an async PresetProperty reading frameworkOptions and forwarding frameworkOptions.builder as builder options; builder/renderer wrapped in fileURLToPath (repo-wide idiom)",
         "framework-vue3 defaults typescript.skipCompiler to true: the default TypeScript wrapper does not check .vue sources and reports TS2307 for .vue imports when no *.vue module shim exists; users who want SFC checking can set main.ts typescript.skipCompiler=false and checkOptions.tsCheckerOptions.typescript.typescriptPath='@esctn/vue-tsc-api'; upstream vue3-vite ships no SFC type check either"
       ]
@@ -254,12 +254,6 @@
       "intentionalDivergences": [
         "VUE_BUILDER_DOCGEN_DEPRECATION names framework 'storybook-vue3-rsbuild' instead of '@storybook/vue3-vite'"
       ]
-    },
-    {
-      "upstream": "code/frameworks/vue3-vite/src/docgen/preset.ts",
-      "local": "packages/framework-vue3/src/docgen/preset.ts",
-      "note": "Ported at v10.6.0. On upstream next this file moved to code/renderers/vue3/src/docgen/preset.ts (storybookjs/storybook e991237e, not in v10.6.0 or v11.0.0-alpha.0), so coverage reports MISSING-UPSTREAM until the pinned @storybook/vue3/preset exports experimental_docgenProvider and experimental_manifests itself. At that point delete this local port and its re-export from preset.ts (otherwise the worker descriptor is registered twice) and drop this entry.",
-      "intentionalDivergences": []
     },
     {
       "upstream": "code/frameworks/vue3-vite/src/plugins/vue-docgen.ts",
