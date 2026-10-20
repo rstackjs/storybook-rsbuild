@@ -353,7 +353,6 @@
       "packages/builder-rsbuild/src/inherited-config.ts",
       "packages/builder-rsbuild/src/logger.ts",
       "packages/builder-rsbuild/src/preview/detect-msw.ts",
-      "packages/builder-rsbuild/src/react-shims.ts",
       "packages/framework-react/src/requirer.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/index.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",

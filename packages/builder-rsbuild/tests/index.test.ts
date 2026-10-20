@@ -10,7 +10,6 @@ import { createTestOptions } from './fixtures/options'
 const { bail, printDuration, start } = previewBuilder
 
 const mocks = rs.hoisted(() => ({
-  applyReactShims: rs.fn(),
   findConfigFile: rs.fn(),
   getPresets: rs.fn(),
   iframeConfig: rs.fn(),
@@ -34,10 +33,6 @@ rs.mock('../src/logger', () => ({
 
 rs.mock('../src/preview/iframe-rsbuild.config', () => ({
   default: mocks.iframeConfig,
-}))
-
-rs.mock('../src/react-shims', () => ({
-  applyReactShims: mocks.applyReactShims,
 }))
 
 type ProgressHandler = (value: number, message: string) => void
@@ -131,7 +126,6 @@ const createStartHarness = ({
 }
 
 beforeEach(() => {
-  mocks.applyReactShims.mockResolvedValue({})
   mocks.findConfigFile.mockReturnValue('/project/.storybook/preview.ts')
   mocks.getPresets.mockResolvedValue({
     apply: async (_name: string, config: unknown) => config,

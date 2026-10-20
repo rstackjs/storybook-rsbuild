@@ -69,7 +69,7 @@ const createOptions = (
       },
     ],
     ['framework', {}],
-    ['frameworkOptions', { renderer: '@storybook/react', legacyRootApi: true }],
+    ['frameworkOptions', { renderer: '@storybook/react' }],
     [
       'env',
       {

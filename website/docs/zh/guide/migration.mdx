@@ -26,6 +26,10 @@ import { PackageManagerTabs } from '@theme'
 
 :::
 
+:::info React 18+
+Storybook 11 移除了 React legacy root API。请从 `framework.options` 中删除 `legacyRootApi`，并使用 React 18 或 19。
+:::
+
 ## 从 Storybook Webpack5 Framework 迁移
 
 如果你的 `.storybook/main.ts` 使用了 webpack5 framework 包（例如 `@storybook/react-webpack5`、`@storybook/vue3-webpack5`），请按照本节操作。

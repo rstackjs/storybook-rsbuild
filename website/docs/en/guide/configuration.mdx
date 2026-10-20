@@ -137,7 +137,7 @@ Framework-specific options allow you to tailor the behavior for React, Vue, etc.
 
 ### React Options
 
-For `storybook-react-rsbuild`, you can configure `reactDocgen` and legacy root API.
+For `storybook-react-rsbuild`, you can configure `reactDocgen`.
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -149,9 +149,6 @@ const config: StorybookConfig = {
     options: {
       // Configure strict mode
       strictMode: true,
-
-      // Use legacy ReactDOM.render instead of createRoot (React 18+)
-      legacyRootApi: false,
     },
   },
   stories: [],
