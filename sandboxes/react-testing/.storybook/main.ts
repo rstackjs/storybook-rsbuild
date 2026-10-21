@@ -42,7 +42,6 @@ const config: StorybookConfig = {
     docsMode: false,
   },
   typescript: {
-    reactDocgen: 'react-docgen',
     check: true,
   },
   staticDirs: ['../public'],
