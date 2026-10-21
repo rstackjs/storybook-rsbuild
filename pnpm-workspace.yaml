@@ -16,3 +16,14 @@ hoistPattern:
   # react-native-reanimated 4's js-reanimated/webUtils.js imports
   # react-native-web/dist/cjs/... without declaring react-native-web as a dependency
   - react-native-web
+# Storybook canary of storybookjs/storybook `next` at b26f35e1aff, the first build with the
+# OXC mocking-utils signatures. Drop these once a Storybook 11 prerelease contains them.
+overrides:
+  storybook: https://pkg.pr.new/storybook@b26f35e1aff
+  '@storybook/addon-docs': https://pkg.pr.new/@storybook/addon-docs@b26f35e1aff
+  '@storybook/addon-onboarding': https://pkg.pr.new/@storybook/addon-onboarding@b26f35e1aff
+  '@storybook/core-webpack': https://pkg.pr.new/@storybook/core-webpack@b26f35e1aff
+  '@storybook/html': https://pkg.pr.new/@storybook/html@b26f35e1aff
+  '@storybook/react': https://pkg.pr.new/@storybook/react@b26f35e1aff
+  '@storybook/vue3': https://pkg.pr.new/@storybook/vue3@b26f35e1aff
+  '@storybook/web-components': https://pkg.pr.new/@storybook/web-components@b26f35e1aff
