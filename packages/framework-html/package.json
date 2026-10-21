@@ -45,19 +45,19 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/html": "^11.0.0-alpha.6",
+    "@storybook/html": "^11.0.0-alpha.7",
     "storybook-builder-rsbuild": "workspace:*"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
     "@types/node": "^22.12.0",
-    "storybook": "11.0.0-alpha.6",
+    "storybook": "11.0.0-alpha.7",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
-    "storybook": "^11.0.0-alpha.6"
+    "storybook": "^11.0.0-alpha.7"
   },
   "engines": {
     "node": ">=22.12.0"
