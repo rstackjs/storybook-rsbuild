@@ -1,3 +1,4 @@
+import type { WebComponentsFrameworkOptions } from '@storybook/web-components'
 import type {
   BuilderOptions,
   StorybookConfigRsbuild,
@@ -14,7 +15,7 @@ type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
 
 export type FrameworkOptions = {
   builder?: BuilderOptions
-}
+} & WebComponentsFrameworkOptions
 
 type StorybookConfigFramework = {
   framework:
