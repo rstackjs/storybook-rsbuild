@@ -46,14 +46,14 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public"

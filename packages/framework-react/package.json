@@ -64,7 +64,7 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "@types/react": "^18.3.31",
     "@types/resolve": "^1.20.6",
     "react": "18.3.1",
@@ -74,10 +74,10 @@
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
     "storybook": "^11.0.0-alpha.6",
-    "typescript": ">= 4.2.x"
+    "typescript": "^5.9.0 || ^6.0.0"
   },
   "peerDependenciesMeta": {
     "typescript": {
@@ -85,7 +85,7 @@
     }
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public"

@@ -18,7 +18,7 @@ importers:
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       bumpp:
         specifier: ^10.4.1
@@ -82,7 +82,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -106,7 +106,7 @@ importers:
         specifier: ~1.0.3
         version: 1.0.3(@microsoft/api-extractor@7.59.4(@types/node@22.19.1))(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -127,7 +127,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       rstack:
         specifier: 0.8.4
@@ -183,12 +183,6 @@ importers:
       process:
         specifier: ^0.11.10
         version: 0.11.10
-      react:
-        specifier: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-        version: 18.3.1
-      react-dom:
-        specifier: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-        version: 18.3.1(react@18.3.1)
       rsbuild-plugin-html-minifier-terser:
         specifier: ^1.1.5
         version: 1.1.5(@rsbuild/core@2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0))
@@ -216,12 +210,12 @@ importers:
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@storybook/core-webpack':
         specifier: 11.0.0-alpha.6
-        version: 11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@18.3.1))
+        version: 11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/pretty-hrtime':
         specifier: ^1.0.3
@@ -237,7 +231,7 @@ importers:
         version: 5.1.0
       storybook:
         specifier: 11.0.0-alpha.6
-        version: 11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@18.3.1)
+        version: 11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -258,7 +252,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -304,7 +298,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -347,7 +341,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -390,7 +384,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -418,7 +412,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       lit:
         specifier: ^3.3.3
@@ -446,7 +440,7 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       typescript:
         specifier: ^5.9.3
@@ -477,7 +471,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(lit@3.3.3)(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -529,7 +523,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -593,7 +587,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -639,7 +633,7 @@ importers:
         specifier: 3.10.0
         version: 3.10.0
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -685,7 +679,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -755,7 +749,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -834,7 +828,7 @@ importers:
         specifier: ^29.5.14
         version: 29.5.14
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -895,7 +889,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -959,7 +953,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -1011,7 +1005,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))(typescript@5.9.3)(vue@3.5.44(typescript@5.9.3))
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       rsbuild-plugin-unplugin-vue:
         specifier: ^0.2.0
@@ -1081,7 +1075,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -1148,7 +1142,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -1200,7 +1194,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-alpha.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^18.3.31
@@ -1242,7 +1236,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -1279,7 +1273,7 @@ importers:
         specifier: 11.0.0-alpha.6
         version: 11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))(typescript@5.9.3)(vue@3.5.44(typescript@5.9.3))
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       storybook:
         specifier: 11.0.0-alpha.6
@@ -1294,7 +1288,7 @@ importers:
   scripts:
     dependencies:
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       pathe:
         specifier: ^1.1.2
@@ -1329,7 +1323,7 @@ importers:
         specifier: ^4.5.0
         version: 4.5.0
       '@types/node':
-        specifier: ^22.0.0
+        specifier: ^22.12.0
         version: 22.19.1
       '@types/react':
         specifier: ^19.3.0
@@ -18248,9 +18242,9 @@ snapshots:
     dependencies:
       storybook: 11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
 
-  '@storybook/core-webpack@11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@18.3.1))':
+  '@storybook/core-webpack@11.0.0-alpha.6(storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))':
     dependencies:
-      storybook: 11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@18.3.1)
+      storybook: 11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
       ts-dedent: 2.3.0
 
   '@storybook/global@5.0.0': {}
@@ -26389,34 +26383,6 @@ snapshots:
       ws: 8.22.0
     optionalDependencies:
       '@types/react': 18.3.31
-      prettier: 3.9.10
-    transitivePeerDependencies:
-      - bufferutil
-      - react
-      - utf-8-validate
-
-  storybook@11.0.0-alpha.6(@types/react@19.3.0)(prettier@3.9.10)(react@18.3.1):
-    dependencies:
-      '@storybook/global': 5.0.0
-      '@storybook/icons': 2.1.0(react@18.3.1)
-      '@testing-library/dom': 10.4.1
-      '@testing-library/jest-dom': 6.9.1
-      '@testing-library/user-event': 14.6.8(@testing-library/dom@10.4.1)
-      '@types/chai': 5.2.3
-      '@vitest/expect': 3.2.4
-      '@vitest/spy': 3.2.4
-      '@webcontainer/env': 1.1.1
-      esbuild: 0.28.0
-      jsonc-parser: 3.3.1
-      open: 10.2.0
-      oxc-parser: 0.127.0
-      oxc-resolver: 11.21.2
-      recast: 0.23.11
-      semver: 7.8.1
-      use-sync-external-store: 1.5.0(react@18.3.1)
-      ws: 8.22.0
-    optionalDependencies:
-      '@types/react': 19.3.0
       prettier: 3.9.10
     transitivePeerDependencies:
       - bufferutil

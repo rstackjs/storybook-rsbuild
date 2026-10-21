@@ -37,6 +37,9 @@ if (dev) {
 const cdvcPeerDev = new CDVC(root, {
   depType: ['peerDependencies'],
   ignorePackage: ['storybook-builder-rsbuild'],
+  // Upstream intentionally uses different TypeScript peer ranges per framework:
+  // React/Vue use ^5.9.0 || ^6.0.0; React Native Web uses >= 5.9.x.
+  ignoreDep: ['typescript'],
 })
 
 // === optionalDependencies & resolutions ===

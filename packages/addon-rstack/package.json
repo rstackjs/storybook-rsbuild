@@ -43,7 +43,7 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "rstack": "0.8.4",
     "storybook": "11.0.0-alpha.6",
     "storybook-addon-rslib": "workspace:*",
@@ -54,6 +54,9 @@
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
     "rstack": "^0.7.4",
     "storybook-builder-rsbuild": "workspace:^"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public"
