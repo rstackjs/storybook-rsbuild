@@ -15,6 +15,7 @@ import {
 } from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
+import { WebpackMissingPreviewTemplateError } from 'storybook/internal/server-errors'
 import type { Options, SecurityConfig } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import {
@@ -235,12 +236,7 @@ export default async (
   const shouldDisableHmr = shouldDisableDevFeatures
 
   if (!template) {
-    throw new Error(dedent`
-      Storybook's Webpack5 builder requires a template to be specified.
-      Somehow you've ended up with a falsy value for the template option.
-
-      Please file an issue at https://github.com/storybookjs/storybook with a reproduction.
-    `)
+    throw new WebpackMissingPreviewTemplateError()
   }
 
   const externals: Record<string, string> = globalsNameReferenceMap
