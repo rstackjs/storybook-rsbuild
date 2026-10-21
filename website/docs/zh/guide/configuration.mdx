@@ -137,7 +137,7 @@ framework 特有的选项让你能够为 React、Vue 等定制行为。
 
 ### React 选项
 
-对于 `storybook-react-rsbuild`，你可以配置 `reactDocgen`。
+对于 `storybook-react-rsbuild`，你可以配置 `strictMode`。
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -152,17 +152,35 @@ const config: StorybookConfig = {
     },
   },
   stories: [],
+}
+
+export default config
+```
+
+#### 组件 docgen
+
+Storybook 11 在 Storybook server 上提取组件元数据（`features.docgenServer`）。对于 React 和 Vue，只要安装了 `typescript` 包，它就默认开启。它从 TypeScript 类型和解构默认值中读取 props，不读取 `propTypes` 或 `defaultProps`。
+
+:::warning Builder docgen 已废弃
+React 的 `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` 和 Vue 的 `framework.options.docgen` 只在 `features.docgenServer` 为 `false` 或未安装 `typescript` 时运行。它们已被废弃，并将在 Storybook 12 中移除。
+:::
+
+如果暂时需要保留 builder docgen：
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  features: {
+    // Opt out of server-side docgen and keep builder docgen
+    docgenServer: false,
+  },
   typescript: {
-    // Configure docgen for TypeScript
     // 'react-docgen-typescript' | 'react-docgen' | false
     reactDocgen: 'react-docgen-typescript',
-
-    // Pass options to react-docgen-typescript-plugin
-    reactDocgenTypescriptOptions: {
-      propFilter: (prop) => {
-        return prop.parent ? !/node_modules/.test(prop.parent.fileName) : true
-      },
-    },
   },
 }
 

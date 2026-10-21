@@ -137,7 +137,7 @@ Framework-specific options allow you to tailor the behavior for React, Vue, etc.
 
 ### React Options
 
-For `storybook-react-rsbuild`, you can configure `reactDocgen`.
+For `storybook-react-rsbuild`, you can configure `strictMode`.
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -152,17 +152,35 @@ const config: StorybookConfig = {
     },
   },
   stories: [],
+}
+
+export default config
+```
+
+#### Component docgen
+
+Storybook 11 extracts component metadata on the Storybook server (`features.docgenServer`). For React and Vue it is on by default when the `typescript` package is installed. It reads props from TypeScript types and inline destructuring defaults; it does not read `propTypes` or `defaultProps`.
+
+:::warning Builder docgen is deprecated
+React's `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` and Vue's `framework.options.docgen` only run when `features.docgenServer` is `false` or `typescript` is not installed. They are deprecated and will be removed in Storybook 12.
+:::
+
+To keep builder docgen for now:
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-react-rsbuild'
+
+const config: StorybookConfig = {
+  framework: 'storybook-react-rsbuild',
+  stories: [],
+  features: {
+    // Opt out of server-side docgen and keep builder docgen
+    docgenServer: false,
+  },
   typescript: {
-    // Configure docgen for TypeScript
     // 'react-docgen-typescript' | 'react-docgen' | false
     reactDocgen: 'react-docgen-typescript',
-
-    // Pass options to react-docgen-typescript-plugin
-    reactDocgenTypescriptOptions: {
-      propFilter: (prop) => {
-        return prop.parent ? !/node_modules/.test(prop.parent.fileName) : true
-      },
-    },
   },
 }
 
