@@ -1,5 +1,6 @@
 import type { RsbuildConfig } from '@rsbuild/core'
 import { mergeRsbuildConfig } from '@rsbuild/core'
+import { deprecate } from 'storybook/internal/node-logger'
 import { requirer } from './requirer'
 import type { StorybookConfig } from './types'
 
@@ -7,7 +8,7 @@ export const rsbuildFinalDocs: NonNullable<
   StorybookConfig['rsbuildFinal']
 > = async (config, options): Promise<RsbuildConfig> => {
   const features = await options.presets.apply('features', {})
-  if (features?.experimentalDocgenServer) {
+  if (features?.docgenServer) {
     // The docgen service owns React metadata extraction for this mode. Do not inject
     // `Component.__docgenInfo` into the preview bundle, otherwise preview argTypes would include
     // docgen data that the UI is now responsible for merging from the service.
@@ -22,6 +23,11 @@ export const rsbuildFinalDocs: NonNullable<
   if (typeof reactDocgen !== 'string') {
     return config
   }
+
+  deprecate(
+    `Builder docgen (\`typescript.reactDocgen: '${reactDocgen}'\`) is deprecated and will be removed in Storybook 12. ` +
+      `It runs because \`features.docgenServer\` is off. Server-side docgen needs the \`typescript\` package: install it and remove any \`docgenServer: false\` from your \`.storybook/main.ts\`.`,
+  )
 
   const reactDocgenLoaderRule = (test: RegExp) => ({
     test,

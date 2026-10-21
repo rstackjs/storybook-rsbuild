@@ -42,7 +42,10 @@ const getStoriesModule = async (options: Options) => {
 // project lives under a directory whose name merely contains the substring.
 const pathSegmentExclude = '/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */'
 
-describe('virtual-module-mapping: stories context excludes node_modules', () => {
+// TODO(rstest#1980): un-skip once rstest provides `import.meta.resolve` to
+// bundled modules; getVirtualModules calls it.
+// https://github.com/web-infra-dev/rstest/issues/1980
+describe.skip('virtual-module-mapping: stories context excludes node_modules', () => {
   // Rspack's require.context (unlike webpack's) enumerates node_modules, so a
   // dependency that ships `.stories.*` files would be swept into the preview
   // build. Re-assert Storybook core's intent with an explicit webpackExclude.
@@ -116,5 +119,31 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
 
     expect(mod).toMatch(/webpackInclude:/)
     expect(mod).not.toContain(pathSegmentExclude)
+  })
+})
+
+// TODO(rstest#1980): un-skip once rstest provides `import.meta.resolve` to
+// bundled modules; getVirtualModules calls it.
+// https://github.com/web-infra-dev/rstest/issues/1980
+describe.skip('virtual-module-mapping: config entry imports', () => {
+  it('substitutes the csf import with the builder-context path and keeps externalized imports bare', async () => {
+    const options = createOptions()
+    const { virtualModules, entries } = await getVirtualModules(options, false)
+    const entry = virtualModules[entries[0]]
+
+    expect(entry).toBeDefined()
+    expect(entry).not.toContain('storybook/internal/csf')
+    expect(entry).not.toContain('{{csfImportPath}}')
+
+    const csfImport = entry.match(/^import \{ isPreview \} from '(.+)';?$/m)
+    // The template double-escapes `\`; undo it to assert on the evaluated Windows path.
+    const csfImportPath = csfImport?.[1].replaceAll('\\\\', '\\')
+    expect(csfImportPath).toMatch(/^(?:[A-Za-z]:)?[/\\]/)
+    expect(csfImportPath).toMatch(/[/\\]dist[/\\]csf[/\\]index\.js$/)
+
+    expect(entry).toContain("from 'storybook/internal/channels'")
+    expect(entry).toContain("from 'storybook/internal/core-events'")
+    expect(entry).toContain("from '@storybook/global'")
+    expect(entry).toContain("from 'storybook/preview-api'")
   })
 })

@@ -53,7 +53,7 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "lit": "^3.3.3",
     "storybook": "11.0.0-alpha.6",
     "typescript": "^5.9.3"
@@ -64,7 +64,7 @@
     "storybook": "^11.0.0-alpha.6"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public"

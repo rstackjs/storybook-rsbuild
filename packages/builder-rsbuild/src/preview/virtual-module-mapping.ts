@@ -1,4 +1,5 @@
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import slash from 'slash'
 import {
   loadPreviewOrConfigFile,
@@ -125,6 +126,12 @@ export const getVirtualModules = async (
     }),
     stories,
   )
+  // Resolve csf from the builder's own storybook copy, not the user's project root.
+  // https://github.com/storybookjs/storybook/blob/b484eaf1449a7dfcddb0599deba1f873efe9fb59/code/builders/builder-webpack5/src/preview/virtual-module-mapping.ts#L65-L69
+  const corePath = dirname(
+    fileURLToPath(import.meta.resolve('storybook/package.json')),
+  )
+  const csfImportPath = join(corePath, 'dist', 'csf', 'index.js')
   // If the entrypoint is changed, remember to sync the change to Chromatic https://github.com/chromaui/chromatic-cli/pull/1206/files.
   // Also ref https://github.com/rstackjs/storybook-rsbuild/issues/332.
   const configEntryPath = resolve(join(workingDir, 'storybook-config-entry.js'))
@@ -148,6 +155,7 @@ export const getVirtualModules = async (
         .map((entry) => `require('${entry}')`)
         .join(','),
     )
+    .replaceAll(`'{{csfImportPath}}'`, `'${csfImportPath}'`)
     // We need to double escape `\` for webpack. We may have some in windows paths
     .replace(/\\/g, '\\\\')
   entries.push(configEntryPath)

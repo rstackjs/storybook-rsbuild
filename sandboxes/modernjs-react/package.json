@@ -11,7 +11,7 @@
     "reset": "npx rimraf node_modules ./**/node_modules",
     "serve": "modern serve",
     "start": "modern start",
-    "storybook": "BFF_PROXY=1 storybook dev -p 6006 --no-open",
+    "storybook": "BFF_PROXY=1 storybook dev -p 6006",
     "upgrade": "modern upgrade"
   },
   "dependencies": {
@@ -29,7 +29,7 @@
     "@storybook/addon-docs": "11.0.0-alpha.6",
     "@storybook/addon-onboarding": "11.0.0-alpha.6",
     "@storybook/react": "11.0.0-alpha.6",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "rimraf": "^6.1.3",
@@ -39,6 +39,6 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=16.18.1"
+    "node": ">=22.12.0"
   }
 }

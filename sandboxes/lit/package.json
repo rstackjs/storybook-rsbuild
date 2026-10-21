@@ -20,7 +20,7 @@
     "@storybook/addon-docs": "11.0.0-alpha.6",
     "@storybook/addon-onboarding": "11.0.0-alpha.6",
     "@storybook/web-components": "11.0.0-alpha.6",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "storybook": "11.0.0-alpha.6",
     "storybook-web-components-rsbuild": "workspace:*",
     "typescript": "^5.9.3"

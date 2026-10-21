@@ -16,14 +16,6 @@ type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
 export type FrameworkOptions = {
   builder?: BuilderOptions
   strictMode?: boolean
-  /**
-   * Use React's legacy root API to mount components
-   * @description
-   * React has introduced a new root API with React 18.x to enable a whole set of new features (e.g. concurrent features)
-   * If this flag is true, the legacy Root API is used to mount components to make it easier to migrate step by step to React 18.
-   * @default false
-   */
-  legacyRootApi?: boolean
 }
 
 type TypescriptOptionsReact = {
@@ -31,6 +23,7 @@ type TypescriptOptionsReact = {
    * Sets the type of Docgen when working with React and TypeScript
    *
    * @default `'react-docgen'`
+   * @deprecated Builder docgen is removed in Storybook 12. Use `features.docgenServer`.
    */
   reactDocgen: 'react-docgen-typescript' | 'react-docgen' | false
   /**
@@ -38,6 +31,7 @@ type TypescriptOptionsReact = {
    *
    * @default
    * @see https://github.com/storybookjs/storybook/blob/next/code/builders/builder-webpack5/src/config/defaults.js#L4-L6
+   * @deprecated Builder docgen is removed in Storybook 12. Use `features.docgenServer`.
    */
   reactDocgenTypescriptOptions: ReactDocgenTypescriptOptions
 }

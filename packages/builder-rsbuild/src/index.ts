@@ -25,7 +25,6 @@ import { pluginStorybookMock } from './plugins/rsbuild-plugin-storybook-mock'
 import rsbuildConfig, {
   type RsbuildBuilderOptions,
 } from './preview/iframe-rsbuild.config'
-import { applyReactShims } from './react-shims'
 import type { RsbuildBuilder } from './types'
 
 export {
@@ -109,12 +108,9 @@ const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
   )
   // #endregion
 
-  let intrinsicRsbuildConfig = await rsbuildConfig(options, webpackAddonsConfig)
-  const shimsConfig = await applyReactShims(intrinsicRsbuildConfig, options)
-
-  intrinsicRsbuildConfig = rsbuildReal.mergeRsbuildConfig(
-    intrinsicRsbuildConfig,
-    shimsConfig,
+  const intrinsicRsbuildConfig = await rsbuildConfig(
+    options,
+    webpackAddonsConfig,
   )
 
   // Preset hooks run in order with the user's main.ts last. Inherited configs have already

@@ -11,7 +11,6 @@ let mismatch = false
 // === dependencies ===
 const cdvcDep = new CDVC(root, {
   depType: ['dependencies'],
-  ignorePackage: ['@sandboxes/react-16'],
 })
 
 const dep = cdvcDep.hasMismatchingDependencies
@@ -25,7 +24,7 @@ const cdvcDevDep = new CDVC(root, {
   depType: ['devDependencies'],
   // addon-rslib keeps a Rslib 1 dev copy for type-check/tests of its peer dependency; sandboxes track Rslib 0.x.
   ignoreDep: ['@rslib/core'],
-  ignorePackage: ['@sandboxes/react-16', 'website'],
+  ignorePackage: ['website'],
 })
 
 const dev = cdvcDevDep.hasMismatchingDependencies
@@ -38,6 +37,9 @@ if (dev) {
 const cdvcPeerDev = new CDVC(root, {
   depType: ['peerDependencies'],
   ignorePackage: ['storybook-builder-rsbuild'],
+  // Upstream intentionally uses different TypeScript peer ranges per framework:
+  // React/Vue use ^5.9.0 || ^6.0.0; React Native Web uses >= 5.9.x.
+  ignoreDep: ['typescript'],
 })
 
 // === optionalDependencies & resolutions ===

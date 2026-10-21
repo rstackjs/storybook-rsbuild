@@ -26,6 +26,10 @@ Match your Storybook version to the correct storybook-rsbuild release:
 
 :::
 
+:::info React 18+
+Storybook 11 removed the React legacy root API. Remove `legacyRootApi` from `framework.options`; React 18 or 19 is required.
+:::
+
 ## From Storybook Webpack5 Framework
 
 If your `.storybook/main.ts` uses a webpack5 framework package (e.g. `@storybook/react-webpack5`, `@storybook/vue3-webpack5`), follow this section.

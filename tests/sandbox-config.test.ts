@@ -16,12 +16,12 @@ interface SandboxSnapshotCase {
 
 const SANDBOX_CASES: SandboxSnapshotCase[] = [
   {
-    sandbox: 'react-16',
+    sandbox: 'rspack-react-18',
     targets: [
       {
         id: 'gfm-mdx-compile',
         fileMatcher: (fileName) =>
-          /^stories-GFM-mdx\..+\.iframe\.bundle\.js$/.test(fileName),
+          /stories-GFM-mdx\..+\.iframe\.bundle\.js$/.test(fileName),
         extract: extractGfmRuntimeMarkers,
       },
     ],
@@ -54,7 +54,7 @@ describe.each(SANDBOX_CASES)(
         expect(gfmRuntimeMarkers).toContain('mailto:contact@example.com')
         expect(gfmRuntimeMarkers).toContain('data-footnote-ref')
         expect(gfmRuntimeMarkers).toContain('contains-task-list')
-        expect(gfmRuntimeMarkers).toContain('textAlign: "center"')
+        expect(gfmRuntimeMarkers).toMatch(/textAlign:\s*"center"/)
       })
     }
   },

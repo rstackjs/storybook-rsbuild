@@ -2,8 +2,8 @@ import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
 import { deprecate } from 'storybook/internal/node-logger'
 import {
   resolveDocgenContext,
+  VUE_BUILDER_DOCGEN_DEPRECATION,
   VUE_COMPONENT_META,
-  VUE_DOCGEN_API_DEPRECATION,
 } from './docgen/options'
 import {
   vueComponentMeta,
@@ -17,11 +17,15 @@ const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
 ): Promise<RsbuildConfig> => {
   const { docgen, docgenServerActive } = await resolveDocgenContext(options)
 
-  // Server-side docgen (features.experimentalDocgenServer) extracts docgen for every
-  // `docgen` value through the @storybook/vue3 docgen worker; skip the loader to avoid double docgen.
-  if (docgen === false || docgenServerActive) {
+  // Test builds turn `docgenServer` off to skip docgen entirely, not to fall back to builder docgen.
+  if (
+    docgen === false ||
+    docgenServerActive ||
+    options.build?.test?.disableDocgen
+  ) {
     return {}
   }
+  deprecate(VUE_BUILDER_DOCGEN_DEPRECATION)
   const engine = await options.presets.apply<VueDocgenEngine>(
     'experimental_vueDocgenEngine',
   )
@@ -29,8 +33,6 @@ const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
   if (docgen.plugin === VUE_COMPONENT_META) {
     return { plugins: [await vueComponentMeta(engine, docgen.tsconfig)] }
   }
-
-  deprecate(VUE_DOCGEN_API_DEPRECATION)
 
   // Intentional divergence: keep the documented legacy addon-docs vueDocgenOptions user channel.
   // A future sync must not remove this scan.

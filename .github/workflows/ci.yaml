@@ -100,8 +100,11 @@ jobs:
             node-version: 22.x
           - os: macos-latest
             node-version: 26.x
-          - os: windows-latest
-            node-version: 26.x
+          # TODO(#601): Re-enable once Storybook 11 emits a platform-agnostic
+          # `webpackInclude` on Windows (picomatch 4 currently leaves it
+          # POSIX-only, so the stories context is empty there).
+          # - os: windows-latest
+          #   node-version: 26.x
     runs-on: ${{ matrix.os }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job

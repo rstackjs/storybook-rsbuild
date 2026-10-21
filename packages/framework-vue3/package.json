@@ -52,7 +52,7 @@
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.12.0",
     "storybook": "11.0.0-alpha.6",
     "typescript": "^5.9.3",
     "vue": "^3.5.44"
@@ -60,7 +60,7 @@
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
     "storybook": "^11.0.0-alpha.6",
-    "typescript": ">= 4.2.x",
+    "typescript": "^5.9.0 || ^6.0.0",
     "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
@@ -69,7 +69,7 @@
     }
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public"
