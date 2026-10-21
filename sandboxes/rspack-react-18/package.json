@@ -39,6 +39,7 @@
     "postcss": "^8.5.31",
     "postcss-loader": "^8.2.1",
     "react-refresh": "^0.19.0",
+    "remark-gfm": "^4.0.1",
     "storybook": "11.0.0-alpha.6",
     "storybook-react-rsbuild": "workspace:*",
     "style-loader": "^4.0.0",

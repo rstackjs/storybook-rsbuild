@@ -12,21 +12,6 @@
       rangeStrategy: 'bump',
     },
     {
-      groupName: 'react-16 (allow non-major, block major)',
-      groupSlug: 'react-16-keep-major',
-      matchFileNames: ['sandboxes/react-16/package.json'],
-      matchPackageNames: [
-        'react',
-        'react-dom',
-        '@types/react',
-        '@types/react-dom',
-      ],
-      allowedVersions: '<17.0.0',
-      rangeStrategy: 'replace',
-      separateMajorMinor: false,
-      separateMinorPatch: false,
-    },
-    {
       groupName: 'rspress',
       matchPackageNames: ['@rspress/**'],
       groupSlug: 'rspress',

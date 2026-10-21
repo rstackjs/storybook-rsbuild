@@ -19,7 +19,6 @@ export const sandboxes: SandboxDefinition[] = [
     port: 6102,
     env: { STORYBOOK: 'true' },
   },
-  { name: 'react-16', relativeDir: 'sandboxes/react-16', port: 6103 },
   { name: 'react-18', relativeDir: 'sandboxes/react-18', port: 6104 },
   {
     name: 'react-native-web',
