@@ -11,7 +11,7 @@
     "reset": "npx rimraf node_modules ./**/node_modules",
     "serve": "modern serve",
     "start": "modern start",
-    "storybook": "BFF_PROXY=1 storybook dev -p 6006 --no-open",
+    "storybook": "BFF_PROXY=1 storybook dev -p 6006",
     "upgrade": "modern upgrade"
   },
   "dependencies": {
