@@ -311,8 +311,12 @@ export function generateDocgenCodeBlock(options: GeneratorOptions): {
     filename: options.filename,
   })
 
-  for (const node of codeBlocks) {
-    s.append(printNode(node))
+  if (codeBlocks.length > 0) {
+    // Separate the appended blocks from the source and from each other. Files
+    // are valid TypeScript without a trailing newline, and appending directly
+    // glues the first `try` onto the last character of the source.
+    const separator = options.source.endsWith('\n') ? '' : '\n'
+    s.append(separator + codeBlocks.map(printNode).join('\n'))
   }
 
   return {
