@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
+import type { ComponentDoc } from 'react-docgen-typescript'
 import ts from 'typescript'
 import reactDocgenTypescript from '../index'
+import { generateDocgenCodeBlock } from '../utils/generate'
 
 const tsconfigPathForTest = resolve(__dirname, 'tsconfig.test.json')
 const fixturesPath = resolve(__dirname, '__fixtures__')
@@ -83,6 +85,45 @@ describe.runIf(isUnix)('component fixture', () => {
       expect(res).toMatchSnapshot()
     })
   }
+})
+
+describe('generateDocgenCodeBlock', () => {
+  const createDoc = (displayName: string) =>
+    ({
+      displayName,
+      description: '',
+      props: {},
+    }) as unknown as ComponentDoc
+
+  it('separates the generated block from a source without a trailing newline', () => {
+    const source =
+      'export const Button = ({ label }: ButtonProps) => {\n  return <button>{label}</button>\n}'
+
+    const { code } = generateDocgenCodeBlock({
+      filename: 'Button.tsx',
+      source,
+      componentDocs: [createDoc('Button')],
+      setDisplayName: false,
+      typePropName: 'type',
+    })
+
+    expect(code.startsWith(`${source}\n`)).toBe(true)
+    expect(code).not.toContain('}try')
+  })
+
+  it('separates multiple generated blocks with a newline', () => {
+    const source = 'export const Button = () => null\n'
+    const { code } = generateDocgenCodeBlock({
+      filename: 'Button.tsx',
+      source,
+      componentDocs: [createDoc('Button'), createDoc('OtherButton')],
+      setDisplayName: false,
+      typePropName: 'type',
+    })
+
+    expect(code).not.toContain('}try')
+    expect(code.split('try {')).toHaveLength(3)
+  })
 })
 
 it.runIf(isUnix)('generates value info for enums', async () => {
