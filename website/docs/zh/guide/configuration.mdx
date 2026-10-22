@@ -157,12 +157,67 @@ const config: StorybookConfig = {
 export default config
 ```
 
-#### 组件 docgen
+### Vue 选项
 
-Storybook 11 在 Storybook server 上提取组件元数据（`features.docgenServer`）。对于 React 和 Vue，只要安装了 `typescript` 包，它就默认开启。它从 TypeScript 类型和解构默认值中读取 props，不读取 `propTypes` 或 `defaultProps`。
+对于 `storybook-vue3-rsbuild`，`framework.options.docgen` 用于选择组件 props、events、slots 和 exposes 的 builder docgen 引擎。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-vue3-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-vue3-rsbuild',
+    options: {
+      docgen: {
+        plugin: 'vue-component-meta',
+        tsconfig: 'tsconfig.app.json',
+      },
+    },
+  },
+  stories: [],
+}
+
+export default config
+```
+
+- `false`：关闭 builder docgen。
+- `'vue-docgen-api'`（默认）或 `'vue-component-meta'`：指定引擎。
+- `{ plugin: 'vue-component-meta', tsconfig }`：传入 tsconfig 路径，相对项目根目录解析。默认为 `'tsconfig.json'`；当根 tsconfig 只包含 references 时需要显式设置。
+
+server 端 docgen 开启时（默认情况），这些选项会被忽略。
+
+### Web Components 选项
+
+对于 `storybook-web-components-rsbuild`，`framework.options.customElementsManifest` 指向一个或多个 Custom Elements Manifest 文件。
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-web-components-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-web-components-rsbuild',
+    options: {
+      customElementsManifest: './custom-elements.json',
+    },
+  },
+  stories: [],
+}
+
+export default config
+```
+
+路径相对 Storybook 配置目录解析。未设置该选项时，Storybook 会读取最近 `package.json` 的 `customElements` 字段。manifest 未声明的 tag 会从项目源码中生成。
+
+### 组件 docgen
+
+Storybook 11 在 Storybook server 上提取组件元数据（`features.docgenServer`）。React、Vue 和 Web Components 默认开启。React 和 Vue 需要安装 `typescript` 包；Web Components 自带该依赖。原生 HTML 没有 docgen。
+
+React 的 props 来自 TypeScript 类型。默认值依次取自解构默认值、`Component.defaultProps` / `static defaultProps`、JSDoc `@default` / `@defaultValue`。不读取 `propTypes`。
 
 :::warning Builder docgen 已废弃
-React 的 `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` 和 Vue 的 `framework.options.docgen` 只在 `features.docgenServer` 为 `false` 或未安装 `typescript` 时运行。它们已被废弃，并将在 Storybook 12 中移除。
+React 的 `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` 和 Vue 的 `framework.options.docgen` 只在 `features.docgenServer` 解析为 `false` 时运行。不设置该 flag 时，未安装 `typescript` 的 React 或 Vue 项目会自动回退到 builder docgen；显式设置 `features.docgenServer: true` 时，即使没有 `typescript`，builder docgen 也会被跳过。这两个选项已废弃，将在 Storybook 12 中移除。
 :::
 
 如果暂时需要保留 builder docgen：

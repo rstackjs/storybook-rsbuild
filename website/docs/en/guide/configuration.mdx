@@ -157,12 +157,67 @@ const config: StorybookConfig = {
 export default config
 ```
 
-#### Component docgen
+### Vue Options
 
-Storybook 11 extracts component metadata on the Storybook server (`features.docgenServer`). For React and Vue it is on by default when the `typescript` package is installed. It reads props from TypeScript types and inline destructuring defaults; it does not read `propTypes` or `defaultProps`.
+For `storybook-vue3-rsbuild`, `framework.options.docgen` selects the builder docgen engine for component props, events, slots, and exposes.
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-vue3-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-vue3-rsbuild',
+    options: {
+      docgen: {
+        plugin: 'vue-component-meta',
+        tsconfig: 'tsconfig.app.json',
+      },
+    },
+  },
+  stories: [],
+}
+
+export default config
+```
+
+- `false` disables builder docgen.
+- `'vue-docgen-api'` (the default) or `'vue-component-meta'` picks the engine.
+- `{ plugin: 'vue-component-meta', tsconfig }` passes a tsconfig path, resolved relative to the project root. It defaults to `'tsconfig.json'`; set it when your root tsconfig only contains references.
+
+These options are ignored while server-side docgen is on, which is the default.
+
+### Web Components Options
+
+For `storybook-web-components-rsbuild`, `framework.options.customElementsManifest` points at one or more Custom Elements Manifest files.
+
+```ts twoslash title=".storybook/main.ts"
+// @noErrors
+import type { StorybookConfig } from 'storybook-web-components-rsbuild'
+
+const config: StorybookConfig = {
+  framework: {
+    name: 'storybook-web-components-rsbuild',
+    options: {
+      customElementsManifest: './custom-elements.json',
+    },
+  },
+  stories: [],
+}
+
+export default config
+```
+
+Paths resolve relative to the Storybook config directory. When the option is omitted, Storybook reads the `customElements` field from the nearest `package.json`. Tags that no manifest declares are generated from the project sources.
+
+### Component docgen
+
+Storybook 11 extracts component metadata on the Storybook server (`features.docgenServer`). It is on by default for React, Vue, and Web Components. React and Vue need the `typescript` package installed; Web Components ship it as a dependency. Vanilla HTML has no docgen.
+
+For React, props come from TypeScript types. Default values are taken from inline destructuring defaults first, then `Component.defaultProps` / `static defaultProps`, then JSDoc `@default` / `@defaultValue`. `propTypes` is not read.
 
 :::warning Builder docgen is deprecated
-React's `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` and Vue's `framework.options.docgen` only run when `features.docgenServer` is `false` or `typescript` is not installed. They are deprecated and will be removed in Storybook 12.
+React's `typescript.reactDocgen` / `typescript.reactDocgenTypescriptOptions` and Vue's `framework.options.docgen` run only when `features.docgenServer` resolves to `false`. Leave the flag unset and React or Vue projects without `typescript` fall back to builder docgen automatically; set `features.docgenServer: true` explicitly and builder docgen is skipped even without `typescript`. Both options are deprecated and will be removed in Storybook 12.
 :::
 
 To keep builder docgen for now:
