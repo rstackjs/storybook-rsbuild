@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
-    "@rsbuild/core": "^2.2.13",
+    "@rsbuild/core": "^2.2.14",
     "@storybook/core-webpack": "10.6.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",

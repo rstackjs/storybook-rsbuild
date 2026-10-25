@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
-    "@rsbuild/core": "^2.2.13",
+    "@rsbuild/core": "^2.2.14",
     "@types/node": "^22.0.0",
     "storybook": "10.6.2",
     "typescript": "^5.9.3",

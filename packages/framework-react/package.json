@@ -63,7 +63,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.59.4",
-    "@rsbuild/core": "^2.2.13",
+    "@rsbuild/core": "^2.2.14",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "@types/resolve": "^1.20.6",
