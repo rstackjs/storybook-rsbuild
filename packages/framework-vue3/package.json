@@ -44,7 +44,7 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/vue3": "^11.0.0-alpha.7",
+    "@storybook/vue3": "^11.0.0-alpha.8",
     "storybook-builder-rsbuild": "workspace:*",
     "vue-docgen-api": "^4.79.2",
     "vue-docgen-loader": "^2.0.1"
@@ -53,13 +53,13 @@
     "@microsoft/api-extractor": "^7.59.4",
     "@rsbuild/core": "^2.2.13",
     "@types/node": "^22.12.0",
-    "storybook": "11.0.0-alpha.7",
+    "storybook": "11.0.0-alpha.8",
     "typescript": "^5.9.3",
     "vue": "^3.5.44"
   },
   "peerDependencies": {
     "@rsbuild/core": "^1.5.0 || ^2.0.0-0",
-    "storybook": "^11.0.0-alpha.7",
+    "storybook": "^11.0.0-alpha.8",
     "typescript": "^5.9.0 || ^6.0.0 || ^7.0.0",
     "vue": "^3.0.0"
   },
