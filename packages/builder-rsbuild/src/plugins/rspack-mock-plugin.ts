@@ -2,7 +2,6 @@ import type { Rspack } from '@rsbuild/core'
 import { dirname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  babelParser,
   extractMockCalls,
   findMockRedirect,
   getIsExternal,
@@ -160,7 +159,6 @@ export class RspackMockPlugin {
         previewConfigPath,
         configDir: configDir ?? dirname(previewConfigPath),
       },
-      babelParser,
       compiler.context,
       findMockRedirect,
     )
