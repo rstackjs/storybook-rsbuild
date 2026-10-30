@@ -25,7 +25,9 @@ function applyPlugin(api: HooksApi) {
   const tappedVia: HooksAccessor[] = []
   let tagHook:
     ((data: TagData, cb: (error: unknown) => void) => void) | undefined
+  let processAssetsHook: (() => void) | undefined
   let startCompilation: ((compilation: unknown) => void) | undefined
+  let processAssetsStage: number | undefined
 
   // One hooks object per accessor, each recording the route it was reached by, so a plugin that
   // offers both names can report which one the code under test actually picked.
@@ -81,6 +83,14 @@ function applyPlugin(api: HooksApi) {
       assets.set(name, source)
       emitted.push(name)
     },
+    hooks: {
+      processAssets: {
+        tap: (options: { name: string; stage: number }, fn: () => void) => {
+          processAssetsStage = options.stage
+          processAssetsHook = fn
+        },
+      },
+    },
   }
 
   const compiler = {
@@ -93,6 +103,9 @@ function applyPlugin(api: HooksApi) {
       },
     },
     webpack: {
+      Compilation: {
+        PROCESS_ASSETS_STAGE_ADDITIONAL: -2000,
+      },
       sources: {
         RawSource: class {
           constructor(public value: string) {}
@@ -109,11 +122,7 @@ function applyPlugin(api: HooksApi) {
   new RspackInjectMockerRuntimePlugin().apply(compiler)
   startCompilation?.(compilation)
 
-  /**
-   * Runs the tag hook for one HTML page, each of which arrives with its own asset list, and
-   * returns the scripts that page ended up referencing.
-   */
-  const renderPage = (): string[] => {
+  const runTagHook = (): string[] => {
     const data: TagData = { assets: { js: [] } }
     tagHook?.(data, (error) => {
       if (error) {
@@ -123,11 +132,23 @@ function applyPlugin(api: HooksApi) {
     return data.assets.js
   }
 
+  /**
+   * Runs processAssets then the tag hook for one HTML page, each of which arrives with its own
+   * asset list, and returns the scripts that page ended up referencing.
+   */
+  const renderPage = (): string[] => {
+    processAssetsHook?.()
+    return runTagHook()
+  }
+
   return {
     renderPage,
+    renderPageWithoutProcessAssets: runTagHook,
+    runProcessAssets: () => processAssetsHook?.(),
     emitted,
     warnings,
     errors,
+    processAssetsStage: () => processAssetsStage,
     tapped: () => tagHook !== undefined,
     usedApi: () => tappedVia[0],
   }
@@ -194,5 +215,39 @@ describe('RspackInjectMockerRuntimePlugin', () => {
     const data: string[] = renderPage()
 
     expect(data[0]).toBe(RUNTIME_ASSET)
+  })
+
+  // Under Rsbuild/Rspack 2.3 the preview middleware finalizes its asset map before
+  // beforeAssetTagGeneration, so the runtime must be emitted during processAssets.
+  // See https://github.com/rstackjs/storybook-rsbuild/issues/618.
+  it('emits the runtime during processAssets before HTML tag generation', () => {
+    const {
+      runProcessAssets,
+      emitted,
+      processAssetsStage,
+      renderPage,
+      errors,
+    } = applyPlugin('getCompilationHooks')
+
+    expect(processAssetsStage()).toBe(-2000)
+    expect(emitted).toEqual([])
+
+    runProcessAssets()
+    expect(emitted).toEqual([RUNTIME_ASSET])
+
+    expect(renderPage()).toContain(RUNTIME_ASSET)
+    // processAssets already emitted; HTML hook must not re-emit.
+    expect(emitted).toEqual([RUNTIME_ASSET])
+    expect(errors).toEqual([])
+  })
+
+  it('still emits from the HTML hook when processAssets did not run', () => {
+    const { renderPageWithoutProcessAssets, emitted, errors } = applyPlugin(
+      'getCompilationHooks',
+    )
+
+    expect(renderPageWithoutProcessAssets()).toContain(RUNTIME_ASSET)
+    expect(emitted).toEqual([RUNTIME_ASSET])
+    expect(errors).toEqual([])
   })
 })

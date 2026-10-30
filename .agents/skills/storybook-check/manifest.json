@@ -19,7 +19,9 @@
       "intentionalDivergences": [
         "resolves the HTML plugin from compiler.options.plugins by constructor name (HtmlRspackPlugin/HtmlWebpackPlugin) instead of importing html-webpack-plugin directly",
         "warn message interpolates `String(error)` instead of upstream's bare `${error}` to satisfy the repo's typed lint (restrict-template-expressions); same output",
-        "an `eslint-disable-next-line @typescript-eslint/unbound-method` comment precedes the `HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks` lookup; code is otherwise identical"
+        "an `eslint-disable-next-line @typescript-eslint/unbound-method` comment precedes the `HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks` lookup (Rspack HtmlRspackPlugin dropped getHooks in v2)",
+        "prepends the runtime asset on every HTML page outside the emit-once guard — upstream gates the unshift with the emit, so only the first page gets the reference (#531)",
+        "emits mocker-runtime-injected.js during processAssets (PROCESS_ASSETS_STAGE_ADDITIONAL) in addition to a guarded emit in beforeAssetTagGeneration — under Rsbuild/Rspack 2.3 emitting only in the HTML hook is too late for the preview middleware (#618)"
       ]
     },
     {
