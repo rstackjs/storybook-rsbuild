@@ -1,6 +1,6 @@
 {
   "name": "storybook-react-rsbuild",
-  "version": "3.6.1",
+  "version": "4.0.0-beta.0",
   "description": "Storybook for React and Rsbuild: Develop React components in isolation with Hot Reloading.",
   "keywords": [
     "storybook",

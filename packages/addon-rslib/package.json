@@ -1,6 +1,6 @@
 {
   "name": "storybook-addon-rslib",
-  "version": "3.6.1",
+  "version": "4.0.0-beta.0",
   "description": "Storybook addon for loading configuration of Rslib",
   "keywords": [
     "storybook",
