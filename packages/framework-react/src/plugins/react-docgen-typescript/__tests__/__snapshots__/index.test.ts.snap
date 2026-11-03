@@ -402,6 +402,85 @@ catch (__react_docgen_typescript_loader_error) { }",
 }
 `;
 
+exports[`component fixture > destructured_export.tsx has code block generated 1`] = `
+{
+  "code": "const bundle = {
+  Button: (props: { label: string }) => <button>{props.label}</button>,
+  Link: (props: { label: string }) => <a>{props.label}</a>,
+}
+
+export const { Button, Link: LinkAlias } = bundle
+try {
+    // @ts-ignore
+    Button.displayName = \\"Button\\";
+    // @ts-ignore
+    Button.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Button\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }
+try {
+    // @ts-ignore
+    LinkAlias.displayName = \\"LinkAlias\\";
+    // @ts-ignore
+    LinkAlias.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"LinkAlias\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/destructured_export.tsx\\"],\\"sourcesContent\\":[\\"const bundle = {\\n  Button: (props: { label: string }) => <button>{props.label}</button>,\\n  Link: (props: { label: string }) => <a>{props.label}</a>,\\n}\\n\\nexport const { Button, Link: LinkAlias } = bundle\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACf,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACtE,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC1D;;AAEA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;;;;;;;;\\"}",
+}
+`;
+
+exports[`component fixture > dotted_display_name.tsx has code block generated 1`] = `
+{
+  "code": "const X = (props: { label: string }) => <div>{props.label}</div>
+
+X.displayName = 'Foo.Bar'
+
+export default X
+try {
+    // @ts-ignore
+    X.displayName = \\"Foo.Bar\\";
+    // @ts-ignore
+    X.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Foo.Bar\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/dotted_display_name.tsx\\"],\\"sourcesContent\\":[\\"const X = (props: { label: string }) => <div>{props.label}</div>\\n\\nX.displayName = 'Foo.Bar'\\n\\nexport default X\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAE/D,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAExB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
+}
+`;
+
+exports[`component fixture > namespace_export.tsx has code block generated 1`] = `
+{
+  "code": "// eslint-disable-next-line @typescript-eslint/no-namespace -- namespace members are the fixture's subject
+export namespace Widgets {
+  export const Button = (props: { label: string }) => (
+    <button>{props.label}</button>
+  )
+}
+try {
+    // @ts-ignore
+    Widgets.Button.displayName = \\"Widgets.Button\\";
+    // @ts-ignore
+    Widgets.Button.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Widgets.Button\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/namespace_export.tsx\\"],\\"sourcesContent\\":[\\"// eslint-disable-next-line @typescript-eslint/no-namespace -- namespace members are the fixture's subject\\nexport namespace Widgets {\\n  export const Button = (props: { label: string }) => (\\n    <button>{props.label}</button>\\n  )\\n}\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACzG,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACtD,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACjC,CAAC,CAAC;AACF;;;;;;;\\"}",
+}
+`;
+
+exports[`component fixture > object_shorthand.tsx has code block generated 1`] = `
+{
+  "code": "const Button = (props: { label: string }) => <button>{props.label}</button>
+
+export const components = { Button }
+try {
+    // @ts-ignore
+    Button.displayName = \\"Button\\";
+    // @ts-ignore
+    Button.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Button\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/object_shorthand.tsx\\"],\\"sourcesContent\\":[\\"const Button = (props: { label: string }) => <button>{props.label}</button>\\n\\nexport const components = { Button }\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAE1E,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
+}
+`;
+
 exports[`component fixture > product_card.tsx has code block generated 1`] = `
 {
   "code": "import * as React from 'react'
@@ -428,6 +507,20 @@ try {
 }
 catch (__react_docgen_typescript_loader_error) { }",
   "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/product_card.tsx\\"],\\"sourcesContent\\":[\\"import * as React from 'react'\\n\\ninterface ProductCardProps {\\n  /** Card title. */\\n  title: string\\n  highlighted?: boolean\\n}\\n\\n/**\\n * A product card.\\n */\\nconst ProductCard: React.FC<ProductCardProps> = ({ title, highlighted }) => (\\n  <div>{highlighted ? \`* \${title}\` : title}</div>\\n)\\n\\nexport default ProductCard\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAE7B,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC3B,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACnB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACd,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACtB;;AAEA,CAAC,CAAC;AACF,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACjB,CAAC,CAAC;AACF,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC5E,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAChD;;AAEA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
+}
+`;
+
+exports[`component fixture > unicode_identifier.tsx has code block generated 1`] = `
+{
+  "code": "export const Café = (props: { label: string }) => <button>{props.label}</button>
+try {
+    // @ts-ignore
+    Café.displayName = \\"Caf\\u00E9\\";
+    // @ts-ignore
+    Café.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Caf\\u00E9\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/unicode_identifier.tsx\\"],\\"sourcesContent\\":[\\"export const Café = (props: { label: string }) => <button>{props.label}</button>\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
 }
 `;
 

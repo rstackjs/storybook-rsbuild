@@ -10,7 +10,10 @@
  * import is inlined), formatted for this repo, and the default-export display
  * name comes from react-docgen-typescript's `getDefaultExportForFile` instead of
  * upstream's local copy, which mis-handles dotted filenames such as
- * `Button.styles.tsx`. The logic is otherwise unchanged.
+ * `Button.styles.tsx`. Target resolution also diverges locally: namespace
+ * members are qualified and must be reachable at module scope, destructured
+ * bindings and shorthand/property assignments resolve through their symbols,
+ * and runtime targets accept Unicode identifiers. The rest is unchanged.
  */
 
 import type { ComponentDoc } from 'react-docgen-typescript'
@@ -23,7 +26,8 @@ export interface ComponentDocWithTarget extends ComponentDoc {
   targetExpression: string | null
 }
 
-const IDENTIFIER_PATH_PATTERN = /^[$A-Z_a-z][$\w]*(?:\.[$A-Z_a-z][$\w]*)*$/
+const IDENTIFIER_PATH_PATTERN =
+  /^[$_\p{ID_Start}][$\u200C\u200D\p{ID_Continue}]*(?:\.[$_\p{ID_Start}][$\u200C\u200D\p{ID_Continue}]*)*$/u
 const RESERVED_RUNTIME_TARGET_ROOTS: ReadonlySet<string> = new Set([
   'arguments',
   'await',
@@ -114,16 +118,28 @@ const getExpressionTargetText = (
   return null
 }
 
-const getDeclarationTarget = (
+const getDeclarationName = (
   declaration: ts.Declaration,
-  sourceFile: ts.SourceFile,
   tsModule: TsModule,
-): string | null => {
+): { declaration: ts.Declaration; name: string } | null => {
+  if (
+    (tsModule.isArrowFunction(declaration) ||
+      tsModule.isFunctionExpression(declaration) ||
+      tsModule.isClassExpression(declaration)) &&
+    tsModule.isVariableDeclaration(declaration.parent) &&
+    tsModule.isIdentifier(declaration.parent.name)
+  ) {
+    return {
+      declaration: declaration.parent,
+      name: declaration.parent.name.text,
+    }
+  }
+
   if (
     tsModule.isVariableDeclaration(declaration) &&
     tsModule.isIdentifier(declaration.name)
   ) {
-    return declaration.name.text
+    return { declaration, name: declaration.name.text }
   }
 
   if (
@@ -131,7 +147,125 @@ const getDeclarationTarget = (
       tsModule.isClassDeclaration(declaration)) &&
     declaration.name
   ) {
-    return declaration.name.text
+    return { declaration, name: declaration.name.text }
+  }
+
+  if (
+    tsModule.isBindingElement(declaration) &&
+    tsModule.isIdentifier(declaration.name)
+  ) {
+    return { declaration, name: declaration.name.text }
+  }
+
+  return null
+}
+
+const getEnclosingVariableStatement = (
+  node: ts.Node,
+  tsModule: TsModule,
+): ts.VariableStatement | undefined => {
+  let current: ts.Node | undefined = node
+
+  while (current) {
+    if (tsModule.isVariableStatement(current)) {
+      return current
+    }
+    if (tsModule.isSourceFile(current) || tsModule.isModuleBlock(current)) {
+      return undefined
+    }
+    current = current.parent
+  }
+
+  return undefined
+}
+
+const isExportedDeclaration = (
+  declaration: ts.Declaration,
+  tsModule: TsModule,
+): boolean => {
+  if (
+    tsModule.isFunctionDeclaration(declaration) ||
+    tsModule.isClassDeclaration(declaration)
+  ) {
+    return hasModifier(declaration, tsModule.SyntaxKind.ExportKeyword)
+  }
+
+  const statement = getEnclosingVariableStatement(declaration, tsModule)
+  return Boolean(
+    statement && hasModifier(statement, tsModule.SyntaxKind.ExportKeyword),
+  )
+}
+
+/**
+ * Enclosing namespace path (outermost first) when the declaration is reachable
+ * at module scope, or null for function/block scopes and non-exported namespace
+ * members.
+ */
+const getModuleScopePath = (
+  declaration: ts.Declaration,
+  tsModule: TsModule,
+): string[] | null => {
+  const namespacePath: string[] = []
+  let node: ts.Node = declaration
+
+  while (node.parent) {
+    const parent = node.parent
+
+    if (tsModule.isSourceFile(parent)) {
+      if (
+        namespacePath.length > 0 &&
+        !isExportedDeclaration(declaration, tsModule)
+      ) {
+        return null
+      }
+      return namespacePath.reverse()
+    }
+
+    if (tsModule.isModuleBlock(parent)) {
+      const moduleDeclaration = parent.parent
+      if (
+        !tsModule.isModuleDeclaration(moduleDeclaration) ||
+        !tsModule.isIdentifier(moduleDeclaration.name) ||
+        !hasModifier(moduleDeclaration, tsModule.SyntaxKind.ExportKeyword)
+      ) {
+        return null
+      }
+      namespacePath.push(moduleDeclaration.name.text)
+      node = moduleDeclaration
+      continue
+    }
+
+    if (
+      tsModule.isVariableDeclaration(parent) ||
+      tsModule.isVariableDeclarationList(parent) ||
+      tsModule.isVariableStatement(parent) ||
+      tsModule.isObjectBindingPattern(parent) ||
+      tsModule.isArrayBindingPattern(parent)
+    ) {
+      node = parent
+      continue
+    }
+
+    // Function body, block, class body, etc. — not module scope.
+    return null
+  }
+
+  return null
+}
+
+const getDeclarationTarget = (
+  declaration: ts.Declaration,
+  sourceFile: ts.SourceFile,
+  tsModule: TsModule,
+): string | null => {
+  const named = getDeclarationName(declaration, tsModule)
+
+  if (named) {
+    const namespacePath = getModuleScopePath(named.declaration, tsModule)
+    if (!namespacePath) {
+      return null
+    }
+    return [...namespacePath, named.name].join('.')
   }
 
   if (tsModule.isExportAssignment(declaration)) {
@@ -158,7 +292,13 @@ const getTargetFromSymbol = (
   checker: ts.TypeChecker,
   sourceFile: ts.SourceFile,
   tsModule: TsModule,
+  seen: Set<ts.Symbol> = new Set(),
 ): string | null => {
+  if (seen.has(symbol)) {
+    return null
+  }
+  seen.add(symbol)
+
   const candidateSymbols = [symbol]
 
   if (symbol.flags & tsModule.SymbolFlags.Alias) {
@@ -181,6 +321,44 @@ const getTargetFromSymbol = (
         continue
       }
 
+      if (tsModule.isShorthandPropertyAssignment(declaration)) {
+        const valueSymbol =
+          checker.getShorthandAssignmentValueSymbol(declaration)
+        const target = valueSymbol
+          ? getTargetFromSymbol(
+              valueSymbol,
+              checker,
+              sourceFile,
+              tsModule,
+              seen,
+            )
+          : null
+        if (target) {
+          return target
+        }
+        continue
+      }
+
+      if (
+        tsModule.isPropertyAssignment(declaration) &&
+        tsModule.isIdentifier(declaration.initializer)
+      ) {
+        const valueSymbol = checker.getSymbolAtLocation(declaration.initializer)
+        const target = valueSymbol
+          ? getTargetFromSymbol(
+              valueSymbol,
+              checker,
+              sourceFile,
+              tsModule,
+              seen,
+            )
+          : null
+        if (target) {
+          return target
+        }
+        continue
+      }
+
       const targetExpression = getDeclarationTarget(
         declaration,
         sourceFile,
@@ -199,6 +377,23 @@ const getTargetFromSymbol = (
   return null
 }
 
+const collectBindingTargets = (
+  name: ts.BindingName,
+  tsModule: TsModule,
+  targets: string[],
+): void => {
+  if (tsModule.isIdentifier(name)) {
+    targets.push(name.text)
+    return
+  }
+
+  for (const element of name.elements) {
+    if (tsModule.isBindingElement(element)) {
+      collectBindingTargets(element.name, tsModule, targets)
+    }
+  }
+}
+
 const getDeclarationStatementTarget = (
   statement: ts.Statement,
   tsModule: TsModule,
@@ -207,9 +402,7 @@ const getDeclarationStatementTarget = (
     const targets: string[] = []
 
     for (const declaration of statement.declarationList.declarations) {
-      if (tsModule.isIdentifier(declaration.name)) {
-        targets.push(declaration.name.text)
-      }
+      collectBindingTargets(declaration.name, tsModule, targets)
     }
 
     return targets
