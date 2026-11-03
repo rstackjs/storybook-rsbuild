@@ -4,10 +4,13 @@ import type { FileParser } from 'react-docgen-typescript'
 import type { CompilerOptions, Program } from 'typescript'
 import { defaultPropFilter } from './utils/filter'
 import type { Options } from './utils/options'
+import { resolveComponentDocRuntimeTargets } from './utils/runtime-target'
 
 type Filepath = string
 type InvalidateModule = () => void
 type CloseWatch = () => void
+
+let typescriptModule: typeof import('typescript')
 
 const getDocgen = async (config: Options) => {
   const docGen = await import('react-docgen-typescript')
@@ -24,6 +27,7 @@ const getDocgen = async (config: Options) => {
   const docgenOptions = {
     propFilter,
     ...rest,
+    shouldIncludeExpression: true,
   }
 
   return docGen.withCompilerOptions(
@@ -40,6 +44,7 @@ const startProgram = async (
 ) => {
   const { default: ts } = await import('typescript')
   const { getTSConfigFile } = await import('./utils/typescript')
+  typescriptModule = ts
 
   let compilerOptions: CompilerOptions = {
     jsx: ts.JsxEmit.React,
@@ -155,10 +160,24 @@ export default (config: Options = {}): RsbuildPlugin => {
               return { code: src }
             }
 
+            const sourceFile = tsProgram.getSourceFile(id)
+            if (!sourceFile) {
+              throw new Error(
+                `Internal error: source file "${id}" was not found in the active TypeScript program`,
+              )
+            }
+
+            const resolvedDocs = resolveComponentDocRuntimeTargets(
+              componentDocs,
+              tsProgram.getTypeChecker(),
+              sourceFile,
+              typescriptModule,
+            )
+
             const res = generateDocgenCodeBlock({
               filename: id,
               source: src,
-              componentDocs,
+              componentDocs: resolvedDocs,
               ...generateOptions,
             })
 

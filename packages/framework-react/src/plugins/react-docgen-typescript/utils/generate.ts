@@ -6,11 +6,13 @@
 import MagicString from 'magic-string'
 import type { ComponentDoc, PropItem } from 'react-docgen-typescript'
 import ts from 'typescript'
+import type { ComponentDocWithTarget } from './runtime-target'
+import { isSupportedRuntimeTargetExpression } from './runtime-target'
 
 export interface GeneratorOptions {
   filename: string
   source: string
-  componentDocs: ComponentDoc[]
+  componentDocs: ComponentDocWithTarget[]
   setDisplayName: boolean
   typePropName: string
 }
@@ -59,12 +61,12 @@ function insertTsIgnoreBeforeStatement(statement: ts.Statement): ts.Statement {
  * SimpleComponent.displayName = "SimpleComponent";
  * ```
  */
-function setDisplayName(d: ComponentDoc): ts.Statement {
+function setDisplayName(d: ComponentDoc, target: string): ts.Statement {
   return insertTsIgnoreBeforeStatement(
     ts.factory.createExpressionStatement(
       ts.factory.createBinaryExpression(
         ts.factory.createPropertyAccessExpression(
-          ts.factory.createIdentifier(d.displayName),
+          ts.factory.createIdentifier(target),
           ts.factory.createIdentifier('displayName'),
         ),
         ts.SyntaxKind.EqualsToken,
@@ -236,13 +238,14 @@ function createPropDefinition(
 function setComponentDocGen(
   d: ComponentDoc,
   options: GeneratorOptions,
+  target: string,
 ): ts.Statement {
   return insertTsIgnoreBeforeStatement(
     ts.factory.createExpressionStatement(
       ts.factory.createBinaryExpression(
         // SimpleComponent.__docgenInfo
         ts.factory.createPropertyAccessExpression(
-          ts.factory.createIdentifier(d.displayName),
+          ts.factory.createIdentifier(target),
           ts.factory.createIdentifier('__docgenInfo'),
         ),
         ts.SyntaxKind.EqualsToken,
@@ -294,14 +297,22 @@ export function generateDocgenCodeBlock(options: GeneratorOptions): {
       undefined,
     )
 
-  const codeBlocks = options.componentDocs.map((d) =>
-    wrapInTryStatement(
-      [
-        options.setDisplayName ? setDisplayName(d) : null,
-        setComponentDocGen(d, options),
-      ].filter((s) => s !== null),
-    ),
-  )
+  const codeBlocks = options.componentDocs.flatMap((d) => {
+    const target = d.targetExpression
+
+    if (!target || !isSupportedRuntimeTargetExpression(target)) {
+      return []
+    }
+
+    return [
+      wrapInTryStatement(
+        [
+          options.setDisplayName ? setDisplayName(d, target) : null,
+          setComponentDocGen(d, options, target),
+        ].filter((s) => s !== null),
+      ),
+    ]
+  })
 
   const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed })
   const printNode = (sourceNode: ts.Node) =>
