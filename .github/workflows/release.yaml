@@ -6,7 +6,20 @@ permissions:
   id-token: write # Required for OIDC
   contents: write
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        type: choice
+        description: 'npm dist-tag'
+        required: true
+        default: latest
+        options:
+          - alpha
+          - beta
+          - rc
+          - canary
+          - latest
 
 jobs:
   release:
@@ -44,11 +57,23 @@ jobs:
             const packageJson = JSON.parse(fs.readFileSync('./packages/builder-rsbuild/package.json', 'utf8'));
             return 'v' + packageJson.version;
 
+      - name: Validate npm tag
+        run: |
+          VERSION=$(node -p "require('./packages/builder-rsbuild/package.json').version")
+          if [[ "$VERSION" == *-* && "${{ inputs.npm_tag }}" == "latest" ]]; then
+            echo "::error::Prerelease $VERSION must use a non-latest npm_tag (e.g. beta)."
+            exit 1
+          fi
+          if [[ "$VERSION" != *-* && "${{ inputs.npm_tag }}" != "latest" ]]; then
+            echo "::error::Stable $VERSION must use npm_tag=latest."
+            exit 1
+          fi
+
       - name: Publish to NPM
         run: |
           git tag ${{ steps.version_to_release.outputs.result }}
           git push origin ${{ steps.version_to_release.outputs.result }}
-          pnpm -r publish --no-git-checks
+          pnpm -r publish --tag ${{ inputs.npm_tag }} --no-git-checks
 
       - name: GitHub Release
         run: pnpx changelogithub
