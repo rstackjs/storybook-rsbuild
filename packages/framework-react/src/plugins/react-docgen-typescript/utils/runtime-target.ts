@@ -7,11 +7,14 @@
  * - packages/vite-plugin-react-docgen-typescript/src/docgen/runtimeTarget.ts
  *
  * Local adjustments: the two files are merged (the `../docgen/runtimeTarget`
- * import is inlined) and formatted for this repo. The logic is unchanged.
+ * import is inlined), formatted for this repo, and the default-export display
+ * name comes from react-docgen-typescript's `getDefaultExportForFile` instead of
+ * upstream's local copy, which mis-handles dotted filenames such as
+ * `Button.styles.tsx`. The logic is otherwise unchanged.
  */
 
-import path from 'node:path'
 import type { ComponentDoc } from 'react-docgen-typescript'
+import { getDefaultExportForFile } from 'react-docgen-typescript'
 import type * as ts from 'typescript'
 
 type TsModule = typeof import('typescript')
@@ -296,17 +299,6 @@ const getDefaultExportTarget = (
   return null
 }
 
-const getDefaultExportDisplayName = (fileName: string): string => {
-  const basename = path.basename(fileName, path.extname(fileName))
-  const normalizedBasename =
-    basename === 'index' ? path.basename(path.dirname(fileName)) : basename
-  const identifier = normalizedBasename
-    .replace(/^[^A-Z]*/gi, '')
-    .replace(/[^A-Z0-9]*/gi, '')
-
-  return identifier.length ? identifier : 'DefaultName'
-}
-
 const resolveTargetExpression = (
   componentDoc: ComponentDoc,
   checker: ts.TypeChecker,
@@ -349,9 +341,7 @@ export function resolveComponentDocRuntimeTargets(
 ): ComponentDocWithTarget[] {
   const namedExportTargets = getNamedExportTargets(sourceFile, tsModule)
   const defaultExportTarget = getDefaultExportTarget(sourceFile, tsModule)
-  const defaultExportDisplayName = getDefaultExportDisplayName(
-    sourceFile.fileName,
-  )
+  const defaultExportDisplayName = getDefaultExportForFile(sourceFile)
   const usedTargets = new Set<string>()
 
   const resolvedComponentDocs = componentDocs.map((componentDoc) => {

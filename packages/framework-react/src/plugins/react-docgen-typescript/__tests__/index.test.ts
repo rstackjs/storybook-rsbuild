@@ -5,6 +5,7 @@ import ts from 'typescript'
 import reactDocgenTypescript from '../index'
 import { generateDocgenCodeBlock } from '../utils/generate'
 import type { ComponentDocWithTarget } from '../utils/runtime-target'
+import { resolveComponentDocRuntimeTargets } from '../utils/runtime-target'
 
 const tsconfigPathForTest = resolve(__dirname, 'tsconfig.test.json')
 const fixturesPath = resolve(__dirname, '__fixtures__')
@@ -156,6 +157,46 @@ describe('generateDocgenCodeBlock', () => {
     })
 
     expect(code).toBe(source)
+  })
+})
+
+describe('resolveComponentDocRuntimeTargets', () => {
+  // react-docgen-typescript derives a default export's display name from the
+  // first dot-delimited segment (`Button.styles.tsx` -> `Button`). The fallback
+  // must compare against the same value, not upstream's `Buttonstyles`.
+  it('matches the default-export fallback for dotted filenames', () => {
+    const source = 'const Button = () => null\n\nexport default Button\n'
+    const sourceFile = ts.createSourceFile(
+      'Button.styles.tsx',
+      source,
+      ts.ScriptTarget.ESNext,
+    )
+    const docs = [
+      {
+        displayName: 'Button',
+        targetExpression: null,
+        description: '',
+        props: {},
+      },
+      {
+        displayName: 'Other',
+        targetExpression: null,
+        description: '',
+        props: {},
+      },
+    ] as unknown as ComponentDocWithTarget[]
+
+    const resolved = resolveComponentDocRuntimeTargets(
+      docs,
+      {} as ts.TypeChecker,
+      sourceFile,
+      ts,
+    )
+
+    expect(resolved.map((doc) => doc.targetExpression)).toEqual([
+      'Button',
+      null,
+    ])
   })
 })
 

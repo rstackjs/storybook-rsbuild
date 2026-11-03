@@ -10,8 +10,6 @@ type Filepath = string
 type InvalidateModule = () => void
 type CloseWatch = () => void
 
-let typescriptModule: typeof import('typescript')
-
 const getDocgen = async (config: Options) => {
   const docGen = await import('react-docgen-typescript')
 
@@ -41,10 +39,9 @@ const startProgram = async (
   config: Options,
   isBuild: boolean,
   onProgramCreatedOrUpdated: (program: Program) => void,
-) => {
+): Promise<[Program, CloseWatch, typeof import('typescript')]> => {
   const { default: ts } = await import('typescript')
   const { getTSConfigFile } = await import('./utils/typescript')
-  typescriptModule = ts
 
   let compilerOptions: CompilerOptions = {
     jsx: ts.JsxEmit.React,
@@ -74,7 +71,7 @@ const startProgram = async (
       options: { ...tsConfig.options, ...compilerOptions },
       projectReferences: tsConfig.projectReferences,
     })
-    return [program, () => {}] as [Program, CloseWatch]
+    return [program, () => {}, ts]
   }
 
   const host = ts.createWatchCompilerHost(
@@ -91,14 +88,17 @@ const startProgram = async (
     onProgramCreatedOrUpdated(program.getProgram())
   }
 
-  return new Promise<[Program, CloseWatch]>((resolve) => {
-    const watch = ts.createWatchProgram(host)
-    resolve([watch.getProgram().getProgram(), () => watch.close()])
-  })
+  return new Promise<[Program, CloseWatch, typeof import('typescript')]>(
+    (resolve) => {
+      const watch = ts.createWatchProgram(host)
+      resolve([watch.getProgram().getProgram(), () => watch.close(), ts])
+    },
+  )
 }
 
 export default (config: Options = {}): RsbuildPlugin => {
   let tsProgram: Program
+  let tsModule: typeof import('typescript')
   let docGenParser: FileParser
   // prettier-ignore
   let generateDocgenCodeBlock: typeof import(
@@ -121,7 +121,7 @@ export default (config: Options = {}): RsbuildPlugin => {
 
         docGenParser = await getDocgen(config)
         generateOptions = getGenerateOptions(config)
-        ;[tsProgram, closeWatch] = await startProgram(
+        ;[tsProgram, closeWatch, tsModule] = await startProgram(
           config,
           api.context.action === 'build',
           (program) => {
@@ -162,16 +162,14 @@ export default (config: Options = {}): RsbuildPlugin => {
 
             const sourceFile = tsProgram.getSourceFile(id)
             if (!sourceFile) {
-              throw new Error(
-                `Internal error: source file "${id}" was not found in the active TypeScript program`,
-              )
+              return { code: src }
             }
 
             const resolvedDocs = resolveComponentDocRuntimeTargets(
               componentDocs,
               tsProgram.getTypeChecker(),
               sourceFile,
-              typescriptModule,
+              tsModule,
             )
 
             const res = generateDocgenCodeBlock({
