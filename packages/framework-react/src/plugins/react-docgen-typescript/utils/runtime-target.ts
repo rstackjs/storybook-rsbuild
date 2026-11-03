@@ -12,7 +12,7 @@
  * upstream's local copy, which mis-handles dotted filenames such as
  * `Button.styles.tsx`. Target resolution also diverges locally: namespace
  * members are qualified and must be reachable at module scope, destructured
- * bindings and shorthand/property assignments resolve through their symbols,
+ * bindings and shorthand properties resolve through their symbols,
  * and runtime targets accept Unicode identifiers. The rest is unchanged.
  */
 
@@ -118,82 +118,30 @@ const getExpressionTargetText = (
   return null
 }
 
+// A function/class expression is named by the variable it initializes.
 const getDeclarationName = (
   declaration: ts.Declaration,
   tsModule: TsModule,
-): { declaration: ts.Declaration; name: string } | null => {
-  if (
-    (tsModule.isArrowFunction(declaration) ||
-      tsModule.isFunctionExpression(declaration) ||
-      tsModule.isClassExpression(declaration)) &&
-    tsModule.isVariableDeclaration(declaration.parent) &&
-    tsModule.isIdentifier(declaration.parent.name)
-  ) {
-    return {
-      declaration: declaration.parent,
-      name: declaration.parent.name.text,
-    }
-  }
+): string | null => {
+  const named =
+    tsModule.isArrowFunction(declaration) ||
+    tsModule.isFunctionExpression(declaration) ||
+    tsModule.isClassExpression(declaration)
+      ? declaration.parent
+      : declaration
 
   if (
-    tsModule.isVariableDeclaration(declaration) &&
-    tsModule.isIdentifier(declaration.name)
+    (tsModule.isVariableDeclaration(named) ||
+      tsModule.isBindingElement(named) ||
+      tsModule.isFunctionDeclaration(named) ||
+      tsModule.isClassDeclaration(named)) &&
+    named.name &&
+    tsModule.isIdentifier(named.name)
   ) {
-    return { declaration, name: declaration.name.text }
-  }
-
-  if (
-    (tsModule.isFunctionDeclaration(declaration) ||
-      tsModule.isClassDeclaration(declaration)) &&
-    declaration.name
-  ) {
-    return { declaration, name: declaration.name.text }
-  }
-
-  if (
-    tsModule.isBindingElement(declaration) &&
-    tsModule.isIdentifier(declaration.name)
-  ) {
-    return { declaration, name: declaration.name.text }
+    return named.name.text
   }
 
   return null
-}
-
-const getEnclosingVariableStatement = (
-  node: ts.Node,
-  tsModule: TsModule,
-): ts.VariableStatement | undefined => {
-  let current: ts.Node | undefined = node
-
-  while (current) {
-    if (tsModule.isVariableStatement(current)) {
-      return current
-    }
-    if (tsModule.isSourceFile(current) || tsModule.isModuleBlock(current)) {
-      return undefined
-    }
-    current = current.parent
-  }
-
-  return undefined
-}
-
-const isExportedDeclaration = (
-  declaration: ts.Declaration,
-  tsModule: TsModule,
-): boolean => {
-  if (
-    tsModule.isFunctionDeclaration(declaration) ||
-    tsModule.isClassDeclaration(declaration)
-  ) {
-    return hasModifier(declaration, tsModule.SyntaxKind.ExportKeyword)
-  }
-
-  const statement = getEnclosingVariableStatement(declaration, tsModule)
-  return Boolean(
-    statement && hasModifier(statement, tsModule.SyntaxKind.ExportKeyword),
-  )
 }
 
 /**
@@ -212,21 +160,16 @@ const getModuleScopePath = (
     const parent = node.parent
 
     if (tsModule.isSourceFile(parent)) {
-      if (
-        namespacePath.length > 0 &&
-        !isExportedDeclaration(declaration, tsModule)
-      ) {
-        return null
-      }
       return namespacePath.reverse()
     }
 
+    // `node` is a namespace member statement: it must be exported to be
+    // reachable as `Namespace.member`.
     if (tsModule.isModuleBlock(parent)) {
       const moduleDeclaration = parent.parent
       if (
-        !tsModule.isModuleDeclaration(moduleDeclaration) ||
-        !tsModule.isIdentifier(moduleDeclaration.name) ||
-        !hasModifier(moduleDeclaration, tsModule.SyntaxKind.ExportKeyword)
+        !hasModifier(node, tsModule.SyntaxKind.ExportKeyword) ||
+        !tsModule.isIdentifier(moduleDeclaration.name)
       ) {
         return null
       }
@@ -258,14 +201,11 @@ const getDeclarationTarget = (
   sourceFile: ts.SourceFile,
   tsModule: TsModule,
 ): string | null => {
-  const named = getDeclarationName(declaration, tsModule)
+  const name = getDeclarationName(declaration, tsModule)
 
-  if (named) {
-    const namespacePath = getModuleScopePath(named.declaration, tsModule)
-    if (!namespacePath) {
-      return null
-    }
-    return [...namespacePath, named.name].join('.')
+  if (name) {
+    const namespacePath = getModuleScopePath(declaration, tsModule)
+    return namespacePath ? [...namespacePath, name].join('.') : null
   }
 
   if (tsModule.isExportAssignment(declaration)) {
@@ -321,38 +261,14 @@ const getTargetFromSymbol = (
         continue
       }
 
+      // `{ Button }`: follow the shorthand to the local value. react-docgen-typescript
+      // already resolves `{ Button: Impl }` property assignments itself.
       if (tsModule.isShorthandPropertyAssignment(declaration)) {
         const valueSymbol =
           checker.getShorthandAssignmentValueSymbol(declaration)
-        const target = valueSymbol
-          ? getTargetFromSymbol(
-              valueSymbol,
-              checker,
-              sourceFile,
-              tsModule,
-              seen,
-            )
-          : null
-        if (target) {
-          return target
-        }
-        continue
-      }
-
-      if (
-        tsModule.isPropertyAssignment(declaration) &&
-        tsModule.isIdentifier(declaration.initializer)
-      ) {
-        const valueSymbol = checker.getSymbolAtLocation(declaration.initializer)
-        const target = valueSymbol
-          ? getTargetFromSymbol(
-              valueSymbol,
-              checker,
-              sourceFile,
-              tsModule,
-              seen,
-            )
-          : null
+        const target =
+          valueSymbol &&
+          getTargetFromSymbol(valueSymbol, checker, sourceFile, tsModule, seen)
         if (target) {
           return target
         }
