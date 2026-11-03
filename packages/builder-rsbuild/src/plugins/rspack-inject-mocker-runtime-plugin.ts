@@ -28,32 +28,6 @@ export class RspackInjectMockerRuntimePlugin {
     }
   }
 
-  private getRuntimeSource(compiler: Rspack.Compiler) {
-    const Sources = compiler.webpack?.sources
-    if (!Sources?.RawSource) {
-      throw new Error('rspack sources is not available on compiler.webpack')
-    }
-
-    const runtimeScriptContent =
-      this.cachedRuntime ?? (this.cachedRuntime = getMockerRuntime())
-
-    return new Sources.RawSource(runtimeScriptContent)
-  }
-
-  private emitRuntimeAsset(
-    compiler: Rspack.Compiler,
-    compilation: Rspack.Compilation,
-  ) {
-    // Emit once per compilation, because re-emitting an identical asset triggers
-    // spurious rebuild loops in dev.
-    // See https://github.com/storybookjs/storybook/pull/33169.
-    if (compilation.getAsset(RUNTIME_ASSET_NAME)) {
-      return
-    }
-
-    compilation.emitAsset(RUNTIME_ASSET_NAME, this.getRuntimeSource(compiler))
-  }
-
   apply(compiler: Rspack.Compiler) {
     const HtmlPlugin = this.getHtmlPlugin(compiler)
     // DIVERGES FROM UPSTREAM — upstream only reads `getHooks`, which is enough for
@@ -69,51 +43,53 @@ export class RspackInjectMockerRuntimePlugin {
       return
     }
 
-    compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation) => {
+    // `thisCompilation` only fires for main compilations, so child compilers (which copy
+    // `compilation` taps) do not emit their own copy of the runtime.
+    compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
       // Emit from processAssets so every compilation has the runtime: on a rebuild,
       // html-rspack-plugin's `cache` fast path re-emits the previous HTML without calling
       // generateHTML, so beforeAssetTagGeneration never runs. Rsbuild 2.3 then prunes the stale
       // asset from the dev memory filesystem (web-infra-dev/rsbuild#8739) and the cached import 404s.
       // See https://github.com/rstackjs/storybook-rsbuild/issues/618.
-      const processAssetsStage =
-        compiler.webpack?.Compilation?.PROCESS_ASSETS_STAGE_ADDITIONAL ??
-        // Fallback for older stubs / compilers without Compilation constants.
-        -2000
-
       compilation.hooks.processAssets.tap(
         {
           name: PLUGIN_NAME,
-          stage: processAssetsStage,
+          stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
         () => {
-          this.emitRuntimeAsset(compiler, compilation)
+          // Emit once per compilation, because re-emitting an identical asset triggers
+          // spurious rebuild loops in dev.
+          // See https://github.com/storybookjs/storybook/pull/33169.
+          if (compilation.getAsset(RUNTIME_ASSET_NAME)) {
+            return
+          }
+
+          const runtimeScriptContent =
+            this.cachedRuntime ?? (this.cachedRuntime = getMockerRuntime())
+          compilation.emitAsset(
+            RUNTIME_ASSET_NAME,
+            new compiler.webpack.sources.RawSource(runtimeScriptContent),
+          )
         },
       )
+    })
 
+    compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation) => {
       getHtmlHooks(compilation).beforeAssetTagGeneration.tapAsync(
         PLUGIN_NAME,
         (data, cb) => {
-          try {
-            // Safety net for compilers/setups where the processAssets tap does not run. The
-            // getAsset guard above makes this a no-op when it already emitted.
-            this.emitRuntimeAsset(compiler, compilation)
+          // Reference it from every page. This hook runs once per HTML page, each
+          // with its own asset list, and each page needs the runtime before its scripts.
+          //
+          // DIVERGES FROM UPSTREAM — do not "sync" this back by copying webpack5's
+          // webpack-inject-mocker-runtime-plugin.ts. Upstream keeps this `unshift` inside its
+          // emit guard, so only its first HTML page references the runtime and `sb.mock()`
+          // silently does nothing on every later page. The bug is invisible upstream because
+          // its preview emits a single `iframe.html`. See #531, and the upstream commit that
+          // introduced it: https://github.com/storybookjs/storybook/commit/5c0c2779
+          data.assets.js.unshift(RUNTIME_ASSET_NAME)
 
-            // Reference it from every page. This hook runs once per HTML page, each
-            // with its own asset list, and each page needs the runtime before its scripts.
-            //
-            // DIVERGES FROM UPSTREAM — do not "sync" this back by copying webpack5's
-            // webpack-inject-mocker-runtime-plugin.ts. Upstream still keeps this `unshift`
-            // inside the emit guard above, so only its first HTML page references the runtime
-            // and `sb.mock()` silently does nothing on every later page. The bug is invisible
-            // upstream because its preview emits a single `iframe.html`. See #531, and the
-            // upstream commit that introduced it:
-            // https://github.com/storybookjs/storybook/commit/5c0c2779
-            data.assets.js.unshift(RUNTIME_ASSET_NAME)
-
-            cb(null, data)
-          } catch (error) {
-            cb(error as Error)
-          }
+          cb(null, data)
         },
       )
     })

@@ -21,7 +21,7 @@
         "warn message interpolates `String(error)` instead of upstream's bare `${error}` to satisfy the repo's typed lint (restrict-template-expressions); same output",
         "an `eslint-disable-next-line @typescript-eslint/unbound-method` comment precedes the `HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks` lookup (Rspack HtmlRspackPlugin dropped getHooks in v2)",
         "prepends the runtime asset on every HTML page outside the emit-once guard — upstream gates the unshift with the emit, so only the first page gets the reference (#531)",
-        "emits mocker-runtime-injected.js during processAssets (PROCESS_ASSETS_STAGE_ADDITIONAL), with a guarded emit in beforeAssetTagGeneration as a safety net — html-rspack-plugin's cached-HTML rebuild path skips the tag hook, and Rsbuild 2.3 prunes stale dev assets, so emitting only there 404s (#618)"
+        "emits mocker-runtime-injected.js from processAssets (PROCESS_ASSETS_STAGE_ADDITIONAL) on thisCompilation, leaving the HTML hook to only prepend the reference — html-rspack-plugin's cached-HTML rebuild path skips beforeAssetTagGeneration and Rsbuild 2.3 prunes stale dev assets (#618)"
       ]
     },
     {
