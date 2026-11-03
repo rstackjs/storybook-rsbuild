@@ -76,21 +76,28 @@ function applyPlugin(api: HooksApi) {
       htmlPlugin = createHtmlPlugin('HtmlRspackPlugin', [])
   }
 
-  const assets = new Map<string, unknown>()
-  const compilation = {
-    getAsset: (name: string) => assets.get(name),
-    emitAsset: (name: string, source: unknown) => {
-      assets.set(name, source)
-      emitted.push(name)
-    },
-    hooks: {
-      processAssets: {
-        tap: (options: { name: string; stage: number }, fn: () => void) => {
-          processAssetsStage = options.stage
-          processAssetsHook = fn
+  /**
+   * Builds one compilation with its own asset map and hooks, mirroring a single (re)build. The
+   * plugin taps `compiler.hooks.compilation` once, so each call to `startNewCompilation` registers
+   * fresh per-compilation hooks.
+   */
+  const createCompilation = () => {
+    const assets = new Map<string, unknown>()
+    return {
+      getAsset: (name: string) => assets.get(name),
+      emitAsset: (name: string, source: unknown) => {
+        assets.set(name, source)
+        emitted.push(name)
+      },
+      hooks: {
+        processAssets: {
+          tap: (options: { name: string; stage: number }, fn: () => void) => {
+            processAssetsStage = options.stage
+            processAssetsHook = fn
+          },
         },
       },
-    },
+    }
   }
 
   const compiler = {
@@ -120,7 +127,14 @@ function applyPlugin(api: HooksApi) {
   } as unknown as Rspack.Compiler
 
   new RspackInjectMockerRuntimePlugin().apply(compiler)
-  startCompilation?.(compilation)
+
+  const startNewCompilation = () => {
+    tagHook = undefined
+    processAssetsHook = undefined
+    processAssetsStage = undefined
+    startCompilation?.(createCompilation())
+  }
+  startNewCompilation()
 
   const runTagHook = (): string[] => {
     const data: TagData = { assets: { js: [] } }
@@ -145,6 +159,7 @@ function applyPlugin(api: HooksApi) {
     renderPage,
     renderPageWithoutProcessAssets: runTagHook,
     runProcessAssets: () => processAssetsHook?.(),
+    startNewCompilation,
     emitted,
     warnings,
     errors,
@@ -217,8 +232,8 @@ describe('RspackInjectMockerRuntimePlugin', () => {
     expect(data[0]).toBe(RUNTIME_ASSET)
   })
 
-  // Under Rsbuild/Rspack 2.3 the preview middleware finalizes its asset map before
-  // beforeAssetTagGeneration, so the runtime must be emitted during processAssets.
+  // html-rspack-plugin's cached-HTML rebuild path can skip beforeAssetTagGeneration, so the
+  // runtime must be emitted during processAssets to be present in every compilation.
   // See https://github.com/rstackjs/storybook-rsbuild/issues/618.
   it('emits the runtime during processAssets before HTML tag generation', () => {
     const {
@@ -248,6 +263,31 @@ describe('RspackInjectMockerRuntimePlugin', () => {
 
     expect(renderPageWithoutProcessAssets()).toContain(RUNTIME_ASSET)
     expect(emitted).toEqual([RUNTIME_ASSET])
+    expect(errors).toEqual([])
+  })
+
+  // A cached-HTML rebuild drops beforeAssetTagGeneration entirely, so the runtime must come from
+  // processAssets or the new compilation has no asset while the re-emitted HTML still imports it.
+  // Rsbuild 2.3 prunes the stale file and the import 404s.
+  // See https://github.com/rstackjs/storybook-rsbuild/issues/618.
+  it('emits the runtime in a cached-HTML rebuild without tag generation', () => {
+    const {
+      renderPage,
+      startNewCompilation,
+      runProcessAssets,
+      emitted,
+      errors,
+    } = applyPlugin('getCompilationHooks')
+
+    expect(renderPage()).toContain(RUNTIME_ASSET)
+    expect(emitted).toEqual([RUNTIME_ASSET])
+
+    // html-rspack-plugin's cache fast path: processAssets runs, the tag hook does not.
+    startNewCompilation()
+    expect(emitted).toEqual([RUNTIME_ASSET])
+
+    runProcessAssets()
+    expect(emitted).toEqual([RUNTIME_ASSET, RUNTIME_ASSET])
     expect(errors).toEqual([])
   })
 })

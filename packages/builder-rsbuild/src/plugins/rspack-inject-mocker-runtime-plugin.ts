@@ -70,9 +70,10 @@ export class RspackInjectMockerRuntimePlugin {
     }
 
     compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation) => {
-      // Emit during processAssets (early) so Rsbuild/Rspack 2.3 preview middleware can
-      // serve the file. Emitting only inside beforeAssetTagGeneration is too late there:
-      // iframe.html still references ./mocker-runtime-injected.js but GET returns 404.
+      // Emit from processAssets so every compilation has the runtime: on a rebuild,
+      // html-rspack-plugin's `cache` fast path re-emits the previous HTML without calling
+      // generateHTML, so beforeAssetTagGeneration never runs. Rsbuild 2.3 then prunes the stale
+      // asset from the dev memory filesystem (web-infra-dev/rsbuild#8739) and the cached import 404s.
       // See https://github.com/rstackjs/storybook-rsbuild/issues/618.
       const processAssetsStage =
         compiler.webpack?.Compilation?.PROCESS_ASSETS_STAGE_ADDITIONAL ??
@@ -93,7 +94,8 @@ export class RspackInjectMockerRuntimePlugin {
         PLUGIN_NAME,
         (data, cb) => {
           try {
-            // Safety net if processAssets did not run (unusual compiler setups).
+            // Safety net for compilers/setups where the processAssets tap does not run. The
+            // getAsset guard above makes this a no-op when it already emitted.
             this.emitRuntimeAsset(compiler, compilation)
 
             // Reference it from every page. This hook runs once per HTML page, each
