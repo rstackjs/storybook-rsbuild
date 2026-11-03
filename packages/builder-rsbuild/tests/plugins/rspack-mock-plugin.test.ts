@@ -1,179 +1,421 @@
-import type { Rspack } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
-import { resolve } from 'node:path'
-import { resolve as resolvePosix } from 'pathe'
+import { type Rspack, rspack } from '@rsbuild/core'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  rs,
+} from '@rstest/core'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join, normalize } from 'node:path'
+import { createAutomockRules } from '../../src/plugins/rsbuild-plugin-storybook-mock'
 import { RspackMockPlugin } from '../../src/plugins/rspack-mock-plugin'
 
-// `extractMockCalls` calls `telemetry('mocking', ...)` whenever it finds mocks, but nothing
-// leaves this process: `telemetry()` gates on `globalThis.SB_TELEMETRY_STATE`, which only the
-// CLI and the common preset ever set. Undefined here means every event is parked on
-// `globalThis.SB_TELEMETRY_QUEUE` and never flushed. Setting `STORYBOOK_DISABLE_TELEMETRY`
-// would not help either — `telemetry()` never reads it.
+const loggerMock = rs.hoisted(() => ({
+  debug: rs.fn(),
+  info: rs.fn(),
+  warn: rs.fn(),
+}))
 
-const fixtureDir = resolve(__dirname, '../fixtures/mock-plugin')
+rs.mock('storybook/internal/node-logger', () => ({
+  logger: loggerMock,
+}))
 
-interface Resource {
-  request: string
-  context: string
+const require = createRequire(import.meta.url)
+const automockLoader =
+  require.resolve('storybook-builder-rsbuild/loaders/rsbuild-automock-loader')
+
+let root: string
+let project: string
+let linkedProject: string
+
+const files: Record<string, string> = {
+  'package.json': JSON.stringify({ name: 'fixture' }),
+  '.storybook/preview.js': [
+    "import { sb } from 'storybook/test';",
+    "sb.mock('../src/api.js');",
+    "sb.mock('../src/utils/format.ts');",
+    "sb.mock('../src/components/Icon.tsx', { spy: true });",
+    "sb.mock('../src/query-format.ts');",
+    "sb.mock('../src/query-api.js');",
+    "sb.mock('ext-pkg');",
+    "sb.mock('server-pkg');",
+  ].join('\n'),
+  '.storybook/preview-without-mocks.js': 'export default {};',
+  '.storybook/preview-dual-pkg.js': [
+    "import { sb } from 'storybook/test';",
+    "sb.mock('dual-pkg');",
+  ].join('\n'),
+  '.storybook/preview-cjs-only-pkg.js': [
+    "import { sb } from 'storybook/test';",
+    "sb.mock('cjs-only-pkg');",
+  ].join('\n'),
+  '.storybook/preview-with-unresolvable-mock.js': [
+    "import { sb } from 'storybook/test';",
+    "sb.mock('../src/api.js');",
+    "sb.mock('../src/data');",
+  ].join('\n'),
+  'src/index.js': [
+    "import { api } from './api.js';",
+    "import { format } from '@/utils/format';",
+    "import { Button } from './components/Button';",
+    "import { ext } from 'ext-pkg';",
+    "import { server } from 'server-pkg';",
+    "import { queryApi } from './query-api.js?foo';",
+    "import { queryFormat } from '@/query-format?foo#bar';",
+    "import { other } from './other.js';",
+    'export default [api, format, Button, ext, server, queryApi, queryFormat, other];',
+  ].join('\n'),
+  'src/index-dual.js': [
+    "import { dual } from 'dual-pkg';",
+    'export default dual;',
+  ].join('\n'),
+  'src/index-cjs-only.js': [
+    "const { cjs } = require('cjs-only-pkg');",
+    'export default cjs;',
+  ].join('\n'),
+  'src/index-without-server-pkg.js': [
+    "import { api } from './api.js';",
+    "import { ext } from 'ext-pkg';",
+    'export default [api, ext];',
+  ].join('\n'),
+  'src/api.js': "export const api = 'REAL_API';",
+  'src/data.json': '{}',
+  'src/__mocks__/api.js':
+    "import { helper } from './helper.js'; export const api = 'MOCKED_API_' + helper;",
+  'src/__mocks__/helper.js': "export const helper = 'FROM_MOCKS_DIR';",
+  'src/utils/format.ts':
+    "export const format = (): string => 'REAL_FORMAT' + 'NEEDS_PROJECT_LOADER';",
+  'src/components/Button.tsx':
+    "import { Icon } from './Icon'; export const Button = () => 'BUTTON' + Icon();",
+  'src/components/Icon.tsx': "export const Icon = (): string => 'REAL_ICON';",
+  'src/query-api.js': "export const queryApi = 'REAL_QUERY_API';",
+  'src/__mocks__/query-api.js': "export const queryApi = 'MOCKED_QUERY_API';",
+  'src/query-format.ts':
+    "export const queryFormat = (): string => 'REAL_QUERY_FORMAT';",
+  'src/other.js': "export const other = 'OTHER';",
+  'node_modules/ext-pkg/package.json': JSON.stringify({
+    name: 'ext-pkg',
+    main: 'index.js',
+  }),
+  'node_modules/ext-pkg/index.js': "export const ext = 'REAL_EXT';",
+  '__mocks__/ext-pkg.js':
+    "export const ext = 'MOCKED_EXT_' + 'NEEDS_PROJECT_LOADER';",
+  // Only Node's resolver can reach this package; Rspack's browser conditions cannot.
+  'node_modules/server-pkg/package.json': JSON.stringify({
+    name: 'server-pkg',
+    exports: { '.': { node: './index.js' } },
+  }),
+  'node_modules/server-pkg/index.js': "export const server = 'REAL_SERVER';",
+  '__mocks__/server-pkg.js': "export const server = 'MOCKED_SERVER';",
+  'node_modules/dual-pkg/package.json': JSON.stringify({
+    name: 'dual-pkg',
+    exports: {
+      '.': { import: './esm.js', require: './cjs.js' },
+    },
+  }),
+  'node_modules/dual-pkg/esm.js': "export const dual = 'REAL_DUAL_ESM';",
+  'node_modules/dual-pkg/cjs.js': "export const dual = 'REAL_DUAL_CJS';",
+  'node_modules/cjs-only-pkg/package.json': JSON.stringify({
+    name: 'cjs-only-pkg',
+    exports: { '.': { require: './index.js' } },
+  }),
+  'node_modules/cjs-only-pkg/index.js': "export const cjs = 'REAL_CJS_ONLY';",
+  'project-loader.cjs':
+    "module.exports = (source) => source.replace('NEEDS_PROJECT_LOADER', 'PROJECT_LOADER_RAN');",
 }
 
-type InfrastructureLogger = ReturnType<
-  Rspack.Compiler['getInfrastructureLogger']
->
+function writeFixture() {
+  root = normalize(
+    realpathSync(mkdtempSync(join(tmpdir(), 'rspack-mock-plugin-'))),
+  )
+  project = join(root, 'project')
+  linkedProject = join(root, 'linked')
+  for (const [file, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(project, file)), { recursive: true })
+    writeFileSync(join(project, file), content)
+  }
+  symlinkSync(project, linkedProject, 'junction')
+}
 
-/**
- * Applies the plugin against a stub compiler and returns handles on the parts under test: the
- * callback given to NormalModuleReplacementPlugin, a trigger for the mock-map refresh that
- * normally runs on beforeRun, and the debug messages the plugin logged.
- *
- * `debugMessages` is what distinguishes an early return from a completed resolution: the plugin
- * only logs on a failed resolve, so an unresolvable request that produces no message proves the
- * callback bailed out before attempting resolution at all.
- */
-function applyPlugin(
-  previewConfig: 'preview-with-mock.ts' | 'preview-without-mock.ts',
-) {
-  const infoMessages: string[] = []
-  const debugMessages: string[] = []
-  const warnMessages: string[] = []
-  let replaceResource: ((resource: Resource) => void) | undefined
-  let refreshMocks: (() => void) | undefined
+function makeAutomockWrapper() {
+  const logFile = join(project, 'automock.log')
+  const wrapper = join(project, 'automock-wrapper.mjs')
+  writeFileSync(
+    wrapper,
+    `import { appendFileSync } from 'node:fs'
+import real from ${JSON.stringify(automockLoader)}
 
-  // Drives the mtime the plugin sees, standing in for the compiler's cached file system.
-  let previewMtime = 1_000
+export default function (source) {
+  appendFileSync(${JSON.stringify(logFile)}, JSON.stringify({
+    resourcePath: this.resourcePath,
+    resourceQuery: this.resourceQuery,
+    options: this.getOptions(),
+    sourceHasTypeAnnotation: String(source).includes(': string'),
+  }) + '\\n')
+  return real.call(this, source)
+}
+`,
+  )
+  return { wrapper, logFile }
+}
 
-  const compilerStub = {
-    context: fixtureDir,
-    inputFileSystem: {
-      statSync: () => ({ mtime: new Date(previewMtime) }),
-    } as unknown as Rspack.Compiler['inputFileSystem'],
-    hooks: {
-      beforeRun: {
-        tap: (_name: string, fn: () => void) => {
-          refreshMocks = fn
+beforeAll(() => {
+  writeFixture()
+})
+
+beforeEach(() => {
+  loggerMock.info.mockImplementation(() => {})
+  loggerMock.warn.mockImplementation(() => {})
+  loggerMock.debug.mockImplementation(() => {})
+})
+
+afterAll(() => {
+  rmSync(root, { recursive: true, force: true })
+})
+
+interface CompileOptions {
+  previewFile?: string
+  context?: string
+  config?: Partial<Rspack.Configuration>
+}
+
+async function compile({
+  previewFile = '.storybook/preview.js',
+  context = project,
+  config = {},
+}: CompileOptions = {}) {
+  const { wrapper } = makeAutomockWrapper()
+  const outputPath = join(
+    root,
+    'dist',
+    `${basename(context)}-${previewFile.replace(/\W/g, '-')}`,
+  )
+  const stats = await new Promise<Rspack.Stats>((resolve, reject) =>
+    rspack(
+      {
+        mode: 'development',
+        devtool: false,
+        context,
+        entry: './src/index.js',
+        output: { path: outputPath, filename: 'bundle.js' },
+        module: {
+          rules: [
+            {
+              test: /\.(ts|tsx)$/,
+              exclude: /node_modules/,
+              use: [
+                {
+                  loader: 'builtin:swc-loader',
+                  options: {
+                    jsc: { parser: { syntax: 'typescript', tsx: true } },
+                    module: { type: 'es6' },
+                  },
+                },
+              ],
+            },
+            {
+              test: /\.(js|ts|tsx)$/,
+              exclude: /node_modules/,
+              loader: join(project, 'project-loader.cjs'),
+            },
+            ...createAutomockRules(wrapper),
+          ],
+        },
+        plugins: [
+          new RspackMockPlugin({
+            previewConfigPath: join(context, previewFile),
+          }),
+        ],
+        ...config,
+        resolve: {
+          extensions: ['.tsx', '.ts', '.js'],
+          alias: { '@': join(context, 'src') },
+          ...config.resolve,
         },
       },
-      watchRun: { tap: () => {} },
-      afterCompile: { tap: () => {} },
-    } as unknown as Rspack.Compiler['hooks'],
-    getInfrastructureLogger: () =>
-      ({
-        info: (message: string) => infoMessages.push(message),
-        warn: (message: string) => warnMessages.push(message),
-        debug: (message: string) => debugMessages.push(message),
-      }) as unknown as InfrastructureLogger,
-    // The plugin reads `NormalModuleReplacementPlugin` off the compiler, so the stub can hand
-    // it a recorder and keep hold of the replacement callback. Nothing global is touched.
-    webpack: {
-      NormalModuleReplacementPlugin: class {
-        constructor(_test: RegExp, callback: (resource: Resource) => void) {
-          replaceResource = callback
+      (error, result) => {
+        if (error) {
+          reject(error)
+        } else if (result) {
+          resolve(result)
+        } else {
+          reject(new Error('Rspack did not return compilation stats'))
         }
-        apply() {}
       },
-    } as unknown as Rspack.Compiler['webpack'],
-  } satisfies Partial<Rspack.Compiler>
-
-  // `Rspack.Compiler` declares a private field, so it is nominally typed and no object literal
-  // can be asserted to it directly. The `satisfies` above is what type-checks the stub.
-  const compiler = compilerStub as unknown as Rspack.Compiler
-
-  new RspackMockPlugin({
-    previewConfigPath: resolve(fixtureDir, previewConfig),
-  }).apply(compiler)
-
-  if (!replaceResource || !refreshMocks) {
-    throw new Error('plugin did not register its replacement callback')
-  }
-  const runUpdateMocks = refreshMocks
-
-  runUpdateMocks()
-
-  // A warning here means mock resolution itself failed, which would make every assertion below
-  // pass for the wrong reason.
-  if (warnMessages.length > 0) {
-    throw new Error(
-      `plugin warned while resolving mocks: ${warnMessages.join('; ')}`,
-    )
-  }
-
-  /**
-   * Runs another compilation, optionally after the preview config has been rewritten. The plugin
-   * logs once per rebuild of a non-empty map, so `rebuildCount` reports whether it re-extracted.
-   */
-  const recompile = (mtime = previewMtime) => {
-    previewMtime = mtime
-    runUpdateMocks()
-  }
-
+    ),
+  )
+  expect(stats.toString({ all: false, errors: true })).toBe('')
+  const modules = [...stats.compilation.modules].filter(
+    (module): module is Rspack.NormalModule => 'resource' in module,
+  )
   return {
-    replaceResource,
-    recompile,
-    debugMessages,
-    rebuildCount: () => infoMessages.length,
+    bundle: readFileSync(join(outputPath, 'bundle.js'), 'utf-8'),
+    sourceOf: (file: string) => {
+      const candidates = modules.filter(
+        (candidate) =>
+          normalize(candidate.resource.split('?')[0]) === join(context, file),
+      )
+      const module =
+        candidates.find((candidate) => candidate.resource.includes('?')) ??
+        candidates[0]
+      expect(module, `module ${file}`).toBeDefined()
+      return String(module?.originalSource()?.source())
+    },
   }
 }
 
 describe('RspackMockPlugin', () => {
-  it('does not resolve anything when no mocks are declared', () => {
-    const { replaceResource, debugMessages } = applyPlugin(
-      'preview-without-mock.ts',
+  let build: Awaited<ReturnType<typeof compile>>
+
+  beforeAll(async () => {
+    build = await compile()
+  })
+
+  it('replaces a relative mock with its __mocks__ file', () => {
+    expect(build.bundle).toContain('MOCKED_API_')
+    expect(build.bundle).not.toContain('REAL_API')
+  })
+
+  it("resolves the __mocks__ file's own imports from the __mocks__ directory", () => {
+    expect(build.bundle).toContain('FROM_MOCKS_DIR')
+  })
+
+  it('automocks a module imported through an alias, after the project loaders', () => {
+    const source = build.sourceOf('src/utils/format.ts')
+    expect(source).toContain('__vitest_mocked_module__')
+    expect(source).toContain('"automock"')
+    expect(source).toContain('PROJECT_LOADER_RAN')
+  })
+
+  it('automocks a .tsx module imported without an extension and passes the spy option', () => {
+    const source = build.sourceOf('src/components/Icon.tsx')
+    expect(source).toContain('__vitest_mocked_module__')
+    expect(source).toContain('"autospy"')
+  })
+
+  it('matches a manual mock when the import carries a query', () => {
+    expect(build.bundle).toContain('MOCKED_QUERY_API')
+    expect(build.bundle).not.toContain('REAL_QUERY_API')
+  })
+
+  it('automocks a query/fragment import by its path and keeps the query', () => {
+    const source = build.sourceOf('src/query-format.ts')
+    expect(source).toContain('__vitest_mocked_module__')
+    expect(source).toContain('"automock"')
+  })
+
+  it('replaces a bare specifier with its __mocks__ file and runs the project loaders on it', () => {
+    expect(build.bundle).toContain('PROJECT_LOADER_RAN')
+    expect(build.bundle).not.toContain('REAL_EXT')
+    expect(build.sourceOf('__mocks__/ext-pkg.js')).toContain('MOCKED_EXT_')
+  })
+
+  it('replaces a package that Rspack cannot resolve with its __mocks__ file', () => {
+    expect(build.bundle).toContain('MOCKED_SERVER')
+    expect(build.bundle).not.toContain('REAL_SERVER')
+    expect(loggerMock.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('server-pkg'),
     )
-    const resource = { request: './not-a-real-module', context: fixtureDir }
-
-    replaceResource(resource)
-
-    expect(resource.request).toBe('./not-a-real-module')
-    expect(debugMessages).toEqual([])
   })
 
-  // `pathe` is a real dependency, so getIsExternal reports it as external and it takes the
-  // candidateSpecifiers path. This pins the outcome, not the shortcut: skipping the resolve is an
-  // optimisation, so removing it would leave this request untouched either way.
-  it('leaves bare specifiers that are not mocked alone', () => {
-    const { replaceResource } = applyPlugin('preview-with-mock.ts')
-    const resource = { request: 'pathe', context: fixtureDir }
-
-    replaceResource(resource)
-
-    expect(resource.request).toBe('pathe')
-  })
-
-  it('redirects a request that matches a declared mock', () => {
-    const { replaceResource } = applyPlugin('preview-with-mock.ts')
-    const resource = { request: './mocked-module', context: fixtureDir }
-
-    replaceResource(resource)
-
-    expect(resource.request).toBe(
-      resolvePosix(fixtureDir, '__mocks__/mocked-module.js'),
+  it('leaves unmocked modules alone', () => {
+    expect(build.bundle).toContain('OTHER')
+    expect(build.sourceOf('src/other.js')).not.toContain(
+      '__vitest_mocked_module__',
     )
   })
 
-  describe('mock map caching', () => {
-    it('reuses the map while the preview config mtime is unchanged', () => {
-      const { recompile, rebuildCount } = applyPlugin('preview-with-mock.ts')
+  it('runs the automock loader after swc and passes spy through rule options', () => {
+    const log = readFileSync(join(project, 'automock.log'), 'utf-8')
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
 
-      recompile()
+    const format = log.find((entry) => entry.resourcePath.endsWith('format.ts'))
+    const icon = log.find((entry) => entry.resourcePath.endsWith('Icon.tsx'))
 
-      expect(rebuildCount()).toBe(1)
+    expect(format).toMatchObject({
+      options: { spy: 'false' },
+      sourceHasTypeAnnotation: false,
+    })
+    expect(icon).toMatchObject({
+      options: { spy: 'true' },
+      sourceHasTypeAnnotation: false,
+    })
+  })
+
+  it('mocks a dual package through its ESM entry', async () => {
+    const { sourceOf } = await compile({
+      previewFile: '.storybook/preview-dual-pkg.js',
+      config: { entry: './src/index-dual.js' },
     })
 
-    it('rebuilds the map when the preview config mtime changes', () => {
-      const { recompile, rebuildCount } = applyPlugin('preview-with-mock.ts')
+    expect(sourceOf('node_modules/dual-pkg/esm.js')).toContain(
+      '__vitest_mocked_module__',
+    )
+    expect(loggerMock.warn).not.toHaveBeenCalled()
+  })
 
-      recompile(2_000)
+  it('falls back to the commonjs resolver for a require-only package', async () => {
+    const result = await compile({
+      previewFile: '.storybook/preview-cjs-only-pkg.js',
+      config: { entry: './src/index-cjs-only.js' },
+    })
+    const { sourceOf } = result
 
-      expect(rebuildCount()).toBe(2)
+    expect(sourceOf('node_modules/cjs-only-pkg/index.js')).toContain(
+      '__vitest_mocked_module__',
+    )
+    expect(loggerMock.warn).not.toHaveBeenCalled()
+  })
+
+  it('applies relative mocks when Rspack keeps symlinked paths', async () => {
+    const { bundle } = await compile({
+      context: linkedProject,
+      config: { resolve: { symlinks: false } },
     })
 
-    // Equality rather than "newer", so restoring an older preview config is still picked up.
-    it('rebuilds the map when the preview config mtime goes backwards', () => {
-      const { recompile, rebuildCount } = applyPlugin('preview-with-mock.ts')
+    expect(bundle).toContain('MOCKED_API_')
+    expect(bundle).not.toContain('REAL_API')
+  })
 
-      recompile(500)
-
-      expect(rebuildCount()).toBe(2)
+  // Node resolves `../src/data` to `data.json`; Rspack's configured extensions do not.
+  it('warns about a mock that Rspack cannot resolve and keeps the others', async () => {
+    const { bundle } = await compile({
+      previewFile: '.storybook/preview-with-unresolvable-mock.js',
+      config: { entry: './src/index-without-server-pkg.js' },
     })
+
+    expect(bundle).toContain('MOCKED_API_')
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Could not resolve "../src/data"'),
+    )
+  })
+
+  it('changes nothing when the preview file has no mocks', async () => {
+    const { bundle } = await compile({
+      previewFile: '.storybook/preview-without-mocks.js',
+      config: { entry: './src/index-without-server-pkg.js' },
+    })
+
+    expect(bundle).toContain('REAL_API')
+    expect(bundle).toContain('REAL_EXT')
+    expect(bundle).not.toContain('__vitest_mocked_module__')
+    expect(loggerMock.info).not.toHaveBeenCalled()
+    expect(loggerMock.warn).not.toHaveBeenCalled()
   })
 })

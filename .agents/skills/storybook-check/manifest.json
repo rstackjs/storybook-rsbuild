@@ -7,10 +7,11 @@
       "upstream": "code/builders/builder-webpack5/src/plugins/webpack-mock-plugin.ts",
       "local": "packages/builder-rsbuild/src/plugins/rspack-mock-plugin.ts",
       "intentionalDivergences": [
-        "normalizePath() applied to mockMap keys and resolved requests — pathe and require.resolve disagree on Windows path separators",
-        "optional `configDir` plugin option not present upstream",
-        "uses compiler.getInfrastructureLogger instead of storybook/internal/node-logger",
-        "passes compiler directly to NormalModuleReplacementPlugin.apply; the redundant `as any` assertion is rejected by Rstack 0.7.4 typed lint"
+        "matching is done in `beforeResolve` with a per-request Rspack `resolveSync` lookup instead of upstream's `afterResolve` match on the already-resolved `createData.resource`; Rspack computes rules and loaders before `afterResolve`, and its JS `normalModuleFactory.hooks.resolve` does not re-enter Rust resolution (web-infra-dev/rspack@124d2b66, crates/rspack_core/src/normal_module_factory.rs)",
+        "the mock map is refreshed in `thisCompilation` and awaited by the first `beforeResolve` instead of `beforeRun`/`watchRun`: Rspack creates `ResolverFactory` before defaults are applied (https://github.com/web-infra-dev/rspack/blob/124d2b66c13e928e378f8fb8c84b721390c3865b/packages/rspack/src/Compiler.ts#L342-L348) but only passes the defaulted resolve options to the binding when `#getInstance` constructs `JsCompiler` (https://github.com/web-infra-dev/rspack/blob/124d2b66c13e928e378f8fb8c84b721390c3865b/crates/rspack_binding_api/src/lib.rs#L373-L379), after `beforeRun` (https://github.com/web-infra-dev/rspack/blob/124d2b66c13e928e378f8fb8c84b721390c3865b/packages/rspack/src/Compiler.ts#L628-L638); a `commonjs` resolver created there is cached without default `byDependency` and fails with PackagePathNotExported. Repro: a package whose exports map only has a require condition fails with PackagePathNotExported from beforeRun but resolves from thisCompilation",
+        "automock is applied by two `resourceQuery`-gated `enforce: 'post'` rules carrying `spy` in rule options, instead of upstream's inline `automockLoader?spy=...!resource` request that webpack re-resolves; the post placement keeps the loader after swc and before export-order-loader",
+        "`beforeResolve` does not expose the dependency type, so each request is resolved with the `esm` resolver first and the `commonjs` resolver as fallback; rule-level `resolve` overrides are also unavailable before resolution",
+        "optional `configDir` plugin option not present upstream"
       ]
     },
     {
