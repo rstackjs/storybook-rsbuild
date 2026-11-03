@@ -143,11 +143,6 @@ export class RspackMockPlugin {
             await this.updatePromise
           }
 
-          // Skip the resolver call entirely when no `sb.mock()` calls are declared.
-          if (this.mocksByPath.size === 0) {
-            return
-          }
-
           const { request } = resolveData
           if (!request || isUnmatchableRequest(request)) {
             return
@@ -155,11 +150,17 @@ export class RspackMockPlugin {
 
           // A package the browser build cannot resolve, such as one with a server-only
           // `exports` map, still needs its manual mock, so redirect it by exact request
-          // before the resolver runs at all.
+          // before the resolver runs at all. This runs even when no mock path resolved:
+          // the redirect map is the only record of such a package.
           const redirectPath = this.redirectsBySpecifier.get(request)
           if (redirectPath) {
             resolveData.request = redirectPath
             resolveData.context = dirname(redirectPath)
+            return
+          }
+
+          // Skip the per-request resolver probe when no declared mock resolved to a path.
+          if (this.mocksByPath.size === 0) {
             return
           }
 

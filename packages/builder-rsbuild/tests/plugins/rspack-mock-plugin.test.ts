@@ -54,6 +54,10 @@ const files: Record<string, string> = {
     "sb.mock('server-pkg');",
   ].join('\n'),
   '.storybook/preview-without-mocks.js': 'export default {};',
+  '.storybook/preview-only-server-pkg.js': [
+    "import { sb } from 'storybook/test';",
+    "sb.mock('server-pkg');",
+  ].join('\n'),
   '.storybook/preview-dual-pkg.js': [
     "import { sb } from 'storybook/test';",
     "sb.mock('dual-pkg');",
@@ -85,6 +89,10 @@ const files: Record<string, string> = {
   'src/index-cjs-only.js': [
     "const { cjs } = require('cjs-only-pkg');",
     'export default cjs;',
+  ].join('\n'),
+  'src/index-only-server-pkg.js': [
+    "import { server } from 'server-pkg';",
+    'export default server;',
   ].join('\n'),
   'src/index-without-server-pkg.js': [
     "import { api } from './api.js';",
@@ -329,6 +337,16 @@ describe('RspackMockPlugin', () => {
     expect(loggerMock.warn).not.toHaveBeenCalledWith(
       expect.stringContaining('server-pkg'),
     )
+  })
+
+  it('redirects a node-only package when it is the only declared mock', async () => {
+    const { bundle } = await compile({
+      previewFile: '.storybook/preview-only-server-pkg.js',
+      config: { entry: './src/index-only-server-pkg.js' },
+    })
+
+    expect(bundle).toContain('MOCKED_SERVER')
+    expect(bundle).not.toContain('REAL_SERVER')
   })
 
   it('leaves unmocked modules alone', () => {
