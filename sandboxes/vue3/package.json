@@ -13,7 +13,7 @@
     "vue": "^3.5.44"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^5.5.1",
+    "@chromatic-com/storybook": "^5.6.0",
     "@rsbuild/core": "^2.2.14",
     "@rsbuild/plugin-vue": "1.2.9",
     "@storybook/addon-docs": "10.6.5",
