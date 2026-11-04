@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import type { ComponentDoc } from 'react-docgen-typescript'
 import ts from 'typescript'
 import reactDocgenTypescript from '../index'
 import { generateDocgenCodeBlock } from '../utils/generate'
+import type { ComponentDocWithTarget } from '../utils/runtime-target'
+import { resolveComponentDocRuntimeTargets } from '../utils/runtime-target'
 
 const tsconfigPathForTest = resolve(__dirname, 'tsconfig.test.json')
 const fixturesPath = resolve(__dirname, '__fixtures__')
@@ -88,12 +89,16 @@ describe.runIf(isUnix)('component fixture', () => {
 })
 
 describe('generateDocgenCodeBlock', () => {
-  const createDoc = (displayName: string) =>
+  const createDoc = (
+    displayName: string,
+    targetExpression: string | null = displayName,
+  ) =>
     ({
       displayName,
+      targetExpression,
       description: '',
       props: {},
-    }) as unknown as ComponentDoc
+    }) as unknown as ComponentDocWithTarget
 
   it('separates the generated block from a source without a trailing newline', () => {
     const source =
@@ -112,7 +117,8 @@ describe('generateDocgenCodeBlock', () => {
   })
 
   it('separates multiple generated blocks with a newline', () => {
-    const source = 'export const Button = () => null\n'
+    const source =
+      'export const Button = () => null\nexport const OtherButton = () => null\n'
     const { code } = generateDocgenCodeBlock({
       filename: 'Button.tsx',
       source,
@@ -123,6 +129,74 @@ describe('generateDocgenCodeBlock', () => {
 
     expect(code).not.toContain('}try')
     expect(code.split('try {')).toHaveLength(3)
+  })
+
+  it('uses the resolved target expression as the assignment target', () => {
+    const source = 'const Local = () => null\n'
+    const { code } = generateDocgenCodeBlock({
+      filename: 'Card.tsx',
+      source,
+      componentDocs: [createDoc('Public', 'Local')],
+      setDisplayName: true,
+      typePropName: 'type',
+    })
+
+    expect(code).toContain('Local.__docgenInfo')
+    expect(code).toContain('Local.displayName = "Public"')
+    expect(code).not.toContain('Public.__docgenInfo')
+  })
+
+  it('skips docs without a resolved target', () => {
+    const source = 'export default () => null\n'
+    const { code } = generateDocgenCodeBlock({
+      filename: 'anonymous.tsx',
+      source,
+      componentDocs: [createDoc('anonymous', null)],
+      setDisplayName: true,
+      typePropName: 'type',
+    })
+
+    expect(code).toBe(source)
+  })
+})
+
+describe('resolveComponentDocRuntimeTargets', () => {
+  // react-docgen-typescript derives a default export's display name from the
+  // first dot-delimited segment (`Button.styles.tsx` -> `Button`). The fallback
+  // must compare against the same value, not upstream's `Buttonstyles`.
+  it('matches the default-export fallback for dotted filenames', () => {
+    const source = 'const Button = () => null\n\nexport default Button\n'
+    const sourceFile = ts.createSourceFile(
+      'Button.styles.tsx',
+      source,
+      ts.ScriptTarget.ESNext,
+    )
+    const docs = [
+      {
+        displayName: 'Button',
+        targetExpression: null,
+        description: '',
+        props: {},
+      },
+      {
+        displayName: 'Other',
+        targetExpression: null,
+        description: '',
+        props: {},
+      },
+    ] as unknown as ComponentDocWithTarget[]
+
+    const resolved = resolveComponentDocRuntimeTargets(
+      docs,
+      {} as ts.TypeChecker,
+      sourceFile,
+      ts,
+    )
+
+    expect(resolved.map((doc) => doc.targetExpression)).toEqual([
+      'Button',
+      null,
+    ])
   })
 })
 

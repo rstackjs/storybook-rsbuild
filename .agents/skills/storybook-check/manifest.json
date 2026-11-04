@@ -367,6 +367,7 @@
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/filter.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/generate.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/options.ts",
+      "packages/framework-react/src/plugins/react-docgen-typescript/utils/runtime-target.ts",
       "packages/framework-react/src/plugins/react-docgen-typescript/utils/typescript.ts"
     ]
   }
