@@ -44,8 +44,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "prebundle && rstack lib",
-    "dev": "prebundle && rstack lib --watch",
+    "build": "prebundle && rs lib",
+    "dev": "prebundle && rs lib --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {

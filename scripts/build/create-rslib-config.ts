@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 
-import type { RslibConfig, RslibConfigAsyncFn, Rspack } from '@rslib/core'
+import type { RslibConfig, RslibConfigAsyncFn, Rspack } from 'rstack/lib'
 import type { BuildEntries, BuildEntry } from './utils/entry-utils.ts'
 import { generatePackageJsonFile } from './utils/generate-package-json.ts'
 import {

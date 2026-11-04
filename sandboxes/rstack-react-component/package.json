@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rstack lib",
+    "build": "rs lib",
     "build:storybook": "storybook build",
     "storybook": "storybook dev -p 6006"
   },

@@ -39,8 +39,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "rstack lib",
-    "dev": "rstack lib --watch",
+    "build": "rs lib",
+    "dev": "rs lib --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {
