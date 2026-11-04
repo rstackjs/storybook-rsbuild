@@ -4,6 +4,7 @@ import type { FileParser } from 'react-docgen-typescript'
 import type { CompilerOptions, Program } from 'typescript'
 import { defaultPropFilter } from './utils/filter'
 import type { Options } from './utils/options'
+import { resolveComponentDocRuntimeTargets } from './utils/runtime-target'
 
 type Filepath = string
 type InvalidateModule = () => void
@@ -24,6 +25,7 @@ const getDocgen = async (config: Options) => {
   const docgenOptions = {
     propFilter,
     ...rest,
+    shouldIncludeExpression: true,
   }
 
   return docGen.withCompilerOptions(
@@ -37,7 +39,7 @@ const startProgram = async (
   config: Options,
   isBuild: boolean,
   onProgramCreatedOrUpdated: (program: Program) => void,
-) => {
+): Promise<[Program, CloseWatch, typeof import('typescript')]> => {
   const { default: ts } = await import('typescript')
   const { getTSConfigFile } = await import('./utils/typescript')
 
@@ -69,7 +71,7 @@ const startProgram = async (
       options: { ...tsConfig.options, ...compilerOptions },
       projectReferences: tsConfig.projectReferences,
     })
-    return [program, () => {}] as [Program, CloseWatch]
+    return [program, () => {}, ts]
   }
 
   const host = ts.createWatchCompilerHost(
@@ -86,14 +88,17 @@ const startProgram = async (
     onProgramCreatedOrUpdated(program.getProgram())
   }
 
-  return new Promise<[Program, CloseWatch]>((resolve) => {
-    const watch = ts.createWatchProgram(host)
-    resolve([watch.getProgram().getProgram(), () => watch.close()])
-  })
+  return new Promise<[Program, CloseWatch, typeof import('typescript')]>(
+    (resolve) => {
+      const watch = ts.createWatchProgram(host)
+      resolve([watch.getProgram().getProgram(), () => watch.close(), ts])
+    },
+  )
 }
 
 export default (config: Options = {}): RsbuildPlugin => {
   let tsProgram: Program
+  let tsModule: typeof import('typescript')
   let docGenParser: FileParser
   // prettier-ignore
   let generateDocgenCodeBlock: typeof import(
@@ -116,7 +121,7 @@ export default (config: Options = {}): RsbuildPlugin => {
 
         docGenParser = await getDocgen(config)
         generateOptions = getGenerateOptions(config)
-        ;[tsProgram, closeWatch] = await startProgram(
+        ;[tsProgram, closeWatch, tsModule] = await startProgram(
           config,
           api.context.action === 'build',
           (program) => {
@@ -155,10 +160,22 @@ export default (config: Options = {}): RsbuildPlugin => {
               return { code: src }
             }
 
+            const sourceFile = tsProgram.getSourceFile(id)
+            if (!sourceFile) {
+              return { code: src }
+            }
+
+            const resolvedDocs = resolveComponentDocRuntimeTargets(
+              componentDocs,
+              tsProgram.getTypeChecker(),
+              sourceFile,
+              tsModule,
+            )
+
             const res = generateDocgenCodeBlock({
               filename: id,
               source: src,
-              componentDocs,
+              componentDocs: resolvedDocs,
               ...generateOptions,
             })
 
