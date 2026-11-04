@@ -4,8 +4,8 @@
 
 - Follow **Conventional Commits**: `feat:`, `fix(builder-rsbuild):`, `chore(deps):`.
 - Subject line under 72 characters.
-- `git commit` runs the `rs hooks`-managed `.rstack/hooks/pre-commit` hook, which invokes `rstack staged` and **rewrites staged files in place**: `rstack fmt` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`. Rstack auto-sorts imports through `prettier-plugin-organize-imports` and package fields through its `sortPackageJson` setting. Invoke Rstack rather than Prettier or ESLint directly. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff. `RSTACK_HOOKS=0` is the only sanctioned emergency skip mechanism, but it is forbidden for normal work; never bypass hooks with `--no-verify`.
-- Linked worktrees (for example, `.claude/worktrees/*`) share `core.hooksPath`, but the generated `.rstack/hooks/_` directory is per checkout. Until `pnpm install` or `pnpm exec rstack hooks` has run in that worktree, Git finds no hooks and commits silently without formatting. Run one of them before the first commit in a fresh worktree.
+- `git commit` runs the `rs hooks`-managed `.rstack/hooks/pre-commit` hook, which invokes `rs staged` and **rewrites staged files in place**: `rs fmt` over staged `*.{js,jsx,ts,tsx,mjs,cjs,json,css,less,scss}`. Rstack auto-sorts imports through `prettier-plugin-organize-imports` and package fields through its `sortPackageJson` setting. Invoke Rstack rather than Prettier or ESLint directly. The commit can therefore differ from what you staged — read back with `git show HEAD` before reporting a diff. `RSTACK_HOOKS=0` is the only sanctioned emergency skip mechanism, but it is forbidden for normal work; never bypass hooks with `--no-verify`.
+- Linked worktrees (for example, `.claude/worktrees/*`) share `core.hooksPath`, but the generated `.rstack/hooks/_` directory is per checkout. Until `pnpm install` or `pnpm exec rs hooks` has run in that worktree, Git finds no hooks and commits silently without formatting. Run one of them before the first commit in a fresh worktree.
 
 ## Linking upstream storybookjs/storybook
 

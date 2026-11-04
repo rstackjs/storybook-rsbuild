@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { beforeEach, describe, expect, it, rs } from 'rstack/test'
 import * as nodeLoggerActual from 'storybook/internal/node-logger' with {
   rstest: 'importActual',
 }

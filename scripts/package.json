@@ -10,8 +10,5 @@
   "dependencies": {
     "@types/node": "^22.0.0",
     "pathe": "^1.1.2"
-  },
-  "devDependencies": {
-    "@rslib/core": "~1.0.0-rc.2"
   }
 }

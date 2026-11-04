@@ -1,5 +1,5 @@
 import type { RsbuildConfig } from '@rsbuild/core'
-import { describe, expect, it, rs } from '@rstest/core'
+import { describe, expect, it, rs } from 'rstack/test'
 import { logger } from 'storybook/internal/node-logger'
 import {
   pickRsbuildEnvironment,

@@ -1,14 +1,9 @@
 import { define } from 'rstack'
 
 define.lint(({ globalIgnores, globals, js, ts }) => [
-  globalIgnores([
-    '**/*.vue',
-    '**/.rslib/**',
-    '**/compiled/**',
-    '**/coverage/**',
-    '**/dist/**',
-    '**/storybook-static/**',
-  ]),
+  // `compiled/`, `coverage/`, `dist/` and `storybook-static/` are covered by
+  // `.gitignore`, which Rslint reads.
+  globalIgnores(['**/*.vue', '**/.rslib/**']),
   js.configs.recommended,
   ts.configs.recommendedTypeChecked,
   {
@@ -89,15 +84,15 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
 
 define.test({
   projects: [
-    './packages/*/rstest.config.ts',
-    './sandboxes/*/rstest.config.ts',
-    './tests/rstest.config.ts',
+    './packages/*/rstack.config.ts',
+    './sandboxes/*/rstack.config.ts',
+    './tests/rstack.config.ts',
   ],
 })
 
 define.staged({
-  '*.{json,css,less,scss}': 'rstack fmt --no-cache',
-  '*.{js,jsx,ts,tsx,mjs,cjs}': 'rstack fmt --no-cache',
+  '*.{json,css,less,scss}': 'rs fmt --no-cache',
+  '*.{js,jsx,ts,tsx,mjs,cjs}': 'rs fmt --no-cache',
 })
 
 // TODO: `--no-cache` on the format script in package.json and define.staged() entries above works around a

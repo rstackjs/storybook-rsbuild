@@ -1,9 +1,9 @@
 // Code taken from https://github.com/storybookjs/storybook/blob/next/code/vitest-setup.ts.
 
-import { expect, rs } from '@rstest/core'
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers'
 import path from 'node:path'
 import { createSnapshotSerializer } from 'path-serializer'
+import { expect, rs } from 'rstack/test'
 import { dedent } from 'ts-dedent'
 
 const ROOT = path.resolve(__dirname)

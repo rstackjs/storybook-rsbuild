@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import { loadAllPresets } from 'storybook/internal/common'
 import type { Options } from 'storybook/internal/types'
 import { isMswActive } from '../../src/preview/detect-msw'

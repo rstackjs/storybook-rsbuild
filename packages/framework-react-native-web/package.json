@@ -41,8 +41,8 @@
     "!src/**/*"
   ],
   "scripts": {
-    "build": "rstack lib",
-    "dev": "rstack lib --watch",
+    "build": "rs lib",
+    "dev": "rs lib --watch",
     "prepare": "pnpm run build"
   },
   "dependencies": {
@@ -52,7 +52,7 @@
     "storybook-react-rsbuild": "workspace:*"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.4",
+    "@microsoft/api-extractor": "^7.60.1",
     "@rsbuild/core": "^2.2.14",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
