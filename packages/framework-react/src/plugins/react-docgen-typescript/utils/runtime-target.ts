@@ -183,7 +183,8 @@ const getModuleScopePath = (
       tsModule.isVariableDeclarationList(parent) ||
       tsModule.isVariableStatement(parent) ||
       tsModule.isObjectBindingPattern(parent) ||
-      tsModule.isArrayBindingPattern(parent)
+      tsModule.isArrayBindingPattern(parent) ||
+      tsModule.isBindingElement(parent)
     ) {
       node = parent
       continue
@@ -232,13 +233,7 @@ const getTargetFromSymbol = (
   checker: ts.TypeChecker,
   sourceFile: ts.SourceFile,
   tsModule: TsModule,
-  seen: Set<ts.Symbol> = new Set(),
 ): string | null => {
-  if (seen.has(symbol)) {
-    return null
-  }
-  seen.add(symbol)
-
   const candidateSymbols = [symbol]
 
   if (symbol.flags & tsModule.SymbolFlags.Alias) {
@@ -261,16 +256,33 @@ const getTargetFromSymbol = (
         continue
       }
 
-      // `{ Button }`: follow the shorthand to the local value. react-docgen-typescript
-      // already resolves `{ Button: Impl }` property assignments itself.
+      // `{ Button }` names a binding: use it when module scope resolves the
+      // same name to the same value (local, import, hoisted var, destructured).
+      // react-docgen-typescript already resolves `{ Button: Impl }` itself.
       if (tsModule.isShorthandPropertyAssignment(declaration)) {
-        const valueSymbol =
-          checker.getShorthandAssignmentValueSymbol(declaration)
-        const target =
+        const name = declaration.name.text
+        const resolveAlias = (value: ts.Symbol | undefined) =>
+          value && value.flags & tsModule.SymbolFlags.Alias
+            ? checker.getAliasedSymbol(value)
+            : value
+        const valueSymbol = resolveAlias(
+          checker.getShorthandAssignmentValueSymbol(declaration),
+        )
+        const moduleSymbol = resolveAlias(
+          checker.resolveName(
+            name,
+            sourceFile,
+            tsModule.SymbolFlags.Value | tsModule.SymbolFlags.Alias,
+            false,
+          ),
+        )
+
+        if (
           valueSymbol &&
-          getTargetFromSymbol(valueSymbol, checker, sourceFile, tsModule, seen)
-        if (target) {
-          return target
+          moduleSymbol === valueSymbol &&
+          isSupportedRuntimeTargetExpression(name)
+        ) {
+          return name
         }
         continue
       }

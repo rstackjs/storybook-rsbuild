@@ -313,6 +313,27 @@ exports[`component fixture > anonymous_default.tsx has code block generated 1`] 
 }
 `;
 
+exports[`component fixture > block_var_shorthand.tsx has code block generated 1`] = `
+{
+  "code": "declare const enabled: boolean
+
+if (enabled) {
+  // eslint-disable-next-line no-var -- the hoisted var is the fixture's subject
+  var Button = (props: { label: string }) => <button>{props.label}</button>
+}
+
+export const components = { Button }
+try {
+    // @ts-ignore
+    Button.displayName = \\"Button\\";
+    // @ts-ignore
+    Button.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Button\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/block_var_shorthand.tsx\\"],\\"sourcesContent\\":[\\"declare const enabled: boolean\\n\\nif (enabled) {\\n  // eslint-disable-next-line no-var -- the hoisted var is the fixture's subject\\n  var Button = (props: { label: string }) => <button>{props.label}</button>\\n}\\n\\nexport const components = { Button }\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAE7B,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACb,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC/E,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC1E;;AAEA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
+}
+`;
+
 exports[`component fixture > compound.tsx has code block generated 1`] = `
 {
   "code": "import * as React from 'react'
@@ -446,6 +467,22 @@ catch (__react_docgen_typescript_loader_error) { }",
 }
 `;
 
+exports[`component fixture > imported_shorthand.tsx has code block generated 1`] = `
+{
+  "code": "import { SimpleComponent } from './Simple'
+
+export const components = { SimpleComponent }
+try {
+    // @ts-ignore
+    SimpleComponent.displayName = \\"SimpleComponent\\";
+    // @ts-ignore
+    SimpleComponent.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"SimpleComponent\\", \\"props\\": { \\"color\\": { \\"defaultValue\\": null, \\"description\\": \\"Button color.\\", \\"name\\": \\"color\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"\\\\"blue\\\\" | \\\\"green\\\\"\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/imported_shorthand.tsx\\"],\\"sourcesContent\\":[\\"import { SimpleComponent } from './Simple'\\n\\nexport const components = { SimpleComponent }\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAEzC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;\\"}",
+}
+`;
+
 exports[`component fixture > namespace_export.tsx has code block generated 1`] = `
 {
   "code": "// eslint-disable-next-line @typescript-eslint/no-namespace -- namespace members are the fixture's subject
@@ -462,6 +499,42 @@ try {
 }
 catch (__react_docgen_typescript_loader_error) { }",
   "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/namespace_export.tsx\\"],\\"sourcesContent\\":[\\"// eslint-disable-next-line @typescript-eslint/no-namespace -- namespace members are the fixture's subject\\nexport namespace Widgets {\\n  export const Button = (props: { label: string }) => (\\n    <button>{props.label}</button>\\n  )\\n}\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACzG,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACtD,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACjC,CAAC,CAAC;AACF;;;;;;;\\"}",
+}
+`;
+
+exports[`component fixture > nested_destructured.tsx has code block generated 1`] = `
+{
+  "code": "const bundle = {
+  nested: {
+    Button: (props: { label: string }) => <button>{props.label}</button>,
+    Link: (props: { label: string }) => <a>{props.label}</a>,
+  },
+}
+
+export const {
+  nested: { Button },
+} = bundle
+
+const {
+  nested: { Link },
+} = bundle
+
+export const components = { Link }
+try {
+    // @ts-ignore
+    Button.displayName = \\"Button\\";
+    // @ts-ignore
+    Button.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Button\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }
+try {
+    // @ts-ignore
+    Link.displayName = \\"Link\\";
+    // @ts-ignore
+    Link.__docgenInfo = { \\"description\\": \\"\\", \\"displayName\\": \\"Link\\", \\"props\\": { \\"label\\": { \\"defaultValue\\": null, \\"description\\": \\"\\", \\"name\\": \\"label\\", \\"required\\": true, \\"type\\": { \\"name\\": \\"string\\" } } } };
+}
+catch (__react_docgen_typescript_loader_error) { }",
+  "map": "{\\"version\\":3,\\"sources\\":[\\"<ROOT>/packages/framework-react/src/plugins/react-docgen-typescript/__tests__/__fixtures__/nested_destructured.tsx\\"],\\"sourcesContent\\":[\\"const bundle = {\\n  nested: {\\n    Button: (props: { label: string }) => <button>{props.label}</button>,\\n    Link: (props: { label: string }) => <a>{props.label}</a>,\\n  },\\n}\\n\\nexport const {\\n  nested: { Button },\\n} = bundle\\n\\nconst {\\n  nested: { Link },\\n} = bundle\\n\\nexport const components = { Link }\\n\\"],\\"names\\":[],\\"mappings\\":\\"AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACf,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACV,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACxE,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAC5D,CAAC,CAAC,CAAC;AACH;;AAEA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACb,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACpB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAET,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACN,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAClB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;AAET,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;;;;;;;;;;;;;;\\"}",
 }
 `;
 
