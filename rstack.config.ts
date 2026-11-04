@@ -87,11 +87,19 @@ define.lint(({ globalIgnores, globals, js, ts }) => [
   },
 ])
 
+// Every entry is an explicit project config file: a directory entry would pick
+// up packages that have no test config and run them with Rstest defaults.
 define.test({
   projects: [
-    './packages/*/rstest.config.ts',
-    './sandboxes/*/rstest.config.ts',
-    './tests/rstest.config.ts',
+    './packages/addon-rslib/rstack.config.ts',
+    './packages/addon-rstack/rstack.config.ts',
+    './packages/builder-rsbuild/rstack.config.ts',
+    './packages/framework-react/rstack.config.ts',
+    './packages/framework-vue3/rstack.config.ts',
+    './packages/framework-web-components/rstack.config.ts',
+    './packages/rsbuild-plugin-react-native-web/rstack.config.ts',
+    './sandboxes/react-18/rstack.config.ts',
+    './tests/rstack.config.ts',
   ],
 })
 
