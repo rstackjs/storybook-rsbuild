@@ -1,7 +1,7 @@
 import type { RsbuildConfig, Rspack } from '@rsbuild/core'
-import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { EventEmitter } from 'node:events'
 import { fileURLToPath } from 'node:url'
+import { afterEach, beforeEach, describe, expect, it, rs } from 'rstack/test'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import * as previewBuilder from '../src/index'
 import * as previewPreset from '../src/preview-preset'

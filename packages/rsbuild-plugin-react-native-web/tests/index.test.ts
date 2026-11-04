@@ -1,5 +1,5 @@
 import { createRsbuild } from '@rsbuild/core'
-import { afterEach, describe, expect, it } from '@rstest/core'
+import { afterEach, describe, expect, it } from 'rstack/test'
 import { pluginReactNativeWeb } from '../src'
 
 const originalNodeEnv = process.env.NODE_ENV

@@ -3,9 +3,9 @@ import {
   type RsbuildConfig,
   type Rspack,
 } from '@rsbuild/core'
-import { describe, expect, it, rs } from '@rstest/core'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { describe, expect, it, rs } from 'rstack/test'
 import { getConfig } from '../../src/index'
 import type { RsbuildBuilderOptions } from '../../src/preview/iframe-rsbuild.config'
 import createIframeRsbuildConfig from '../../src/preview/iframe-rsbuild.config'

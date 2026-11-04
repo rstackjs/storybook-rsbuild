@@ -1,4 +1,4 @@
-import { rs } from '@rstest/core'
+import { rs } from 'rstack/test'
 import type { Options } from 'storybook/internal/types'
 
 type CreateTestOptionsParams = {

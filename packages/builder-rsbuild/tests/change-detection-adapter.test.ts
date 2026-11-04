@@ -1,6 +1,6 @@
 // Tests the Rspack implementation of ChangeDetectionAdapter — resolve-config extraction
 // and watchRun-based file-change event normalisation. Ported from builder-webpack5.
-import { describe, expect, it, rs } from '@rstest/core'
+import { describe, expect, it, rs } from 'rstack/test'
 import { createRspackChangeDetectionAdapter } from '../src/change-detection-adapter'
 
 interface FakeTapable<T> {

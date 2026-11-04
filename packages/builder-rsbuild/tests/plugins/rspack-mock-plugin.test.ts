@@ -1,7 +1,7 @@
 import type { Rspack } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
 import { resolve as resolvePosix } from 'pathe'
+import { describe, expect, it } from 'rstack/test'
 import { RspackMockPlugin } from '../../src/plugins/rspack-mock-plugin'
 
 // `extractMockCalls` calls `telemetry('mocking', ...)` whenever it finds mocks, but nothing

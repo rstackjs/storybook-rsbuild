@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
+import { afterEach, describe, expect, it, rs } from 'rstack/test'
 import ts from 'typescript'
 import reactDocgenTypescript from '../index'
 import { generateDocgenCodeBlock } from '../utils/generate'

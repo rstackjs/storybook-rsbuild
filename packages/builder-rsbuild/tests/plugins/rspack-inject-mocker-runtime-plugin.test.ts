@@ -1,5 +1,5 @@
 import type { Rspack } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
+import { describe, expect, it } from 'rstack/test'
 import { RspackInjectMockerRuntimePlugin } from '../../src/plugins/rspack-inject-mocker-runtime-plugin'
 
 const RUNTIME_ASSET = 'mocker-runtime-injected.js'

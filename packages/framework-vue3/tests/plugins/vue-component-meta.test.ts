@@ -3,9 +3,9 @@ import type {
   TransformDescriptor,
   TransformHandler,
 } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
 import { experimental_vueDocgenEngine } from '@storybook/vue3/preset'
 import { join, relative } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import { getProjectRoot } from 'storybook/internal/common'
 import { vueComponentMeta } from '../../src/plugins/vue-component-meta'
 
