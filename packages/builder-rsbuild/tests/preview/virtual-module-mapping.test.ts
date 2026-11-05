@@ -37,77 +37,32 @@ const getStoriesModule = async (options: Options) => {
   return virtualModules[storiesPath]
 }
 
-// The injected exclude is anchored to path separators rather than the bare
-// `node_modules` substring, so it can't prune first-party stories when the
-// project lives under a directory whose name merely contains the substring.
-const pathSegmentExclude = '/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */'
-
-describe('virtual-module-mapping: stories context excludes node_modules', () => {
-  // Rspack's require.context (unlike webpack's) enumerates node_modules, so a
-  // dependency that ships `.stories.*` files would be swept into the preview
-  // build. Re-assert Storybook core's intent with an explicit webpackExclude.
-  it('adds a node_modules webpackExclude to the generated stories importFn', async () => {
+// Rspack's context module drops candidates under `node_modules` natively since
+// @rspack/core 2.1.0 (web-infra-dev/rspack#14576), matching webpack's
+// `RequireContextPlugin`, so the stories virtual module is upstream's
+// `toImportFn` output unchanged — no injected `webpackExclude`.
+describe('virtual-module-mapping: stories context leaves node_modules to Rspack', () => {
+  it('generates the upstream importFn without a webpackExclude', async () => {
     const mod = await getStoriesModule(createOptions())
 
     expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).toContain(pathSegmentExclude)
+    expect(mod).not.toMatch(/webpackExclude:/)
   })
 
-  // `storybook dev` uses the pipelined/lazy import form — the exclude must
-  // apply there too (it's the more common path that hits the sweep).
-  it('also excludes node_modules in development (lazy) mode', async () => {
+  // `storybook dev` uses the pipelined/lazy import form — it must stay
+  // upstream-shaped there too.
+  it('also leaves the development (lazy) importFn untouched', async () => {
     const mod = await getStoriesModule(
       createOptions(storiesConfig, 'DEVELOPMENT'),
     )
 
-    expect(mod).toContain(pathSegmentExclude)
-  })
-
-  // The exclude must be a path-segment regex, not a bare `/node_modules/`
-  // substring match — otherwise a checkout path like `/builds/node_modules-x/`
-  // would over-prune first-party stories into an empty context.
-  it('anchors the exclude to path separators, not the bare substring', async () => {
-    const mod = await getStoriesModule(createOptions())
-
-    expect(mod).not.toMatch(/webpackExclude:\s*\/node_modules\//)
-  })
-
-  // A glob whose *string* merely contains the `node_modules` substring outside a
-  // real path segment (e.g. `node_modules-cache`) is NOT intentionally targeting
-  // dependencies. Storybook core still suppresses its `(?!.*node_modules)` guard
-  // for it, so keying off that guard would skip the exclude and let the
-  // unanchored `webpackInclude` sweep real `node_modules/<pkg>/**` stories.
-  it('still excludes node_modules when a glob merely contains the substring', async () => {
-    const mod = await getStoriesModule(
-      createOptions([
-        { directory: './@(src|node_modules-cache)', files: '**/*.stories.tsx' },
-      ]),
-    )
-
     expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).toContain(pathSegmentExclude)
+    expect(mod).not.toMatch(/webpackExclude:/)
   })
 
-  // If a glob *intentionally* points into node_modules, Storybook core emits no
-  // `(?!.*node_modules)` guard — we must not override that intent.
-  it('leaves a glob that intentionally targets node_modules untouched', async () => {
-    const mod = await getStoriesModule(
-      createOptions([
-        { directory: './node_modules/some-pkg', files: '*.stories.tsx' },
-      ]),
-    )
-
-    expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).not.toContain(pathSegmentExclude)
-  })
-
-  // A brace/extglob alternation branch that is *exactly* `node_modules`
-  // (`./@(src|node_modules)`) also intentionally targets dependency stories —
-  // core suppresses its guard and the webpack builder surfaces them. The
-  // decision keys on the structured glob, not the emitted regex (where the
-  // branch hides `node_modules` behind `|`/`)` rather than path separators), so
-  // the exclude must be left off here too.
-  it('leaves a glob targeting node_modules as an alternation branch untouched', async () => {
+  // A brace/extglob alternation whose branch is `node_modules` intentionally
+  // targets dependency stories; nothing local should rewrite its include.
+  it('does not rewrite a glob targeting node_modules as an alternation branch', async () => {
     const mod = await getStoriesModule(
       createOptions([
         { directory: './@(src|node_modules)', files: '**/*.stories.tsx' },
@@ -115,7 +70,7 @@ describe('virtual-module-mapping: stories context excludes node_modules', () => 
     )
 
     expect(mod).toMatch(/webpackInclude:/)
-    expect(mod).not.toContain(pathSegmentExclude)
+    expect(mod).not.toMatch(/webpackExclude:/)
   })
 })
 
