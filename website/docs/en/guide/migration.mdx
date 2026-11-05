@@ -36,11 +36,11 @@ v4 drops support for legacy peer versions. Upgrade before you move to v4.
 
 `@rsbuild/core` must resolve to <PeerRange name="@rsbuild/core" />. Rsbuild 1.x and Rspack 1.x are no longer supported; projects that need them stay on Storybook Rsbuild `^3`.
 
-The addons and the React Native Web framework drop older peers too:
+`react-native-web` must resolve to <PeerRange name="react-native-web" /> when you use the React Native Web framework; the previous floor was `0.19.0`.
 
-- `react-native-web` (`^0.19.12 || ^0.20.0 || ^0.21.0`); the previous floor was `0.19.0`.
-- `@modern-js/app-tools` and `@modern-js/plugin` (`^3.0.0`). Modern.js 2 is no longer supported, and `@modern-js/plugin-v2` is no longer a peer.
-- `@rslib/core` (`>= 0.22.0`). 0.20 and 0.21 build against Rsbuild 2 pre-releases.
+`@modern-js/app-tools` must resolve to <PeerRange name="@modern-js/app-tools" /> when you use the Modern.js addon. Modern.js 2 is no longer supported, and `@modern-js/plugin-v2` is no longer a peer.
+
+`@rslib/core` must resolve to <PeerRange name="@rslib/core" /> when you use the Rslib addon; 0.20 and 0.21 build against Rsbuild 2 pre-releases.
 
 :::
 

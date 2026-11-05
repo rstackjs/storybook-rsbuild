@@ -36,11 +36,11 @@ v4 不再支持旧版 peer。升级到 v4 之前请先完成升级。
 
 `@rsbuild/core` 必须解析到 <PeerRange name="@rsbuild/core" />。不再支持 Rsbuild 1.x 和 Rspack 1.x；仍需要这些版本的项目请继续使用 Storybook Rsbuild `^3`。
 
-addon 和 React Native Web framework 也收紧了下限：
+使用 React Native Web framework 时，`react-native-web` 必须解析到 <PeerRange name="react-native-web" />，此前的最低版本是 `0.19.0`。
 
-- `react-native-web`（`^0.19.12 || ^0.20.0 || ^0.21.0`），此前的最低版本是 `0.19.0`。
-- `@modern-js/app-tools` 和 `@modern-js/plugin`（`^3.0.0`）。不再支持 Modern.js 2，也不再声明 `@modern-js/plugin-v2` peer。
-- `@rslib/core`（`>= 0.22.0`）。0.20 和 0.21 基于 Rsbuild 2 的预发布版本构建。
+使用 Modern.js addon 时，`@modern-js/app-tools` 必须解析到 <PeerRange name="@modern-js/app-tools" />。不再支持 Modern.js 2，也不再声明 `@modern-js/plugin-v2` peer。
+
+使用 Rslib addon 时，`@rslib/core` 必须解析到 <PeerRange name="@rslib/core" />；0.20 和 0.21 基于 Rsbuild 2 的预发布版本构建。
 
 :::
 
