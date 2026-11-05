@@ -206,15 +206,11 @@ export const start: RsbuildBuilder['start'] = async ({
     },
   })
 
-  let buildStartTime = startTime
   let progressValue = 0
+  let completedMessage: string | undefined
   const reportProgress = (newValue: number, message: string) => {
-    // Unlike builder-webpack5, reset after a completed compilation because Rspack reuses this
-    // handler for rebuilds; otherwise every later update is permanently clamped to 1.
-    if (progressValue === 1 && newValue < 1) {
-      buildStartTime = process.hrtime()
-      progressValue = 0
-    }
+    // Monotonic like builder-webpack5: rebuilds stay at 1 so the preview loader only covers the
+    // initial build (#626).
     progressValue = Math.max(newValue, progressValue)
     const progress = {
       value: progressValue,
@@ -222,7 +218,8 @@ export const start: RsbuildBuilder['start'] = async ({
     }
 
     if (progressValue === 1) {
-      progress.message = `Completed in ${printDuration(buildStartTime)}.`
+      completedMessage ??= `Completed in ${printDuration(startTime)}.`
+      progress.message = completedMessage
     }
 
     channel.emit(PREVIEW_BUILDER_PROGRESS, progress)
