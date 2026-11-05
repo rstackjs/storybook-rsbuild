@@ -135,10 +135,7 @@ const createOptions = (
   return { options, apply }
 }
 
-// TODO(rstest#1980): un-skip once rstest provides `import.meta.resolve` to
-// bundled modules; getVirtualModules calls it.
-// https://github.com/web-infra-dev/rstest/issues/1980
-describe.skip('iframe-rsbuild.config', () => {
+describe('iframe-rsbuild.config', () => {
   it('overrides rsbuild source.entry with Storybook entry', async () => {
     const { options } = createOptions()
 
