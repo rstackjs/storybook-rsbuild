@@ -285,25 +285,24 @@ describe('start', () => {
     })
   })
 
-  it('restarts progress from the next compilation value', async () => {
+  it('keeps rebuild progress at the completed value', async () => {
     const { channel, reportProgress, startOptions } = createStartHarness()
 
     await start(startOptions)
     reportProgress(1, 'done')
     reportProgress(0.2, 'building')
-    reportProgress(0.1, 'building')
+    reportProgress(1, 'done')
 
-    expect(channel.emit).toHaveBeenNthCalledWith(2, PREVIEW_BUILDER_PROGRESS, {
-      value: 0.2,
-      message: 'Building',
-    })
-    expect(channel.emit).toHaveBeenNthCalledWith(3, PREVIEW_BUILDER_PROGRESS, {
-      value: 0.2,
-      message: 'Building',
-    })
+    const emitted = channel.emit.mock.calls.map((call) => call[1])
+    expect(emitted).toHaveLength(3)
+    for (const progress of emitted) {
+      expect(progress.value).toBe(1)
+      expect(progress.message).toBe(emitted[0].message)
+    }
+    expect(emitted[0].message).toMatch(/^Completed in /)
   })
 
-  it('measures rebuild duration from the rebuild start', async () => {
+  it('measures the completion duration from startTime', async () => {
     const staleStartTime = process.hrtime()
     staleStartTime[0] -= 120
     const { channel, reportProgress, startOptions } = createStartHarness({
@@ -312,13 +311,8 @@ describe('start', () => {
 
     await start(startOptions)
     reportProgress(1, 'done')
-    reportProgress(0.2, 'building')
-    reportProgress(1, 'done')
 
-    const firstBuild = channel.emit.mock.calls[0][1]
-    const rebuild = channel.emit.mock.calls[2][1]
-    expect(firstBuild.message).toContain('minutes')
-    expect(rebuild.message).not.toContain('minutes')
+    expect(channel.emit.mock.calls[0][1].message).toContain('minutes')
   })
 
   it('applies progress tracking to the preview compiler', async () => {
