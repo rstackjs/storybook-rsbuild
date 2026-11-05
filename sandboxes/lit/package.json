@@ -14,14 +14,14 @@
     "lit": "^3.3.3"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^5.5.1",
+    "@chromatic-com/storybook": "^5.6.0",
     "@rsbuild/core": "^2.2.13",
     "@rsbuild/plugin-vue": "1.2.9",
-    "@storybook/addon-docs": "11.0.0-alpha.9",
-    "@storybook/addon-onboarding": "11.0.0-alpha.9",
-    "@storybook/web-components": "11.0.0-alpha.9",
+    "@storybook/addon-docs": "11.0.0-beta.0",
+    "@storybook/addon-onboarding": "11.0.0-beta.0",
+    "@storybook/web-components": "11.0.0-beta.0",
     "@types/node": "^22.12.0",
-    "storybook": "11.0.0-alpha.9",
+    "storybook": "11.0.0-beta.0",
     "storybook-web-components-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
   }
