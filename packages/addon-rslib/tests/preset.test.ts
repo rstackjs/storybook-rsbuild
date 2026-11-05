@@ -1,5 +1,5 @@
 import type { RsbuildConfig } from '@rsbuild/core'
-import { beforeEach, describe, expect, it, rs } from '@rstest/core'
+import { beforeEach, describe, expect, it, rs } from 'rstack/test'
 import { rsbuildFinal } from '../src/preset'
 import type { AddonOptions } from '../src/types'
 

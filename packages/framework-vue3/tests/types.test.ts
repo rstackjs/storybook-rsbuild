@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@rstest/core'
+import { describe, expect, it } from 'rstack/test'
 import type { ComponentDoc } from 'vue-docgen-api'
 import type {
   FrameworkOptions,

@@ -1,5 +1,5 @@
-import { describe, expect, it, rs } from '@rstest/core'
 import { join } from 'node:path'
+import { describe, expect, it, rs } from 'rstack/test'
 import {
   withChromaticMinimalContract,
   withStatsJsonCompat,

@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import type { Options } from 'storybook/internal/types'
 import { getVirtualModules } from '../../src/preview/virtual-module-mapping'
 import { createTestOptions } from '../fixtures/options'

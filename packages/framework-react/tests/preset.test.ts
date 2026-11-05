@@ -1,6 +1,6 @@
 import type { RsbuildConfig } from '@rsbuild/core'
-import { describe, expect, it } from '@rstest/core'
 import { createRequire } from 'node:module'
+import { describe, expect, it } from 'rstack/test'
 import { rsbuildFinal } from '../src/preset'
 
 const require = createRequire(import.meta.url)
