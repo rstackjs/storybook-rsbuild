@@ -80,7 +80,8 @@
         "SWC env.targets default comes from Rsbuild's browserslist chain (.browserslistrc / overrideBrowserslist) instead of upstream's hardcoded chrome 100/safari 15/firefox 91 floor — upstream hardcodes only because builder-webpack5 has no browserslist integration; explicit user env.targets wins identically on both sides (PR #556)",
         "B1/B11 module rules use Rsbuild's addRules() API, whose prepend ordering keeps user-provided rules later in the merged config so they retain upstream-equivalent precedence (PR #556)",
         "fallback defaults retain the builder's existing browser polyfills while adding upstream's crypto: false, and merge user fallback values last to fix the local ??= all-or-nothing bug while preserving user precedence (PR #556)",
-        "optimization.sideEffects: true is applied through Rsbuild's tools.rspack hook instead of raw webpack config (PR #556)"
+        "optimization.sideEffects: true is applied through Rsbuild's tools.rspack hook instead of raw webpack config (PR #556)",
+        "htmlPlugin.chunksSortMode is not set: upstream's 'none' is an html-webpack-plugin value; Rspack's HtmlRspackPlugin only accepts 'auto' | 'manual', so the option is left to Rsbuild's default (which picks 'manual' for multi-chunk entries) (PR #633)"
       ]
     },
     {
