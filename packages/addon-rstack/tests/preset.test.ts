@@ -1,9 +1,9 @@
 import type { RsbuildConfig } from '@rsbuild/core'
-import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { fileURLToPath } from 'node:url'
 import * as actualRstackConfig from 'rstack/config' with {
   rstest: 'importActual',
 }
+import { afterEach, beforeEach, describe, expect, it, rs } from 'rstack/test'
 import { rsbuildFinal } from '../src/preset'
 import type { AddonOptions } from '../src/types'
 

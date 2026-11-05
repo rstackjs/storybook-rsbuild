@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import type { Options } from 'storybook/internal/types'
 import { getVirtualModules } from '../../src/preview/virtual-module-mapping'
 import { createTestOptions } from '../fixtures/options'
@@ -42,10 +42,7 @@ const getStoriesModule = async (options: Options) => {
 // project lives under a directory whose name merely contains the substring.
 const pathSegmentExclude = '/* webpackExclude: /[\\\\/]node_modules[\\\\/]/ */'
 
-// TODO(rstest#1980): un-skip once rstest provides `import.meta.resolve` to
-// bundled modules; getVirtualModules calls it.
-// https://github.com/web-infra-dev/rstest/issues/1980
-describe.skip('virtual-module-mapping: stories context excludes node_modules', () => {
+describe('virtual-module-mapping: stories context excludes node_modules', () => {
   // Rspack's require.context (unlike webpack's) enumerates node_modules, so a
   // dependency that ships `.stories.*` files would be swept into the preview
   // build. Re-assert Storybook core's intent with an explicit webpackExclude.
@@ -122,10 +119,7 @@ describe.skip('virtual-module-mapping: stories context excludes node_modules', (
   })
 })
 
-// TODO(rstest#1980): un-skip once rstest provides `import.meta.resolve` to
-// bundled modules; getVirtualModules calls it.
-// https://github.com/web-infra-dev/rstest/issues/1980
-describe.skip('virtual-module-mapping: config entry imports', () => {
+describe('virtual-module-mapping: config entry imports', () => {
   it('substitutes the csf import with the builder-context path and keeps externalized imports bare', async () => {
     const options = createOptions()
     const { virtualModules, entries } = await getVirtualModules(options, false)

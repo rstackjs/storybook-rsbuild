@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import { loadAllPresets, resolveAddonName } from 'storybook/internal/common'
 
 const fixtureDir = resolve(__dirname, 'fixtures/vue3-preset-chain')

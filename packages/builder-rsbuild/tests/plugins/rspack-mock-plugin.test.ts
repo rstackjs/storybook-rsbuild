@@ -1,14 +1,5 @@
 import { type Rspack, rspack } from '@rsbuild/core'
 import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  rs,
-} from '@rstest/core'
-import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -20,6 +11,15 @@ import {
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, normalize } from 'node:path'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  rs,
+} from 'rstack/test'
 import { createAutomockRules } from '../../src/plugins/rsbuild-plugin-storybook-mock'
 import { RspackMockPlugin } from '../../src/plugins/rspack-mock-plugin'
 

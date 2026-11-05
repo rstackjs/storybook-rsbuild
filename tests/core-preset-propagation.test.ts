@@ -1,5 +1,5 @@
-import { describe, expect, it } from '@rstest/core'
 import { resolve } from 'node:path'
+import { describe, expect, it } from 'rstack/test'
 import { runCorePreset } from './helpers/runCorePreset'
 
 const workspaceRoot = resolve(__dirname, '..')

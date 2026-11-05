@@ -1,8 +1,8 @@
 // Tests the headless Rsbuild ChangeDetectionAdapter used by `storybook tools`: resolve config is read
 // from a real development-mode Rspack compiler created without a server.
 import * as rsbuildReal from '@rsbuild/core'
-import { describe, expect, it, rs } from '@rstest/core'
 import { fileURLToPath } from 'node:url'
+import { describe, expect, it, rs } from 'rstack/test'
 import { createHeadlessRsbuildChangeDetectionAdapter } from '../../src/change-detection-adapter/headless'
 import { createTestOptions } from '../fixtures/options'
 

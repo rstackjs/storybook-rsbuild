@@ -45,7 +45,7 @@ export async function generatePackageJsonFile(cwd: string, data: BuildEntries) {
   await writeFile(location, `${JSON.stringify(pkgJson, null, 2)}\n`, {})
 
   // Keep the generated package.json consistent with the repository formatter.
-  await exec(`pnpm exec rstack fmt ${location}`)
+  await exec(`pnpm exec rs fmt ${location}`)
 }
 
 function sortObject(obj: Record<string, any>) {
