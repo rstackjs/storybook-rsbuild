@@ -31,9 +31,17 @@ Match your Storybook version to the correct storybook-rsbuild release:
 Storybook 11 removed the React legacy root API. Remove `legacyRootApi` from `framework.options`; React 18 or 19 is required.
 :::
 
-:::info Rsbuild 2
-Storybook Rsbuild v4 supports Rsbuild 2 / Rspack 2 only. Upgrade `@rsbuild/core` to <PeerRange name="@rsbuild/core" /> before you move to v4; Rsbuild 1.x projects must stay on Storybook Rsbuild `^3`.
-:::
+:::info Dropped peer versions
+v4 drops support for legacy peer versions. Upgrade before you move to v4.
+
+`@rsbuild/core` must resolve to <PeerRange name="@rsbuild/core" />. Rsbuild 1.x and Rspack 1.x are no longer supported; projects that need them stay on Storybook Rsbuild `^3`.
+
+The addons and the React Native Web framework drop older peers too:
+
+- `react-native-web` (`^0.19.12 || ^0.20.0 || ^0.21.0`); the previous floor was `0.19.0`.
+- `@modern-js/app-tools` and `@modern-js/plugin` (`^3.0.0`). Modern.js 2 is no longer supported, and `@modern-js/plugin-v2` is no longer a peer.
+- `@rslib/core` (`>= 0.22.0`). 0.20 and 0.21 build against Rsbuild 2 pre-releases.
+  :::
 
 ## From Storybook Webpack5 Framework
 
