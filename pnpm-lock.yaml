@@ -453,8 +453,8 @@ importers:
         version: 3.3.3
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -661,8 +661,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -792,8 +792,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -865,8 +865,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -920,8 +920,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@module-federation/enhanced':
         specifier: ^2.9.2
         version: 2.9.2(@rspack/core@2.2.9(@module-federation/runtime-tools@2.9.2)(@swc/helpers@0.5.23))(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.16.18(@swc/helpers@0.5.23)))
@@ -981,8 +981,8 @@ importers:
         version: 3.5.44(typescript@5.9.3)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -1054,8 +1054,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -1124,8 +1124,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -1176,8 +1176,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -1221,8 +1221,8 @@ importers:
   sandboxes/vanilla-ts:
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -1255,8 +1255,8 @@ importers:
         version: 3.5.44(typescript@5.9.3)
     devDependencies:
       '@chromatic-com/storybook':
-        specifier: ^5.5.1
-        version: 5.5.1(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
+        specifier: ^5.6.0
+        version: 5.6.0(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))
       '@rsbuild/core':
         specifier: ^2.2.13
         version: 2.2.13(@module-federation/runtime-tools@2.9.2)(core-js@3.50.0)
@@ -2505,8 +2505,8 @@ packages:
   '@bufbuild/protobuf@2.6.3':
     resolution: {integrity: sha512-w/gJKME9mYN7ZoUAmSMAWXk4hkVpxRKvEJCb3dV5g9wwWdxTJJ0ayOJAVcNxtdqaxDyFuC0uz4RSGVacJ030PQ==}
 
-  '@chromatic-com/storybook@5.5.1':
-    resolution: {integrity: sha512-DOtUEBIJHmqsOWg+Hi1t5m5FTNlyzL0NpZUwQob+ex30nDvL4p+MrYctmvEqH/QT72mf9mLXbz3Uj8aoWD2OYA==}
+  '@chromatic-com/storybook@5.6.0':
+    resolution: {integrity: sha512-Z7YMtr9DVwegQeWcBeQaiK5dLcAvgpX53Qr/eGGYTyAEqTb1meUr5VQNq1wmst0Lj+gT6lQEco0PuFfUuf3jzA==}
     engines: {node: '>=20.0.0', yarn: '>=1.22.18'}
     peerDependencies:
       storybook: ^0.0.0-0 || ^10.1.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0 || ^10.5.0-0 || ^10.6.0-0 || ^11.0.0-0
@@ -7040,8 +7040,8 @@ packages:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
 
-  chromatic@18.1.0:
-    resolution: {integrity: sha512-I9av8lUc5CQRlYzwKpmOG9cwYvZ4AFmTvtHeNrzOMC1353F9xYw45CHpSNIsNKuOiqqmzci9esXQd5akl0fi6w==}
+  chromatic@18.14.1:
+    resolution: {integrity: sha512-KVV1c6TvdKCK8nivnvdGiVBPc17rlS22iH1apI7boUTWVf8OkrGnQ/qN8drnfHBzgZdJ/p874RIuHT6JhdMYUQ==}
     engines: {node: '>=22.0.0'}
     hasBin: true
     peerDependencies:
@@ -14330,10 +14330,10 @@ snapshots:
 
   '@bufbuild/protobuf@2.6.3': {}
 
-  '@chromatic-com/storybook@5.5.1(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))':
+  '@chromatic-com/storybook@5.6.0(storybook@11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))':
     dependencies:
       '@neoconfetti/react': 1.0.0
-      chromatic: 18.1.0
+      chromatic: 18.14.1
       jsonfile: 6.2.0
       storybook: 11.0.0-beta.0(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1)
       strip-ansi: 7.1.0
@@ -14342,10 +14342,10 @@ snapshots:
       - '@chromatic-com/playwright'
       - '@chromatic-com/vitest'
 
-  '@chromatic-com/storybook@5.5.1(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))':
+  '@chromatic-com/storybook@5.6.0(storybook@11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))':
     dependencies:
       '@neoconfetti/react': 1.0.0
-      chromatic: 18.1.0
+      chromatic: 18.14.1
       jsonfile: 6.2.0
       storybook: 11.0.0-beta.0(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
       strip-ansi: 7.1.0
@@ -20002,7 +20002,7 @@ snapshots:
 
   chownr@3.0.0: {}
 
-  chromatic@18.1.0:
+  chromatic@18.14.1:
     dependencies:
       semver: 7.8.1
 
