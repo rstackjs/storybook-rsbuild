@@ -25,6 +25,7 @@ const inheritedConfig = (): RsbuildConfig =>
       progressBar: true,
       assetPrefix: '/dev-assets/',
       writeToDisk: true,
+      client: { path: '/webpack-hmr', port: '<port>' },
     },
     plugins: [{ name: 'inherited-plugin', setup() {} }],
     tools: {
@@ -61,6 +62,7 @@ describe('stripInheritedConfig', () => {
       'dev.progressBar',
       'dev.assetPrefix',
       'dev.writeToDisk',
+      'dev.client',
       'tools.htmlPlugin',
       'tools.rspack.output.library',
       'tools.rspack.output.globalObject',
@@ -76,6 +78,7 @@ describe('stripInheritedConfig', () => {
     expect(config.dev?.progressBar).toBeUndefined()
     expect(config.dev?.assetPrefix).toBeUndefined()
     expect(config.dev?.writeToDisk).toBeUndefined()
+    expect(config.dev?.client).toBeUndefined()
     expect(config.plugins).toEqual([
       expect.objectContaining({ name: 'inherited-plugin' }),
     ])
