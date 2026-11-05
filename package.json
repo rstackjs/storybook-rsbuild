@@ -11,7 +11,7 @@
     "check-dependency-version": "pnpm jiti ./scripts/check-dependency-version.mts",
     "dev": "pnpm --parallel --filter \"./packages/**\" run dev",
     "e2e": "pnpm exec playwright test --config e2e/playwright.config.ts",
-    "format": "rs fmt --no-cache",
+    "format": "rs fmt",
     "lint": "rs lint",
     "prepare": "rs hooks",
     "test": "cross-env NODE_OPTIONS=--max_old_space_size=4096 rs test",
