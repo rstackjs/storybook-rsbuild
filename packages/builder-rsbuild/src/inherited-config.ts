@@ -12,6 +12,11 @@ const inheritedConfigFieldPaths = [
   'dev.progressBar',
   'dev.assetPrefix',
   'dev.writeToDisk',
+  // The preview dev server is mounted on the Storybook HTTP server and only
+  // listens on that port; an inherited `dev.client.port` (Modern.js sets
+  // `'/webpack-hmr'` with the `<port>` placeholder) would point the HMR and
+  // lazy-compilation socket at the builder's never-bound random port.
+  'dev.client',
   'tools.htmlPlugin',
   'tools.rspack.output.library',
   'tools.rspack.output.globalObject',
