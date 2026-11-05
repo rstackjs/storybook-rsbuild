@@ -36,14 +36,9 @@ const loadCreateStorybookOptions =
       // @ts-expect-error Optional peer dependency for Modern.js v3 projects.
       return (await import('@modern-js/plugin/cli')).createStorybookOptions
     } catch {
-      try {
-        // @ts-expect-error Optional peer dependency for Modern.js v2 projects.
-        return (await import('@modern-js/plugin-v2/cli')).createStorybookOptions
-      } catch {
-        throw new Error(
-          'Cannot resolve Modern.js Storybook plugin entry. Install @modern-js/app-tools@^3 with @modern-js/plugin, or @modern-js/app-tools@^2 with @modern-js/plugin-v2, then retry.',
-        )
-      }
+      throw new Error(
+        'Cannot resolve the Modern.js Storybook plugin entry. Install @modern-js/app-tools@^3 with @modern-js/plugin, then retry.',
+      )
     }
   }
 
@@ -123,10 +118,10 @@ export const rsbuildFinal: StorybookConfigRsbuild['rsbuildFinal'] = async (
   // @typescript-eslint/no-unnecessary-type-assertion. rslint also reports
   // `as unknown as RsbuildConfig`, so widen to `unknown` through a typed binding
   // first and assert once, which passes in both states.
-  // Storybook previews the browser build, which Modern.js names `client` (v3) or `web` (v2).
+  // Storybook previews the browser build, which Modern.js v3 names `client`.
   const modernRsbuildConfig: unknown = rsbuildConfig
   const { environments, ...topLevel } = modernRsbuildConfig as RsbuildConfig
-  const browserEnvironment = environments?.client ?? environments?.web
+  const browserEnvironment = environments?.client
   const inherited = browserEnvironment
     ? mergeRsbuildConfig(topLevel, browserEnvironment)
     : topLevel

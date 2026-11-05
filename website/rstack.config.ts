@@ -40,6 +40,8 @@ const peerRanges: typeof __PEER_RANGES__ = {
     'framework-react-native-web',
     'react-native-web',
   ),
+  '@modern-js/app-tools': peerRange('addon-modernjs', '@modern-js/app-tools'),
+  '@rslib/core': peerRange('addon-rslib', '@rslib/core'),
 }
 define.doc({
   plugins: [

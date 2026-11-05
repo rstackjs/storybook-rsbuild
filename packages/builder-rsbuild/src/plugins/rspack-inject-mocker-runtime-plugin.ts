@@ -11,11 +11,11 @@ export class RspackInjectMockerRuntimePlugin {
     compiler: Rspack.Compiler,
   ): typeof HtmlRspackPlugin | null {
     try {
-      // Rspack v1 compatible: check for both `HtmlRspackPlugin` (v2) and `HtmlWebpackPlugin` (v1) names.
-      const pluginConstructor = compiler.options.plugins?.find((plugin) => {
-        const name = plugin?.constructor?.name
-        return name === 'HtmlRspackPlugin' || name === 'HtmlWebpackPlugin'
-      })?.constructor
+      // Both of Rsbuild 2's HTML plugin implementations (`native` and `js`) are classed
+      // `HtmlRspackPlugin`.
+      const pluginConstructor = compiler.options.plugins?.find(
+        (plugin) => plugin?.constructor?.name === 'HtmlRspackPlugin',
+      )?.constructor
 
       return pluginConstructor as typeof HtmlRspackPlugin
     } catch (error) {
@@ -31,11 +31,10 @@ export class RspackInjectMockerRuntimePlugin {
   apply(compiler: Rspack.Compiler) {
     const HtmlPlugin = this.getHtmlPlugin(compiler)
     // DIVERGES FROM UPSTREAM — upstream only reads `getHooks`, which is enough for
-    // html-webpack-plugin but not here: rspack's native `HtmlRspackPlugin` dropped that
-    // deprecated alias in v2 and offers `getCompilationHooks` alone, so `html.implementation:
-    // 'native'` would leave the hook untapped. Both are plain statics that ignore `this`.
+    // html-webpack-plugin but not here: `HtmlRspackPlugin` exposes `getCompilationHooks` only.
+    // It is a plain static that ignores `this`.
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    const getHtmlHooks = HtmlPlugin?.getCompilationHooks ?? HtmlPlugin?.getHooks
+    const getHtmlHooks = HtmlPlugin?.getCompilationHooks
     if (typeof getHtmlHooks !== 'function') {
       compiler
         .getInfrastructureLogger(PLUGIN_NAME)
