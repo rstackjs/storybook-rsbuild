@@ -91,13 +91,10 @@ define.test({
 })
 
 define.staged({
-  '*.{json,css,less,scss}': 'rs fmt --no-cache',
-  '*.{js,jsx,ts,tsx,mjs,cjs}': 'rs fmt --no-cache',
+  '*.{json,css,less,scss}': 'rs fmt',
+  '*.{js,jsx,ts,tsx,mjs,cjs}': 'rs fmt',
 })
 
-// TODO: `--no-cache` on the format script in package.json and define.staged() entries above works around a
-// Prettier idempotency regression fixed by prettier/prettier#19725 but not yet released as of
-// Prettier 3.9.6. Once a release containing the fix ships and Prettier is bumped, drop the flag.
 define.fmt({
   semi: false,
   singleQuote: true,
