@@ -1,4 +1,4 @@
-import { PackageManagerTabs } from '@theme'
+import { PackageManagerTabs, PeerRange } from '@theme'
 
 # 迁移
 
@@ -29,6 +29,10 @@ import { PackageManagerTabs } from '@theme'
 
 :::info React 18+
 Storybook 11 移除了 React legacy root API。请从 `framework.options` 中删除 `legacyRootApi`，并使用 React 18 或 19。
+:::
+
+:::info Rsbuild 2
+Storybook Rsbuild v4 仅支持 Rsbuild 2 / Rspack 2。升级到 v4 之前，请先将 `@rsbuild/core` 升级到 <PeerRange name="@rsbuild/core" />；仍在使用 Rsbuild 1.x 的项目请继续使用 Storybook Rsbuild `^3`。
 :::
 
 ## 从 Storybook Webpack5 Framework 迁移

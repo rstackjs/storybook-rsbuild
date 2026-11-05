@@ -7,7 +7,7 @@
  * Set `cell` when rendering inside a table cell: GFM splits cells on `|` even
  * inside code spans, so the `.md` / llms.txt build (Rspress sets `__SSR_MD__`
  * for its `node_md` environment) must escape the `||` of a union such as
- * `^1.5.0 || ^2.0.0-0`. Outside a table that backslash would be literal.
+ * `^18.0.0 || ^19.0.0`. Outside a table that backslash would be literal.
  */
 export const PeerRange = ({
   name,

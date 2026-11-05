@@ -4,9 +4,7 @@ import { RspackInjectMockerRuntimePlugin } from '../../src/plugins/rspack-inject
 
 const RUNTIME_ASSET = 'mocker-runtime-injected.js'
 
-type HooksAccessor = 'getCompilationHooks' | 'getHooks'
-
-type HooksApi = HooksAccessor | 'both' | 'neither'
+type HooksApi = 'getCompilationHooks' | 'neither'
 
 type TagData = { assets: { js: string[] } }
 
@@ -30,7 +28,6 @@ function applyPlugin(api: HooksApi) {
   const warnings: string[] = []
   const emitted: string[] = []
   const errors: unknown[] = []
-  let tappedVia: HooksAccessor | undefined
   let tapped = false
   let startThisCompilation: ((compilation: unknown) => void) | undefined
   let startCompilation: ((compilation: unknown) => void) | undefined
@@ -39,20 +36,15 @@ function applyPlugin(api: HooksApi) {
 
   /**
    * Builds a stand-in HTML plugin instance. The name matters because `getHtmlPlugin` finds the
-   * plugin by constructor name, and the hooks accessors have to sit on the constructor because
-   * that is where the plugin reads them from. Each compilation gets its own hooks object, as in
-   * rspack.
+   * plugin by constructor name, and the hooks accessor has to sit on the constructor because that
+   * is where the plugin reads it from. Each compilation gets its own hooks object, as in rspack.
    */
-  const createHtmlPlugin = (
-    name: string,
-    accessors: HooksAccessor[],
-  ): object => {
+  const createHtmlPlugin = (accessors: string[]): object => {
     const Plugin = class {}
-    Object.defineProperty(Plugin, 'name', { value: name })
+    Object.defineProperty(Plugin, 'name', { value: 'HtmlRspackPlugin' })
     for (const accessor of accessors) {
       Object.defineProperty(Plugin, accessor, {
         value: (compilation: object): HtmlHooks => {
-          tappedVia = accessor
           const hooks = htmlHooksByCompilation.get(compilation)
           if (!hooks) {
             throw new Error('no HTML hooks registered for this compilation')
@@ -64,23 +56,10 @@ function applyPlugin(api: HooksApi) {
     return new Plugin()
   }
 
-  let htmlPlugin: object
-  switch (api) {
-    case 'getCompilationHooks':
-      htmlPlugin = createHtmlPlugin('HtmlRspackPlugin', ['getCompilationHooks'])
-      break
-    case 'getHooks':
-      htmlPlugin = createHtmlPlugin('HtmlWebpackPlugin', ['getHooks'])
-      break
-    case 'both':
-      htmlPlugin = createHtmlPlugin('HtmlRspackPlugin', [
-        'getCompilationHooks',
-        'getHooks',
-      ])
-      break
-    default:
-      htmlPlugin = createHtmlPlugin('HtmlRspackPlugin', [])
-  }
+  const htmlPlugin =
+    api === 'getCompilationHooks'
+      ? createHtmlPlugin(['getCompilationHooks'])
+      : createHtmlPlugin([])
 
   const compiler = {
     options: { plugins: [htmlPlugin] },
@@ -177,43 +156,16 @@ function applyPlugin(api: HooksApi) {
     warnings,
     errors,
     tapped: () => tapped,
-    usedApi: () => tappedVia,
   }
 }
 
 describe('RspackInjectMockerRuntimePlugin', () => {
   describe('locating the html plugin hooks', () => {
-    // Rspack's native HtmlRspackPlugin only offers getCompilationHooks, so requiring getHooks
-    // meant the runtime was never injected there.
     it('taps the hook when the plugin exposes getCompilationHooks', () => {
       const { runProcessAssets, renderPage, warnings, errors } = applyPlugin(
         'getCompilationHooks',
       )
 
-      runProcessAssets()
-      expect(renderPage()).toContain(RUNTIME_ASSET)
-      expect(warnings).toEqual([])
-      expect(errors).toEqual([])
-    })
-
-    it('taps the hook when the plugin only exposes the deprecated getHooks', () => {
-      const { runProcessAssets, renderPage, warnings, errors } =
-        applyPlugin('getHooks')
-
-      runProcessAssets()
-      expect(renderPage()).toContain(RUNTIME_ASSET)
-      expect(warnings).toEqual([])
-      expect(errors).toEqual([])
-    })
-
-    // The path almost every user is on: html-rspack-plugin, behind the default
-    // `html.implementation: 'js'`, exports both names, and so does rspack v1. Pinning the
-    // preference means the deprecated alias can be dropped without silently changing behaviour.
-    it('prefers getCompilationHooks when the plugin exposes both', () => {
-      const { runProcessAssets, renderPage, usedApi, warnings, errors } =
-        applyPlugin('both')
-
-      expect(usedApi()).toBe('getCompilationHooks')
       runProcessAssets()
       expect(renderPage()).toContain(RUNTIME_ASSET)
       expect(warnings).toEqual([])
