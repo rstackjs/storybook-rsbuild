@@ -115,7 +115,7 @@ Plugin 会继续继承，因为它们通常提供 preview build 所需的 transf
 
 ## Webpack Addons 兼容性
 
-由于 Rspack 兼容 webpack 的 loader/plugin API，你通常可以使用为 Webpack 设计的 Storybook addon。为此，请使用 `webpackAddons` 字段而非 `addons`。
+由于 Rspack 兼容 webpack 的 loader/plugin API，你通常可以使用为 Webpack 设计的 Storybook addon。如需运行某个 addon 的 `webpackFinal`，请把它写进 `webpackAddons`。只有这里的 `webpackFinal` 会运行：`addons` 中条目的 `webpackFinal` 不会运行，`.storybook/main.ts` 中的 `webpackFinal` 也不会运行（请改用 `rsbuildFinal`）。
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -131,7 +131,9 @@ const config: StorybookConfig = {
 export default config
 ```
 
-每个 addon 的 `webpackFinal` 都在组装完成的 Rspack 配置上运行，时机在 builder 默认配置和 `webpack` preset 输出之后，因此可以读取或替换已有的 rules、plugins 和 `resolve` 配置。在 `rsbuildFinal` 中添加的 `tools.rspack` 仍会在它之后运行。只有 `webpackAddons` 会这样执行：`.storybook/main.ts` 中的 `webpackFinal` 不会运行，如需修改配置，请使用 `rsbuildFinal`。
+每个 addon 的 `webpackFinal` 都在组装完成的 Rspack 配置上运行，时机在 builder 默认配置和 `webpack` preset 输出之后，因此可以读取或替换已有的 rules、plugins 和 `resolve` 配置。在 `rsbuildFinal` 中添加的 `tools.rspack` 仍会在它之后运行。
+
+对于 `webpackAddons` 中的条目，只会应用 `webpackFinal`，它们导出的其他 preset 钩子（例如 `managerEntries`、`previewAnnotations`）都会被忽略。如果某个 addon 还提供 UI 或其他钩子，请同时写进 `addons` 和 `webpackAddons`。
 
 ## Framework 选项
 

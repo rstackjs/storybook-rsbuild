@@ -132,7 +132,7 @@ Rsbuild resolves alias values relative to the project root. Use `'./src/componen
 
 ### 4. Handle webpack-dependent addons
 
-Some Storybook addons use `webpackFinal` internally. Move them from `addons` to `webpackAddons`:
+Some Storybook addons use `webpackFinal` internally. List them in `webpackAddons`. If an addon also provides UI or other preset hooks, keep it in `addons` too:
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -150,14 +150,13 @@ const config: StorybookConfig = {
 export default config
 ```
 
-The `webpackAddons` field runs each addon's `webpackFinal` hook and translates the resulting webpack config into Rspack config automatically.
+Only addons listed in `webpackAddons` have their `webpackFinal` run, and only that hook is applied. The returned config is merged into the Rspack config as is, which works because Rspack is compatible with webpack's loader/plugin API.
 
 :::tip Common addons that need `webpackAddons`
-A few addons hook `webpackFinal` internally and must move to `webpackAddons` (or be replaced with the Rsbuild-native equivalent):
+A few addons hook `webpackFinal` internally and must be listed in `webpackAddons` (or be replaced with the Rsbuild-native equivalent):
 
 - `@storybook/addon-styling-webpack` — global CSS / PostCSS / Sass / Less. Either route via `webpackAddons` or replace with [`@rsbuild/plugin-postcss`](https://rsbuild.rs/plugins/list/plugin-postcss), [`@rsbuild/plugin-sass`](https://rsbuild.rs/plugins/list/plugin-sass), or [`@rsbuild/plugin-less`](https://rsbuild.rs/plugins/list/plugin-less).
 - `@storybook/addon-coverage` — collects test coverage; route via `webpackAddons`.
-- `@storybook/preset-create-react-app` — CRA compatibility; route via `webpackAddons`.
 
 If an addon's name ends in `-webpack` or its docs mention `webpackFinal`, assume it needs this treatment. Silently dropping a webpack-only addon is a regression even if `storybook build` still passes.
 :::

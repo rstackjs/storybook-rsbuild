@@ -115,7 +115,7 @@ In development, the default `{ entries: false }` compiles entry chunks eagerly w
 
 ## Webpack Addons Compatibility
 
-Since Rspack is compatible with the webpack loader/plugin API, you can often use Storybook addons designed for Webpack. To do this, use the `webpackAddons` field instead of `addons`.
+Since Rspack is compatible with the webpack loader/plugin API, you can often use Storybook addons designed for Webpack. To run an addon's `webpackFinal`, list it in `webpackAddons`. This is the only place where `webpackFinal` runs: the `webpackFinal` of entries in `addons` is not run, and neither is `webpackFinal` in `.storybook/main.ts` (use `rsbuildFinal` instead).
 
 ```ts twoslash title=".storybook/main.ts"
 // @noErrors
@@ -131,7 +131,9 @@ const config: StorybookConfig = {
 export default config
 ```
 
-Each addon's `webpackFinal` runs on the fully composed Rspack config, after the builder's defaults and the `webpack` preset output, so it can read or replace existing rules, plugins, and `resolve` options. A `tools.rspack` hook added in `rsbuildFinal` still runs after it. Only `webpackAddons` are applied this way: `webpackFinal` in `.storybook/main.ts` is not run, so use `rsbuildFinal` to change the config instead.
+Each addon's `webpackFinal` runs on the fully composed Rspack config, after the builder's defaults and the `webpack` preset output, so it can read or replace existing rules, plugins, and `resolve` options. A `tools.rspack` hook added in `rsbuildFinal` still runs after it.
+
+For `webpackAddons` entries, only `webpackFinal` is applied. Other preset hooks they export, such as `managerEntries` or `previewAnnotations`, are ignored. If an addon also provides UI or other hooks, list it in both `addons` and `webpackAddons`.
 
 ## Framework Options
 

@@ -141,8 +141,9 @@ const resolveLazyCompilation = async (
   }
 }
 
-// `webpackAddons` entries are resolved the same way Storybook resolves `addons`, but into a
-// separate preset chain that only contributes `webpackFinal`.
+// Resolve `webpackAddons` like Storybook resolves `addons` (e.g. `@storybook/addon-coverage` -> its
+// `/preset` entry), but load them into their own preset chain: only their `webpackFinal` is applied;
+// other preset hooks they export are ignored.
 // https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198
 const loadWebpackAddonPresets = async (options: RsbuildBuilderOptions) => {
   const webpackAddons = await options.presets.apply<Preset[]>(
