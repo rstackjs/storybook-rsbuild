@@ -1,7 +1,5 @@
 {
-  "name": "fixture-webpack-final-addon",
-  "version": "0.0.0",
+  "name": "webpack-final-addon",
   "private": true,
-  "type": "commonjs",
-  "main": "preset.js"
+  "main": "preset.cjs"
 }

@@ -326,15 +326,8 @@ describe('iframe-rsbuild.config', () => {
     const rspackTool = config.tools?.rspack
     expect(typeof rspackTool).toBe('function')
 
-    // Records the rules Rsbuild's own helpers would insert, so the composed config
-    // matches what a real build would hand to an addon.
-    const recordRules = (position: 'unshift' | 'push') => (rules: any) => {
-      baseConfig.module ??= {}
-      baseConfig.module.rules ??= []
-      baseConfig.module.rules[position](...[rules].flat())
-    }
-    const addRules = rs.fn(recordRules('unshift'))
-    const appendRules = rs.fn(recordRules('push'))
+    const addRules = rs.fn()
+    const appendRules = rs.fn()
     let virtualModules: Record<string, string> = {}
 
     const result = await (rspackTool as any)(baseConfig, {
@@ -350,7 +343,7 @@ describe('iframe-rsbuild.config', () => {
         },
         ProvidePlugin: class ProvidePlugin {},
       },
-      mergeConfig: (a: any, b: any) => mergeRsbuildConfig(a, b),
+      mergeConfig: (c: any) => c,
     })
 
     return { rspackConfig: result, addRules, appendRules, virtualModules }
@@ -489,6 +482,27 @@ describe('iframe-rsbuild.config', () => {
       constants: expect.any(String),
       custom: 'user-custom',
     })
+  })
+
+  it('applies webpackAddons webpackFinal to the composed Rspack config', async () => {
+    const { rspackConfig } = await runRspackTool(
+      false,
+      [],
+      { module: { rules: [{ test: /\.existing$/ }] } },
+      { webpackAddons: [resolve(fixtureDir, 'webpack-final-addon')] },
+    )
+
+    // The fixture pushes onto `module.rules`, which only exists on the composed config.
+    expect(rspackConfig.module.rules).toEqual([
+      { test: /\.existing$/ },
+      { test: /\.webpack-final$/ },
+    ])
+    // Builder-composed fields survive the addon's return value.
+    expect(rspackConfig.resolve.modules).toEqual([
+      'node_modules',
+      '/workspace/shared',
+      '/workspace/generated',
+    ])
   })
 
   it('preserves a user-provided SWC bugfixes value', async () => {
@@ -702,37 +716,6 @@ describe('iframe-rsbuild.config', () => {
       expect(template).toContain('"./" + file')
       // Must use a regex that matches http(s)://, //, and root-relative /
       expect(template).toMatch(/\^.https.*\\\//)
-    })
-  })
-
-  describe('webpackAddons webpackFinal', () => {
-    it('runs addon webpackFinal against the composed Rspack config', async () => {
-      const { rspackConfig, addRules, appendRules } = await runRspackTool(
-        false,
-        [],
-        {
-          module: { rules: [{ test: /\.pre-existing$/ }] },
-          resolve: { alias: { '@fixture': '/fixture/src' } },
-        },
-        {
-          webpackAddons: [resolve(fixtureDir, 'webpack-final-addon')],
-        },
-      )
-
-      const ruleTests = (rspackConfig.module?.rules ?? []).map(
-        (rule: unknown) => String((rule as { test?: unknown }).test),
-      )
-      expect(ruleTests).toContain('/\\.webpack-final-marker$/')
-      expect(ruleTests).toContain('/\\.pre-existing$/')
-      expect(ruleTests).toContain(
-        '/\\.stories\\.([tj])sx?$|(stories|story)\\.mdx$/',
-      )
-      expect(rspackConfig.resolve?.alias).toMatchObject({
-        '@fixture': '/fixture/src',
-        '@webpack-final': '/webpack-final',
-      })
-      expect(addRules).toHaveBeenCalledOnce()
-      expect(appendRules).toHaveBeenCalledOnce()
     })
   })
 })

@@ -131,7 +131,7 @@ const config: StorybookConfig = {
 export default config
 ```
 
-每个 addon 的 `webpackFinal` 收到的是组装完成的 Rspack 配置——builder 自身的 rules、`webpack` preset 的输出、`resolve.alias` 以及此前加入的 plugin，而不是一份空配置。它运行在 builder 默认配置和 `webpack` preset 输出之后、`rsbuildFinal` 添加的 `tools.rspack` 之前，与 webpack builder 的顺序一致。`main.ts` 中的 `webpackFinal` 仍然不会执行，请改用 `rsbuildFinal`。
+每个 addon 的 `webpackFinal` 都在组装完成的 Rspack 配置上运行，时机在 builder 默认配置和 `webpack` preset 输出之后，因此可以读取或替换已有的 rules、plugins 和 `resolve` 配置。在 `rsbuildFinal` 中添加的 `tools.rspack` 仍会在它之后运行。只有 `webpackAddons` 会这样执行：`.storybook/main.ts` 中的 `webpackFinal` 不会运行，如需修改配置，请使用 `rsbuildFinal`。
 
 ## Framework 选项
 

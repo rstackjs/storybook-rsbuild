@@ -54,7 +54,6 @@ export const executor = {
 
 const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
   const { presets } = options
-
   const intrinsicRsbuildConfig = await rsbuildConfig(options)
 
   // Preset hooks run in order with the user's main.ts last. Inherited configs have already

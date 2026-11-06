@@ -18,12 +18,7 @@ import {
 import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import { WebpackMissingPreviewTemplateError } from 'storybook/internal/server-errors'
-import type {
-  Options,
-  Preset,
-  SecurityConfig,
-  StorybookConfigRaw,
-} from 'storybook/internal/types'
+import type { Options, Preset, SecurityConfig } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import {
   pickRsbuildEnvironment,
@@ -146,33 +141,23 @@ const resolveLazyCompilation = async (
   }
 }
 
-const isObject = (val: unknown): val is Record<string, any> =>
-  val != null && typeof val === 'object' && Array.isArray(val) === false
-
-function nonNullables<T>(value: T): value is NonNullable<T> {
-  return value !== undefined
-}
-
-/**
- * Resolve the `webpackAddons` field to a preset chain and hand back its `apply`, so
- * `webpackFinal` can run against the composed Rspack config inside `tools.rspack`.
- */
-const resolveWebpackAddonsApply = async (options: RsbuildBuilderOptions) => {
-  const webpackAddons =
-    await options.presets.apply<StorybookConfigRaw['addons']>('webpackAddons')
-  const resolvedWebpackAddons = (webpackAddons ?? [])
-    .map((preset: Preset) => {
-      const addonOptions = isObject(preset)
-        ? preset.options || undefined
-        : undefined
-      const name = isObject(preset) ? preset.name : preset
-      // Taken fromm https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198.
+// `webpackAddons` entries are resolved the same way Storybook resolves `addons`, but into a
+// separate preset chain that only contributes `webpackFinal`.
+// https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198
+const loadWebpackAddonPresets = async (options: RsbuildBuilderOptions) => {
+  const webpackAddons = await options.presets.apply<Preset[]>(
+    'webpackAddons',
+    [],
+  )
+  const resolved = webpackAddons
+    .map((addon) => {
+      const { name, options: addonOptions } =
+        typeof addon === 'string' ? { name: addon, options: undefined } : addon
       return resolveAddonName(options.configDir, name, addonOptions)
     })
-    .filter(nonNullables)
-  // eslint-disable-next-line @typescript-eslint/unbound-method
-  const { apply } = await getPresets(resolvedWebpackAddons, options)
-  return apply
+    .filter((addon) => addon !== undefined)
+
+  return getPresets(resolved, options)
 }
 
 export default async (
@@ -180,8 +165,10 @@ export default async (
 ): Promise<RsbuildConfig> => {
   const { rsbuildConfigPath, addonDocs } =
     await getBuilderOptions<BuilderOptions>(options)
-  const webpackConfigFromPresets =
-    await options.presets.apply<Rspack.Configuration>('webpack', {}, options)
+  const [webpackConfigFromPresets, webpackAddonPresets] = await Promise.all([
+    options.presets.apply<Rspack.Configuration>('webpack', {}, options),
+    loadWebpackAddonPresets(options),
+  ])
 
   if (addonDocs) {
     console.warn(
@@ -217,7 +204,6 @@ export default async (
     tagsOptions,
     security,
     htmlLang,
-    applyWebpackFinal,
   ] = await Promise.all([
     presets.apply('core'),
     presets.apply('frameworkOptions'),
@@ -233,7 +219,6 @@ export default async (
     presets.apply('tags', {}),
     presets.apply<SecurityConfig | undefined>('security'),
     presets.apply<string>('htmlLang', 'en'),
-    resolveWebpackAddonsApply(options),
   ])
 
   const stories = normalizeStories(nonNormalizedStories, {
@@ -404,10 +389,7 @@ export default async (
           config.env.bugfixes ??= true
         }
       },
-      rspack: async (
-        config,
-        { addRules, appendRules, rspack, mergeConfig },
-      ) => {
+      rspack: (config, { addRules, appendRules, rspack, mergeConfig }) => {
         addRules([
           {
             test: /\.stories\.([tj])sx?$|(stories|story)\.mdx$/,
@@ -540,8 +522,9 @@ export default async (
           type: 'asset/source',
         })
 
-        // Addons receive the composed Rspack config, not a synthetic empty base.
-        return applyWebpackFinal(
+        // Like builder-webpack5, `webpackFinal` runs after the builder defaults and the `webpack` preset.
+        // Returning a promise is fine: Rsbuild 2 awaits every `tools.rspack` entry.
+        return webpackAddonPresets.apply(
           'webpackFinal',
           mergeConfig(config, webpackConfigFromPresets),
           options,
