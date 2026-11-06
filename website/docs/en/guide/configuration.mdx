@@ -131,6 +131,8 @@ const config: StorybookConfig = {
 export default config
 ```
 
+Each addon's `webpackFinal` receives the composed Rspack config — the builder's own rules, the output of the `webpack` preset, `resolve.alias`, and the plugins added so far — rather than an empty config. It runs after the builder defaults and the `webpack` preset output, and before any `tools.rspack` added by `rsbuildFinal`, matching the order of the webpack builder. A `webpackFinal` in `main.ts` is still not run; use `rsbuildFinal` instead.
+
 ## Framework Options
 
 Framework-specific options allow you to tailor the behavior for React, Vue, etc.

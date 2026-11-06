@@ -9,14 +9,21 @@ import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
 import { pluginHtmlMinifierTerser } from 'rsbuild-plugin-html-minifier-terser'
 import {
   getBuilderOptions,
+  getPresets,
   isPreservingSymlinks,
   normalizeStories,
+  resolveAddonName,
   stringifyProcessEnvs,
 } from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import { WebpackMissingPreviewTemplateError } from 'storybook/internal/server-errors'
-import type { Options, SecurityConfig } from 'storybook/internal/types'
+import type {
+  Options,
+  Preset,
+  SecurityConfig,
+  StorybookConfigRaw,
+} from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import {
   pickRsbuildEnvironment,
@@ -139,9 +146,37 @@ const resolveLazyCompilation = async (
   }
 }
 
+const isObject = (val: unknown): val is Record<string, any> =>
+  val != null && typeof val === 'object' && Array.isArray(val) === false
+
+function nonNullables<T>(value: T): value is NonNullable<T> {
+  return value !== undefined
+}
+
+/**
+ * Resolve the `webpackAddons` field to a preset chain and hand back its `apply`, so
+ * `webpackFinal` can run against the composed Rspack config inside `tools.rspack`.
+ */
+const resolveWebpackAddonsApply = async (options: RsbuildBuilderOptions) => {
+  const webpackAddons =
+    await options.presets.apply<StorybookConfigRaw['addons']>('webpackAddons')
+  const resolvedWebpackAddons = (webpackAddons ?? [])
+    .map((preset: Preset) => {
+      const addonOptions = isObject(preset)
+        ? preset.options || undefined
+        : undefined
+      const name = isObject(preset) ? preset.name : preset
+      // Taken fromm https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198.
+      return resolveAddonName(options.configDir, name, addonOptions)
+    })
+    .filter(nonNullables)
+  // eslint-disable-next-line @typescript-eslint/unbound-method
+  const { apply } = await getPresets(resolvedWebpackAddons, options)
+  return apply
+}
+
 export default async (
   options: RsbuildBuilderOptions,
-  extraWebpackConfig?: Rspack.Configuration,
 ): Promise<RsbuildConfig> => {
   const { rsbuildConfigPath, addonDocs } =
     await getBuilderOptions<BuilderOptions>(options)
@@ -182,6 +217,7 @@ export default async (
     tagsOptions,
     security,
     htmlLang,
+    applyWebpackFinal,
   ] = await Promise.all([
     presets.apply('core'),
     presets.apply('frameworkOptions'),
@@ -197,6 +233,7 @@ export default async (
     presets.apply('tags', {}),
     presets.apply<SecurityConfig | undefined>('security'),
     presets.apply<string>('htmlLang', 'en'),
+    resolveWebpackAddonsApply(options),
   ])
 
   const stories = normalizeStories(nonNormalizedStories, {
@@ -367,7 +404,10 @@ export default async (
           config.env.bugfixes ??= true
         }
       },
-      rspack: (config, { addRules, appendRules, rspack, mergeConfig }) => {
+      rspack: async (
+        config,
+        { addRules, appendRules, rspack, mergeConfig },
+      ) => {
         addRules([
           {
             test: /\.stories\.([tj])sx?$|(stories|story)\.mdx$/,
@@ -500,10 +540,11 @@ export default async (
           type: 'asset/source',
         })
 
-        return mergeConfig(
-          config,
-          extraWebpackConfig || {},
-          webpackConfigFromPresets,
+        // Addons receive the composed Rspack config, not a synthetic empty base.
+        return applyWebpackFinal(
+          'webpackFinal',
+          mergeConfig(config, webpackConfigFromPresets),
+          options,
         )
       },
       htmlPlugin: {

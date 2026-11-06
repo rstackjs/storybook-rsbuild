@@ -11,7 +11,6 @@ const { bail, printDuration, start } = previewBuilder
 
 const mocks = rs.hoisted(() => ({
   findConfigFile: rs.fn(),
-  getPresets: rs.fn(),
   iframeConfig: rs.fn(),
   loggerError: rs.fn(),
   overrideRsbuildLogger: rs.fn(),
@@ -19,8 +18,6 @@ const mocks = rs.hoisted(() => ({
 
 rs.mock('storybook/internal/common', () => ({
   findConfigFile: mocks.findConfigFile,
-  getPresets: mocks.getPresets,
-  resolveAddonName: rs.fn(),
 }))
 
 rs.mock('storybook/internal/node-logger', () => ({
@@ -100,7 +97,6 @@ const createStartHarness = ({
   const { options } = createTestOptions({
     presetValues: new Map<string, unknown>([
       ['rsbuildInstance', rsbuildInstance],
-      ['webpackAddons', []],
     ]),
     overrides: {
       host: 'localhost',
@@ -127,9 +123,6 @@ const createStartHarness = ({
 
 beforeEach(() => {
   mocks.findConfigFile.mockReturnValue('/project/.storybook/preview.ts')
-  mocks.getPresets.mockResolvedValue({
-    apply: async (_name: string, config: unknown) => config,
-  })
   mocks.iframeConfig.mockResolvedValue({})
 })
 

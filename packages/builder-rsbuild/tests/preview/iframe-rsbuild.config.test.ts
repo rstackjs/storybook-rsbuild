@@ -307,11 +307,17 @@ describe('iframe-rsbuild.config', () => {
     lazyCompilation: LazyCompilationOption | 'unset',
     staticDirs: unknown = [],
     baseConfig: Rspack.Configuration = {},
+    presetOverrides: Record<string, unknown> = {},
   ) => {
     const { options } = createOptions(
       lazyCompilation,
       'DEVELOPMENT',
       staticDirs,
+      {},
+      false,
+      false,
+      undefined,
+      presetOverrides,
     )
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
@@ -320,11 +326,18 @@ describe('iframe-rsbuild.config', () => {
     const rspackTool = config.tools?.rspack
     expect(typeof rspackTool).toBe('function')
 
-    const addRules = rs.fn()
-    const appendRules = rs.fn()
+    // Records the rules Rsbuild's own helpers would insert, so the composed config
+    // matches what a real build would hand to an addon.
+    const recordRules = (position: 'unshift' | 'push') => (rules: any) => {
+      baseConfig.module ??= {}
+      baseConfig.module.rules ??= []
+      baseConfig.module.rules[position](...[rules].flat())
+    }
+    const addRules = rs.fn(recordRules('unshift'))
+    const appendRules = rs.fn(recordRules('push'))
     let virtualModules: Record<string, string> = {}
 
-    const result = (rspackTool as any)(baseConfig, {
+    const result = await (rspackTool as any)(baseConfig, {
       addRules,
       appendRules,
       rspack: {
@@ -337,7 +350,7 @@ describe('iframe-rsbuild.config', () => {
         },
         ProvidePlugin: class ProvidePlugin {},
       },
-      mergeConfig: (c: any) => c,
+      mergeConfig: (a: any, b: any) => mergeRsbuildConfig(a, b),
     })
 
     return { rspackConfig: result, addRules, appendRules, virtualModules }
@@ -689,6 +702,37 @@ describe('iframe-rsbuild.config', () => {
       expect(template).toContain('"./" + file')
       // Must use a regex that matches http(s)://, //, and root-relative /
       expect(template).toMatch(/\^.https.*\\\//)
+    })
+  })
+
+  describe('webpackAddons webpackFinal', () => {
+    it('runs addon webpackFinal against the composed Rspack config', async () => {
+      const { rspackConfig, addRules, appendRules } = await runRspackTool(
+        false,
+        [],
+        {
+          module: { rules: [{ test: /\.pre-existing$/ }] },
+          resolve: { alias: { '@fixture': '/fixture/src' } },
+        },
+        {
+          webpackAddons: [resolve(fixtureDir, 'webpack-final-addon')],
+        },
+      )
+
+      const ruleTests = (rspackConfig.module?.rules ?? []).map(
+        (rule: unknown) => String((rule as { test?: unknown }).test),
+      )
+      expect(ruleTests).toContain('/\\.webpack-final-marker$/')
+      expect(ruleTests).toContain('/\\.pre-existing$/')
+      expect(ruleTests).toContain(
+        '/\\.stories\\.([tj])sx?$|(stories|story)\\.mdx$/',
+      )
+      expect(rspackConfig.resolve?.alias).toMatchObject({
+        '@fixture': '/fixture/src',
+        '@webpack-final': '/webpack-final',
+      })
+      expect(addRules).toHaveBeenCalledOnce()
+      expect(appendRules).toHaveBeenCalledOnce()
     })
   })
 })
