@@ -4,19 +4,11 @@ import { type AddressInfo, createServer } from 'node:net'
 import { dirname, join, parse } from 'node:path'
 import prettyTime from 'pretty-hrtime'
 import sirv from 'sirv'
-import {
-  findConfigFile,
-  getPresets,
-  resolveAddonName,
-} from 'storybook/internal/common'
+import { findConfigFile } from 'storybook/internal/common'
 import { PREVIEW_BUILDER_PROGRESS } from 'storybook/internal/core-events'
 import { logger } from 'storybook/internal/node-logger'
 import { WebpackInvocationError } from 'storybook/internal/server-errors'
-import type {
-  Options,
-  Preset,
-  StorybookConfigRaw,
-} from 'storybook/internal/types'
+import type { Options } from 'storybook/internal/types'
 import { createRspackChangeDetectionAdapter } from './change-detection-adapter'
 import { createHeadlessRsbuildChangeDetectionAdapter } from './change-detection-adapter/headless'
 import { withStatsJsonCompat } from './chromatic-stats'
@@ -60,58 +52,9 @@ export const executor = {
   },
 }
 
-const isObject = (val: unknown): val is Record<string, unknown> =>
-  val != null && typeof val === 'object' && Array.isArray(val) === false
-
-function nonNullables<T>(value: T): value is NonNullable<T> {
-  return value !== undefined
-}
-
 const rsbuild = async (_: unknown, options: RsbuildBuilderOptions) => {
   const { presets } = options
-  // #region webpack addons
-  const webpackAddons =
-    await presets.apply<StorybookConfigRaw['addons']>('webpackAddons')
-  const resolvedWebpackAddons = (webpackAddons ?? [])
-    .map((preset: Preset) => {
-      const addonOptions = isObject(preset)
-        ? preset.options || undefined
-        : undefined
-      const name = isObject(preset) ? preset.name : preset
-      // Taken fromm https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198.
-      return resolveAddonName(options.configDir, name, addonOptions)
-    })
-    .filter(nonNullables)
-  // eslint-disable-next-line @typescript-eslint/unbound-method
-  const { apply } = await getPresets(resolvedWebpackAddons, options)
-  const webpackAddonsConfig: rsbuildReal.Rspack.Configuration = await apply(
-    'webpackFinal',
-    // TODO: using empty webpack config as base for now. It's better to using the composed rspack
-    // config in `iframe-rsbuild.config.ts` as base config. But when `tools.rspack` is an async function,
-    // the following `tools.rspack` raise an `Promises are not supported` error.
-    {
-      output: {},
-      module: {},
-      plugins: [],
-      resolve: {},
-      // https://github.com/web-infra-dev/rsbuild/blob/8dc35dc1d1500d2f119875d46b6a07e27986d532/packages/core/src/provider/rspackConfig.ts#L167
-      devServer: undefined,
-      optimization: {},
-      performance: {},
-      externals: {},
-      experiments: {},
-      node: {},
-      stats: {},
-      entry: {},
-    },
-    options,
-  )
-  // #endregion
-
-  const intrinsicRsbuildConfig = await rsbuildConfig(
-    options,
-    webpackAddonsConfig,
-  )
+  const intrinsicRsbuildConfig = await rsbuildConfig(options)
 
   // Preset hooks run in order with the user's main.ts last. Inherited configs have already
   // been stripped, so an explicit rsbuildFinal hook is the escape hatch for restoring fields.

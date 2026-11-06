@@ -9,14 +9,16 @@ import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
 import { pluginHtmlMinifierTerser } from 'rsbuild-plugin-html-minifier-terser'
 import {
   getBuilderOptions,
+  getPresets,
   isPreservingSymlinks,
   normalizeStories,
+  resolveAddonName,
   stringifyProcessEnvs,
 } from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import { globalsNameReferenceMap } from 'storybook/internal/preview/globals'
 import { WebpackMissingPreviewTemplateError } from 'storybook/internal/server-errors'
-import type { Options, SecurityConfig } from 'storybook/internal/types'
+import type { Options, Preset, SecurityConfig } from 'storybook/internal/types'
 import { dedent } from 'ts-dedent'
 import {
   pickRsbuildEnvironment,
@@ -139,14 +141,35 @@ const resolveLazyCompilation = async (
   }
 }
 
+// Resolve `webpackAddons` like Storybook resolves `addons` (e.g. `@storybook/addon-coverage` -> its
+// `/preset` entry), but load them into their own preset chain: only their `webpackFinal` is applied;
+// other preset hooks they export are ignored.
+// https://github.com/storybookjs/storybook/blob/f3b15ce1f28daac195e7698c075be7790f8172f1/code/core/src/common/presets.ts#L198
+const loadWebpackAddonPresets = async (options: RsbuildBuilderOptions) => {
+  const webpackAddons = await options.presets.apply<Preset[]>(
+    'webpackAddons',
+    [],
+  )
+  const resolved = webpackAddons
+    .map((addon) => {
+      const { name, options: addonOptions } =
+        typeof addon === 'string' ? { name: addon, options: undefined } : addon
+      return resolveAddonName(options.configDir, name, addonOptions)
+    })
+    .filter((addon) => addon !== undefined)
+
+  return getPresets(resolved, options)
+}
+
 export default async (
   options: RsbuildBuilderOptions,
-  extraWebpackConfig?: Rspack.Configuration,
 ): Promise<RsbuildConfig> => {
   const { rsbuildConfigPath, addonDocs } =
     await getBuilderOptions<BuilderOptions>(options)
-  const webpackConfigFromPresets =
-    await options.presets.apply<Rspack.Configuration>('webpack', {}, options)
+  const [webpackConfigFromPresets, webpackAddonPresets] = await Promise.all([
+    options.presets.apply<Rspack.Configuration>('webpack', {}, options),
+    loadWebpackAddonPresets(options),
+  ])
 
   if (addonDocs) {
     console.warn(
@@ -500,10 +523,12 @@ export default async (
           type: 'asset/source',
         })
 
-        return mergeConfig(
-          config,
-          extraWebpackConfig || {},
-          webpackConfigFromPresets,
+        // Like builder-webpack5, `webpackFinal` runs after the builder defaults and the `webpack` preset.
+        // Returning a promise is fine: Rsbuild 2 awaits every `tools.rspack` entry.
+        return webpackAddonPresets.apply(
+          'webpackFinal',
+          mergeConfig(config, webpackConfigFromPresets),
+          options,
         )
       },
       htmlPlugin: {
