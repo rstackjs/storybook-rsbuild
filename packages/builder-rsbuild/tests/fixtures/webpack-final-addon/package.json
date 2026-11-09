@@ -1,0 +1,5 @@
+{
+  "name": "webpack-final-addon",
+  "private": true,
+  "main": "preset.cjs"
+}

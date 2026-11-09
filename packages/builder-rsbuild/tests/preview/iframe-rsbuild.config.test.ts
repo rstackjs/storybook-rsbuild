@@ -307,11 +307,17 @@ describe('iframe-rsbuild.config', () => {
     lazyCompilation: LazyCompilationOption | 'unset',
     staticDirs: unknown = [],
     baseConfig: Rspack.Configuration = {},
+    presetOverrides: Record<string, unknown> = {},
   ) => {
     const { options } = createOptions(
       lazyCompilation,
       'DEVELOPMENT',
       staticDirs,
+      {},
+      false,
+      false,
+      undefined,
+      presetOverrides,
     )
     const config = await createIframeRsbuildConfig(
       options as RsbuildBuilderOptions,
@@ -324,7 +330,7 @@ describe('iframe-rsbuild.config', () => {
     const appendRules = rs.fn()
     let virtualModules: Record<string, string> = {}
 
-    const result = (rspackTool as any)(baseConfig, {
+    const result = await (rspackTool as any)(baseConfig, {
       addRules,
       appendRules,
       rspack: {
@@ -476,6 +482,27 @@ describe('iframe-rsbuild.config', () => {
       constants: expect.any(String),
       custom: 'user-custom',
     })
+  })
+
+  it('applies webpackAddons webpackFinal to the composed Rspack config', async () => {
+    const { rspackConfig } = await runRspackTool(
+      false,
+      [],
+      { module: { rules: [{ test: /\.existing$/ }] } },
+      { webpackAddons: [resolve(fixtureDir, 'webpack-final-addon')] },
+    )
+
+    // The fixture pushes onto `module.rules`, which only exists on the composed config.
+    expect(rspackConfig.module.rules).toEqual([
+      { test: /\.existing$/ },
+      { test: /\.webpack-final$/ },
+    ])
+    // Builder-composed fields survive the addon's return value.
+    expect(rspackConfig.resolve.modules).toEqual([
+      'node_modules',
+      '/workspace/shared',
+      '/workspace/generated',
+    ])
   })
 
   it('preserves a user-provided SWC bugfixes value', async () => {

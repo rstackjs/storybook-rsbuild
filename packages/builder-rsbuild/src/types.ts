@@ -33,6 +33,11 @@ export type RsbuildFinal = (
 
 export type StorybookConfigRsbuild = {
   rsbuildFinal?: RsbuildFinal
+  /**
+   * Addons whose `webpackFinal` runs on the composed Rspack config. Only `webpackFinal` is
+   * applied; their other preset hooks are ignored. `webpackFinal` from `addons` and from
+   * `main.ts` is not run.
+   */
   webpackAddons?: StorybookConfigRaw['addons']
   features?: StorybookConfigRaw['features'] & {
     /**
