@@ -1,6 +1,6 @@
 {
   "name": "rsbuild-plugin-react-native-web",
-  "version": "3.6.2",
+  "version": "3.6.3",
   "description": "Rsbuild plugin for React Native Web support",
   "keywords": [
     "rsbuild",
