@@ -157,7 +157,9 @@
       "local": null,
       "reviewWith": "packages/framework-react",
       "note": "Docgen option types; the local parallels live in framework-react/src/types.ts, which copies ReactDocgenTypescriptOptions from here (the plugin is an optional peer, so it is not imported). Review type/option changes for anything the local types should carry.",
-      "intentionalDivergences": []
+      "intentionalDivergences": [
+        "Does not declare `@storybook/react-docgen-typescript-plugin` (upstream: optional peer, https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/package.json): the vendored plugin is used and the option types are inlined, so the package is never imported."
+      ]
     },
     {
       "upstream": "code/frameworks/react-webpack5/src/index.ts",

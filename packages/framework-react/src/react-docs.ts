@@ -105,6 +105,7 @@ export const rsbuildFinalDocs: NonNullable<
   //#region webpack flavor react-docgen-typescript implementation, lacking support for hooks.
   // it's now superseded by the `transform` hook implementation of Vite flavor.
 
+  // Reference only: `@storybook/react-docgen-typescript-plugin` is not a dependency of this package.
   // const { ReactDocgenTypeScriptPlugin } = await import(
   //   '@storybook/react-docgen-typescript-plugin'
   // )

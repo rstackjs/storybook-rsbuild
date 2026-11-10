@@ -44,12 +44,12 @@ describe('docgen package contract', () => {
     }
   })
 
-  it('declares the webpack react-docgen-typescript plugin as an optional peer, as upstream does', () => {
+  it('does not declare the webpack react-docgen-typescript plugin: the vendored plugin is used', () => {
     const pkg = readPackageJson('framework-react')
     const name = '@storybook/react-docgen-typescript-plugin'
 
-    expect(pkg.peerDependencies?.[name]).toBe('1.0.6--canary.9.0c3f3b7.0')
-    expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
     expect(pkg.dependencies?.[name]).toBeUndefined()
+    expect(pkg.peerDependencies?.[name]).toBeUndefined()
+    expect(pkg.peerDependenciesMeta?.[name]).toBeUndefined()
   })
 })
