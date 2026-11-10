@@ -156,7 +156,15 @@ export function getReactDocgenImporter(
   return makeFsImporter((filename, basedir) => {
     const mappedFilenameByPaths = (() => {
       if (matchingPath) {
-        const match = matchingPath(filename)
+        // Without extensions, tsconfig-paths only tries `.js`, `.json` and `.node`, so an alias to a
+        // TypeScript file would never match.
+        // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/src/loaders/react-docgen-loader.ts#L138-L140
+        const match = matchingPath(
+          filename,
+          undefined,
+          undefined,
+          RESOLVE_EXTENSIONS,
+        )
         return match || filename
       }
       return filename

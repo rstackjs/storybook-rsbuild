@@ -1,8 +1,15 @@
 import type { RsbuildConfig } from '@rsbuild/core'
 import { mergeRsbuildConfig } from '@rsbuild/core'
-import { deprecate } from 'storybook/internal/node-logger'
+import {
+  isReactBuilderDocgenPackageInstalled,
+  prepareReactBuilderDocgen,
+  type ReactDocgenConfig,
+} from './builder-docgen'
 import { requirer } from './requirer'
 import type { StorybookConfig } from './types'
+
+/** Resolve from this package, which declares the builder docgen packages as optional peers. */
+const resolve = (specifier: string) => import.meta.resolve(specifier)
 
 export const rsbuildFinalDocs: NonNullable<
   StorybookConfig['rsbuildFinal']
@@ -15,7 +22,10 @@ export const rsbuildFinalDocs: NonNullable<
     return config
   }
 
-  const typescriptOptions = await options.presets.apply('typescript', {} as any)
+  const typescriptOptions = await options.presets.apply<{
+    reactDocgen?: ReactDocgenConfig
+    reactDocgenTypescriptOptions?: Record<string, unknown>
+  }>('typescript', {})
   const debug = options.loglevel === 'debug'
 
   const { reactDocgen, reactDocgenTypescriptOptions } = typescriptOptions || {}
@@ -23,11 +33,6 @@ export const rsbuildFinalDocs: NonNullable<
   if (typeof reactDocgen !== 'string') {
     return config
   }
-
-  deprecate(
-    `Builder docgen (\`typescript.reactDocgen: '${reactDocgen}'\`) is deprecated and will be removed in Storybook 12. ` +
-      `It runs because \`features.docgenServer\` is off. Server-side docgen needs the \`typescript\` package: install it and remove any \`docgenServer: false\` from your \`.storybook/main.ts\`.`,
-  )
 
   const reactDocgenLoaderRule = (test: RegExp) => ({
     test,
@@ -42,19 +47,18 @@ export const rsbuildFinalDocs: NonNullable<
     exclude: /(\.(stories|story)\.(js|jsx|ts|tsx))|(node_modules)/,
   })
 
-  let typescriptPresent: boolean
-  try {
-    require.resolve('typescript')
-    typescriptPresent = true
-  } catch (_e) {
-    typescriptPresent = false
+  // Builder docgen packages are optional peers: the loader and plugin import them only once
+  // builder docgen runs, so projects on the docgen server never resolve them.
+  // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/src/framework-preset-react-docs.ts#L39-L50
+  const mode = await prepareReactBuilderDocgen({
+    reactDocgen,
+    resolve,
+    options,
+  })
+  if (!mode) {
+    return config
   }
-
-  // `typescript` is an optional peerDependency here and the vendored plugin imports it
-  // dynamically, so a JS-only project must degrade rather than crash.
-  // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/frameworks/react-vite/src/preset.ts#L26-L45
-  const useReactDocgenTypescript =
-    reactDocgen === 'react-docgen-typescript' && typescriptPresent
+  const useReactDocgenTypescript = mode === 'react-docgen-typescript'
 
   //#region react-docgen
   if (!useReactDocgenTypescript) {
@@ -80,9 +84,11 @@ export const rsbuildFinalDocs: NonNullable<
       rspack: {
         module: {
           // The vendored react-docgen-typescript plugin only matches `**/**.tsx`, so non-TS
-          // files still need plain react-docgen.
-          // @see https://github.com/storybookjs/storybook/blob/3e12dfc040/code/presets/react-webpack/src/framework-preset-react-docs.ts#L60
-          rules: [reactDocgenLoaderRule(/\.(cjs|mjs|jsx?)$/)],
+          // files still need plain react-docgen. In this mode react-docgen is optional.
+          // @see https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/src/framework-preset-react-docs.ts#L77-L92
+          rules: isReactBuilderDocgenPackageInstalled(resolve, 'react-docgen')
+            ? [reactDocgenLoaderRule(/\.(cjs|mjs|jsx?)$/)]
+            : [],
         },
       },
     },

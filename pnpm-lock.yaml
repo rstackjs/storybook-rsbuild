@@ -264,17 +264,11 @@ importers:
         specifier: ^11.0.0-beta.1
         version: 11.0.0-beta.1(@types/react-dom@19.3.0(@types/react@18.3.31))(@types/react@18.3.31)(react-docgen-typescript@2.4.0(typescript@5.9.3))(react-docgen@8.0.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-beta.1(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
       '@storybook/react-docgen-typescript-plugin':
-        specifier: ^1.0.1
-        version: 1.0.1(typescript@5.9.3)(webpack@5.104.1)
+        specifier: 1.0.6--canary.9.0c3f3b7.0
+        version: 1.0.6--canary.9.0c3f3b7.0(typescript@5.9.3)(webpack@5.104.1)
       magic-string:
         specifier: ^1.4.3
         version: 1.4.3
-      react-docgen:
-        specifier: ^8.0.4
-        version: 8.0.4
-      react-docgen-typescript:
-        specifier: ^2.4.0
-        version: 2.4.0(typescript@5.9.3)
       resolve:
         specifier: ^1.22.13
         version: 1.22.13
@@ -303,6 +297,12 @@ importers:
       react:
         specifier: 18.3.1
         version: 18.3.1
+      react-docgen:
+        specifier: ^8.0.4
+        version: 8.0.4
+      react-docgen-typescript:
+        specifier: ^2.4.0
+        version: 2.4.0(typescript@5.9.3)
       react-dom:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
@@ -1089,6 +1089,12 @@ importers:
       postcss-loader:
         specifier: ^8.2.1
         version: 8.2.1(@rspack/core@2.2.9(@module-federation/runtime-tools@2.9.2)(@swc/helpers@0.5.23))(postcss@8.5.31)(typescript@5.9.3)(webpack@5.104.1)
+      react-docgen:
+        specifier: ^8.0.4
+        version: 8.0.4
+      react-docgen-typescript:
+        specifier: ^2.4.0
+        version: 2.4.0(typescript@5.9.3)
       react-refresh:
         specifier: ^0.19.0
         version: 0.19.0
@@ -5495,10 +5501,10 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@storybook/react-docgen-typescript-plugin@1.0.1':
-    resolution: {integrity: sha512-dqbHa+5gaxaklFCuV1WTvljVPTo3QIJgpW4Ln+QeME7osPZUnUhjN2/djvo+sxrWUrTTuqX5jkn291aDngu9Tw==}
+  '@storybook/react-docgen-typescript-plugin@1.0.6--canary.9.0c3f3b7.0':
+    resolution: {integrity: sha512-KUqXC3oa9JuQ0kZJLBhVdS4lOneKTOopnNBK4tUAgoxWQ3u/IjzdueZjFr7gyBrXMoU6duutk3RQR9u8ZpYJ4Q==}
     peerDependencies:
-      typescript: '>= 3.x'
+      typescript: '>= 4.x'
       webpack: '>= 4'
 
   '@storybook/react@11.0.0-beta.1':
@@ -8057,9 +8063,6 @@ packages:
   flat@5.0.2:
     resolution: {integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==}
     hasBin: true
-
-  flatted@3.3.3:
-    resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
 
   flatted@3.4.4:
     resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==}
@@ -18152,7 +18155,7 @@ snapshots:
     dependencies:
       react: 19.3.1
 
-  '@storybook/react-docgen-typescript-plugin@1.0.1(typescript@5.9.3)(webpack@5.104.1)':
+  '@storybook/react-docgen-typescript-plugin@1.0.6--canary.9.0c3f3b7.0(typescript@5.9.3)(webpack@5.104.1)':
     dependencies:
       debug: 4.4.3
       endent: 2.1.0
@@ -21019,14 +21022,12 @@ snapshots:
 
   flat-cache@3.2.0:
     dependencies:
-      flatted: 3.3.3
+      flatted: 3.4.4
       keyv: 4.5.4
       rimraf: 3.0.2
 
   flat@5.0.2:
     optional: true
-
-  flatted@3.3.3: {}
 
   flatted@3.4.4: {}
 

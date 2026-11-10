@@ -1,4 +1,4 @@
-import type { PluginOptions as ReactDocgenTypescriptOptions } from '@storybook/react-docgen-typescript-plugin'
+import type { ReactDocgenTypescriptParserOptions } from '@storybook/react'
 import type {
   BuilderOptions,
   StorybookConfigRsbuild,
@@ -9,6 +9,24 @@ import type {
   StorybookConfig as StorybookConfigBase,
   TypescriptOptions as TypescriptOptionsBase,
 } from 'storybook/internal/types'
+
+/**
+ * Options of `@storybook/react-docgen-typescript-plugin`, copied from its declarations instead of
+ * imported: it is an optional peer dependency, and a `.d.ts` import of a missing package fails
+ * `tsc` without `skipLibCheck`.
+ * https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/src/types.ts#L6-L17
+ */
+export type ReactDocgenTypescriptOptions =
+  ReactDocgenTypescriptParserOptions & {
+    docgenCollectionName?: string | null
+    setDisplayName?: boolean
+    typePropName?: string
+    tsconfigPath?: string
+    /** TypeScript `CompilerOptions`. */
+    compilerOptions?: Record<string, any>
+    exclude?: string[]
+    include?: string[]
+  }
 
 type FrameworkName = CompatibleString<'storybook-react-rsbuild'>
 type BuilderName = CompatibleString<'storybook-builder-rsbuild'>
