@@ -81,7 +81,8 @@
         "B1/B11 module rules use Rsbuild's addRules() API, whose prepend ordering keeps user-provided rules later in the merged config so they retain upstream-equivalent precedence (PR #556)",
         "fallback defaults retain the builder's existing browser polyfills while adding upstream's crypto: false, and merge user fallback values last to fix the local ??= all-or-nothing bug while preserving user precedence (PR #556)",
         "optimization.sideEffects: true is applied through Rsbuild's tools.rspack hook instead of raw webpack config (PR #556)",
-        "htmlPlugin.chunksSortMode is not set: upstream's 'none' is an html-webpack-plugin value; Rspack's HtmlRspackPlugin only accepts 'auto' | 'manual', so the option is left to Rsbuild's default (which picks 'manual' for multi-chunk entries) (PR #633)"
+        "htmlPlugin.chunksSortMode is not set: upstream's 'none' is an html-webpack-plugin value; Rspack's HtmlRspackPlugin only accepts 'auto' | 'manual', so the option is left to Rsbuild's default (which picks 'manual' for multi-chunk entries) (PR #633)",
+        "not ported, by user decision: upstream PR https://redirect.github.com/storybookjs/storybook/pull/36247 (builder-vite copies `publicDir` through the `staticDirs` preset) fixes a bug that does not exist here, because `server.publicDir` is forced to `false` and not inherited (`inherited-config.ts`); the core `copyAllStaticFiles` part ships in `storybook` and is active from 11.0.0-beta.1"
       ]
     },
     {
@@ -114,6 +115,18 @@
     {
       "upstream": "code/builders/builder-webpack5/src/types.ts",
       "local": "packages/builder-rsbuild/src/types.ts",
+      "intentionalDivergences": []
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/templates/preview.ejs",
+      "local": "packages/builder-rsbuild/templates/preview.ejs",
+      "intentionalDivergences": [
+        "the entry import keeps absolute, protocol-relative and root-relative URLs as they are and prefixes only relative files with `./` (`/^(https?:)?\\//` test, marked by the EJS comment above it), where upstream always writes `./<%= file %>`: builder-rsbuild defaults `assetPrefix` to `''` for subpath and CDN deployment, so entry files can be absolute CDN URLs (#464, upstream storybookjs/storybook#23481)"
+      ]
+    },
+    {
+      "upstream": "code/builders/builder-webpack5/templates/virtualModuleModernEntry.js",
+      "local": "packages/builder-rsbuild/templates/virtualModuleModernEntry.js",
       "intentionalDivergences": []
     },
     {
@@ -219,7 +232,8 @@
       "reviewWith": "packages/framework-react",
       "note": "Vite twin of the react-docgen port; the port source is code/presets/react-webpack/src/loaders/react-docgen-loader.ts. Review only for docgen behaviors the webpack twin lacks.",
       "intentionalDivergences": [
-        "react-native -> react-native-web importer remap lives in packages/framework-react/src/loaders/react-docgen-loader.ts because the local loader serves both upstream docgen implementations (upstream PR #31324)"
+        "react-native -> react-native-web importer remap lives in packages/framework-react/src/loaders/react-docgen-loader.ts because the local loader serves both upstream docgen implementations (upstream PR #31324)",
+        "not ported, by user decision: upstream PR https://redirect.github.com/storybookjs/storybook/pull/36574 (parse in isolation first, retry with the project Babel config) fixes a bug that does not exist here, because the local loader has always parsed with `babelrc: false, configFile: false` like the webpack twin `react-webpack/src/loaders/react-docgen-loader.ts`, which did not get the change"
       ]
     },
     {
@@ -287,6 +301,7 @@
         "the exclude list also drops builder-rsbuild's storybook-stories.js and storybook-config-entry.js virtual entries (upstream excludes /virtual: ids) and node_modules, which Vite dev never transforms because it pre-bundles dependencies",
         "the default export binding is probed as `__exports__` (rspack-vue-loader) or `_sfc_main` (unplugin-vue); upstream's imported-`_sfc_main` detection (Vite production output) and the non-SFC `export default` -> `_sfc_main` rewrite have no rspack counterpart and are dropped, so a non-SFC default export (no local binding) is skipped",
         "handleHotUpdate becomes a watchRun hook that calls checker.updateFile for the matching ids in compiler.modifiedFiles; no module invalidation or full reload is needed because Rspack's own HMR re-runs the transform for changed modules",
+        "upstream PR https://redirect.github.com/storybookjs/storybook/pull/35705 (reload only when docgen changes) is not ported, by user decision: the watchRun hook only refreshes the checker and never sends a full reload, so the bug does not exist here and HMR stays with rspack-vue-loader",
         "no magic-string: the transform is append-only, so returning the code keeps the incoming source map; the empty and error paths return the source unchanged because Rsbuild's TransformResult has no undefined"
       ]
     },

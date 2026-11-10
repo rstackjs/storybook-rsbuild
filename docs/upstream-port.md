@@ -9,7 +9,7 @@ This repo adapts upstream `storybookjs/storybook` (mainly `builder-webpack5`, wi
 - A perceived upstream bug or better approach is reported to the user, never implemented unilaterally. Deviating needs the user's explicit approval, presented as a binary choice (upstream-literal vs. local variant).
 - Every approved deviation is recorded twice, in the same change: an `intentionalDivergences` line in the manifest (see [project-structure.md](project-structure.md)), and an in-code comment on exactly the lines a future sync would silently revert. Comments in ported code cite an upstream permalink instead of copying upstream's own comment text.
 - Both upstream builders count as precedent: a divergence from `builder-webpack5` is not a divergence if `builder-vite` does it.
-- `templates/preview.ejs` stays verbatim-aligned with upstream `builder-webpack5`; no new divergence in it.
+- `templates/preview.ejs` stays aligned with upstream `builder-webpack5` except for the recorded asset-prefix divergence; no new divergence in it.
 
 ## Porting a change
 

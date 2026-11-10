@@ -59,6 +59,10 @@ There is no plugin package to install for `react-docgen-typescript`: `storybook-
 Set `typescript.reactDocgen: false` to run without docgen, or better, remove `docgenServer: false` to use server-side docgen. Storybook does not add these packages when you upgrade.
 :::
 
+:::info `htmlLang` main-config option removed
+`htmlLang` is no longer a main-config option, to match upstream Storybook, and the preview `<html>` element is always `lang="en"`. To set a language, use the `htmlLang` story parameter (`parameters.htmlLang`), which sets `lang` on the story root element (story view) or the embedded story canvas (docs view), not on the iframe `<html>`. Use `parameters.docs.lang` for the language of docs prose such as descriptions; Storybook's own UI stays English. Both parameters are available since Storybook 10.5 ([storybook#35321](https://redirect.github.com/storybookjs/storybook/pull/35321)).
+:::
+
 ## From Storybook Webpack5 Framework
 
 If your `.storybook/main.ts` uses a webpack5 framework package (e.g. `@storybook/react-webpack5`, `@storybook/vue3-webpack5`), follow this section.
