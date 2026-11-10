@@ -1,12 +1,13 @@
+import { isReactBuilderDocgenPackageInstalled } from '@storybook/react/internal/builder-docgen'
 import { beforeEach, describe, expect, it, rs } from 'rstack/test'
-import {
-  isReactBuilderDocgenPackageInstalled,
-  prepareReactBuilderDocgen,
-} from '../src/builder-docgen'
+import { prepareReactBuilderDocgen } from '../src/builder-docgen'
 import { rsbuildFinalDocs } from '../src/react-docs'
 
 rs.mock('../src/builder-docgen', () => ({
   prepareReactBuilderDocgen: rs.fn(),
+}))
+
+rs.mock('@storybook/react/internal/builder-docgen', () => ({
   isReactBuilderDocgenPackageInstalled: rs.fn(),
 }))
 
@@ -70,10 +71,7 @@ describe('rsbuildFinalDocs', () => {
 
     expect(result).toBe(config)
     expect(prepareReactBuilderDocgen).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reactDocgen: 'react-docgen',
-        builder: 'rsbuild',
-      }),
+      expect.objectContaining({ reactDocgen: 'react-docgen' }),
     )
   })
 

@@ -11,8 +11,7 @@ import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, rs } from 'rstack/test'
 import { logger, once } from 'storybook/internal/node-logger'
 import {
-  getReactBuilderDocgenPackages,
-  isReactBuilderDocgenPackageInstalled,
+  getRsbuildBuilderDocgenPackages,
   prepareReactBuilderDocgen,
 } from '../src/builder-docgen'
 
@@ -74,37 +73,21 @@ function createProject({
 const TS_5 = { typescript: '5.9.3' }
 const TS_7 = { typescript: '7.0.0' }
 
-describe('getReactBuilderDocgenPackages', () => {
+describe('getRsbuildBuilderDocgenPackages', () => {
   it('needs react-docgen for the react-docgen mode', () => {
-    expect(getReactBuilderDocgenPackages('react-docgen', 'rsbuild')).toEqual([
+    expect(getRsbuildBuilderDocgenPackages('react-docgen')).toEqual([
       'react-docgen',
     ])
   })
 
-  it('needs only react-docgen-typescript for the react-docgen-typescript mode on rsbuild, since the plugin is vendored', () => {
-    expect(
-      getReactBuilderDocgenPackages('react-docgen-typescript', 'rsbuild'),
-    ).toEqual(['react-docgen-typescript'])
+  it('needs only react-docgen-typescript for the react-docgen-typescript mode, since the plugin is vendored', () => {
+    expect(getRsbuildBuilderDocgenPackages('react-docgen-typescript')).toEqual([
+      'react-docgen-typescript',
+    ])
   })
 
   it.each([false, undefined] as const)('needs nothing for %s', (mode) => {
-    expect(getReactBuilderDocgenPackages(mode, 'rsbuild')).toEqual([])
-  })
-})
-
-describe('isReactBuilderDocgenPackageInstalled', () => {
-  it('rejects a version outside the supported range', () => {
-    const { resolve } = createProject({ packages: { 'react-docgen': '5.4.3' } })
-    expect(isReactBuilderDocgenPackageInstalled(resolve, 'react-docgen')).toBe(
-      false,
-    )
-  })
-
-  it('accepts a supported version', () => {
-    const { resolve } = createProject({ packages: { 'react-docgen': '8.0.4' } })
-    expect(isReactBuilderDocgenPackageInstalled(resolve, 'react-docgen')).toBe(
-      true,
-    )
+    expect(getRsbuildBuilderDocgenPackages(mode)).toEqual([])
   })
 })
 
@@ -120,7 +103,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen-typescript',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -135,7 +117,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen-typescript',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -150,7 +131,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen-typescript',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -166,7 +146,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -180,7 +159,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -198,7 +176,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),
@@ -217,7 +194,6 @@ describe('prepareReactBuilderDocgen', () => {
     await expect(
       prepareReactBuilderDocgen({
         reactDocgen: 'react-docgen',
-        builder: 'rsbuild',
         resolve,
         options: { configDir },
       }),

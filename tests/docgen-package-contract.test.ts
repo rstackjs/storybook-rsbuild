@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'rstack/test'
-import { REACT_BUILDER_DOCGEN_PACKAGES } from '../packages/framework-react/src/builder-docgen'
 
 type PackageJson = {
   dependencies?: Record<string, string>
@@ -18,6 +18,27 @@ const readPackageJson = (dir: string): PackageJson =>
       'utf-8',
     ),
   )
+
+// The supported ranges come from the renderer, resolved the way `framework-react` resolves it.
+const requireFromFrameworkReact = createRequire(
+  new URL('../packages/framework-react/package.json', import.meta.url),
+)
+const { REACT_BUILDER_DOCGEN_PACKAGES } = (await import(
+  pathToFileURL(
+    requireFromFrameworkReact.resolve(
+      '@storybook/react/internal/builder-docgen',
+    ),
+  ).href
+)) as { REACT_BUILDER_DOCGEN_PACKAGES: Record<string, string> }
+// Only the packages this repo's builder docgen uses; the renderer also lists builder plugins.
+const {
+  'react-docgen': reactDocgenRange,
+  'react-docgen-typescript': rdtRange,
+} = REACT_BUILDER_DOCGEN_PACKAGES
+const DOCGEN_PEERS = {
+  'react-docgen': reactDocgenRange,
+  'react-docgen-typescript': rdtRange,
+}
 
 const TYPESCRIPT_PEER = '^5.9.0 || ^6.0.0 || ^7.0.0'
 
@@ -37,7 +58,7 @@ describe('docgen package contract', () => {
   it('declares the builder docgen packages of framework-react as optional peers with the supported ranges', () => {
     const pkg = readPackageJson('framework-react')
 
-    for (const [name, range] of Object.entries(REACT_BUILDER_DOCGEN_PACKAGES)) {
+    for (const [name, range] of Object.entries(DOCGEN_PEERS)) {
       expect(pkg.peerDependencies?.[name]).toBe(range)
       expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
       expect(pkg.dependencies?.[name]).toBeUndefined()
@@ -47,7 +68,7 @@ describe('docgen package contract', () => {
   it('declares the builder docgen packages of framework-react-native-web as optional peers with the supported ranges', () => {
     const pkg = readPackageJson('framework-react-native-web')
 
-    for (const [name, range] of Object.entries(REACT_BUILDER_DOCGEN_PACKAGES)) {
+    for (const [name, range] of Object.entries(DOCGEN_PEERS)) {
       expect(pkg.peerDependencies?.[name]).toBe(range)
       expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
       expect(pkg.dependencies?.[name]).toBeUndefined()
