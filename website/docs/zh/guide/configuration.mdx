@@ -216,7 +216,7 @@ export default config
 
 ### 组件 docgen
 
-Storybook 11 在 Storybook server 上提取组件元数据（`features.docgenServer`）。React、Vue 和 Web Components 默认开启。React 和 Vue 需要安装 `typescript` 包；Web Components 自带该依赖。原生 HTML 没有 docgen。
+Storybook 11 在 Storybook server 上提取组件元数据（`features.docgenServer`）。React、Vue 和 Web Components 默认开启。React、Vue 和 Web Components 需要安装 `typescript` 包；它是这些 framework 的必需 peer dependency。原生 HTML 没有 docgen。
 
 React 的 props 来自 TypeScript 类型。默认值依次取自解构默认值、`Component.defaultProps` / `static defaultProps`、JSDoc `@default` / `@defaultValue`。不读取 `propTypes`。
 
