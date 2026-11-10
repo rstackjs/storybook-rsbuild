@@ -354,11 +354,7 @@
       ]
     }
   ],
-  "ignoredUpstreamFiles": [
-    "code/presets/react-webpack/src/cra-config.ts",
-    "code/presets/react-webpack/src/framework-preset-cra.ts",
-    "code/renderers/react/src/**"
-  ],
+  "ignoredUpstreamFiles": ["code/renderers/react/src/**"],
   "localOnlyFiles": {
     "$comment": "Local files with no storybook upstream origin — listed so coverage audits know they are expected. The react-docgen-typescript plugin is vendored from the external vite-plugin-react-docgen-typescript project, adapted to Rsbuild. headless.ts and preset.ts follow builder-vite (change-detection-adapter/headless.ts and preset.ts); preset.ts is kept as a re-export of preview-preset.ts rather than merged into it so preview-preset.ts stays 1:1 with builder-webpack5's presets/preview-preset.ts while dist/preset.js satisfies the headless `<builder dir>/preset.js` lookup; builder-vite has no file-level mappings, see the top-level $comment.",
     "files": [
