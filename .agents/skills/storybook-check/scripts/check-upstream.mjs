@@ -41,7 +41,7 @@ Modes:
                                                    review-only entry, duplicate
                                                    upstream, dangling package)
                           UNMAPPED|<path>          upstream file (under mapped
-                                                   src dirs) in neither mappings
+                                                   src/templates dirs) in neither mappings
                                                    nor ignoredUpstreamFiles
                           MISSING-UPSTREAM|<path>  mapped upstream file that no
                                                    longer exists on origin/next
@@ -51,7 +51,7 @@ Modes:
                           MISSING-LOCAL|<path>     mapped or localOnly local file
                                                    that no longer exists here
                           UNLISTED-LOCAL|<path>    local file (under mapped local
-                                                   src dirs) in neither mappings
+                                                   src/templates dirs) in neither mappings
                                                    nor localOnlyFiles
   --no-fetch            Skip git fetch (cache already updated this session).
 `
@@ -156,7 +156,7 @@ function ensureCache(noFetch) {
 const isSkipped = (path) =>
   /(\.test\.|\.stories\.|\.d\.ts$|__tests__|__fixtures__|__mocks__)/.test(path)
 
-const srcDir = (path) => path.replace(/\/src\/.*$/, '/src')
+const sweepDir = (path) => path.replace(/\/(src|templates)\/.*$/, '/$1')
 const localPackage = (path) => path.split('/').slice(0, 2).join('/')
 const uniq = (values) => [...new Set(values)]
 
@@ -212,7 +212,7 @@ function listLocalSources(repoRoot, dir) {
   const absolute = join(repoRoot, dir)
   if (!existsSync(absolute)) return []
   return readdirSync(absolute, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.(ts|tsx|js)$/.test(entry.name))
+    .filter((entry) => entry.isFile() && /\.(ts|tsx|js|ejs)$/.test(entry.name))
     .map((entry) => {
       const nested = entry.parentPath ?? entry.path
       // Manifest paths are slash-separated; join() uses the platform separator.
@@ -236,7 +236,7 @@ function reportCoverage(manifest, repoRoot) {
   // One ls-tree per mapped source dir answers both upstream questions: which
   // mapped files have disappeared, and which tracked files nobody has mapped.
   const tracked = new Set(
-    uniq(swept.map((entry) => srcDir(entry.upstream))).flatMap((dir) =>
+    uniq(swept.map((entry) => sweepDir(entry.upstream))).flatMap((dir) =>
       gitLines([
         '-C',
         CACHE_DIR,
@@ -290,7 +290,7 @@ function reportCoverage(manifest, repoRoot) {
     mappings
       .map((entry) => entry.local)
       .filter(Boolean)
-      .map(srcDir),
+      .map(sweepDir),
   )
   for (const dir of localDirs) {
     for (const file of listLocalSources(repoRoot, dir)) {
