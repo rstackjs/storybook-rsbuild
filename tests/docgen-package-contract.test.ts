@@ -31,13 +31,10 @@ const { REACT_BUILDER_DOCGEN_PACKAGES } = (await import(
   ).href
 )) as { REACT_BUILDER_DOCGEN_PACKAGES: Record<string, string> }
 // Only the packages this repo's builder docgen uses; the renderer also lists builder plugins.
-const {
-  'react-docgen': reactDocgenRange,
-  'react-docgen-typescript': rdtRange,
-} = REACT_BUILDER_DOCGEN_PACKAGES
 const DOCGEN_PEERS = {
-  'react-docgen': reactDocgenRange,
-  'react-docgen-typescript': rdtRange,
+  'react-docgen': REACT_BUILDER_DOCGEN_PACKAGES['react-docgen'],
+  'react-docgen-typescript':
+    REACT_BUILDER_DOCGEN_PACKAGES['react-docgen-typescript'],
 }
 
 const TYPESCRIPT_PEER = '^5.9.0 || ^6.0.0 || ^7.0.0'
@@ -55,25 +52,18 @@ describe('docgen package contract', () => {
     expect(pkg.peerDependenciesMeta?.typescript?.optional).not.toBe(true)
   })
 
-  it('declares the builder docgen packages of framework-react as optional peers with the supported ranges', () => {
-    const pkg = readPackageJson('framework-react')
+  it.each(['framework-react', 'framework-react-native-web'])(
+    '%s declares the builder docgen packages as optional peers with the supported ranges',
+    (dir) => {
+      const pkg = readPackageJson(dir)
 
-    for (const [name, range] of Object.entries(DOCGEN_PEERS)) {
-      expect(pkg.peerDependencies?.[name]).toBe(range)
-      expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
-      expect(pkg.dependencies?.[name]).toBeUndefined()
-    }
-  })
-
-  it('declares the builder docgen packages of framework-react-native-web as optional peers with the supported ranges', () => {
-    const pkg = readPackageJson('framework-react-native-web')
-
-    for (const [name, range] of Object.entries(DOCGEN_PEERS)) {
-      expect(pkg.peerDependencies?.[name]).toBe(range)
-      expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
-      expect(pkg.dependencies?.[name]).toBeUndefined()
-    }
-  })
+      for (const [name, range] of Object.entries(DOCGEN_PEERS)) {
+        expect(pkg.peerDependencies?.[name]).toBe(range)
+        expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
+        expect(pkg.dependencies?.[name]).toBeUndefined()
+      }
+    },
+  )
 
   it('does not declare the webpack react-docgen-typescript plugin: the vendored plugin is used', () => {
     const pkg = readPackageJson('framework-react')
