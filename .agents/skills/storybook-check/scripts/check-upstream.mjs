@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import picomatch from 'picomatch'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const MANIFEST_PATH = resolve(SCRIPT_DIR, '../manifest.json')
@@ -223,35 +224,6 @@ function listLocalSources(repoRoot, dir) {
     .sort()
 }
 
-/**
- * Compile an `ignoredUpstreamFiles` entry to a RegExp. `*` matches within one path segment, `**`
- * matches across segments (`**\/` also matches zero directories); everything else is literal, so a
- * plain path matches exactly itself. Dependency-free on purpose: `path.matchesGlob` is
- * experimental on part of the supported Node range.
- */
-function globToRegExp(pattern) {
-  let source = ''
-  for (let i = 0; i < pattern.length; i++) {
-    const char = pattern[i]
-    if (char === '*') {
-      if (pattern[i + 1] === '*') {
-        i++
-        if (pattern[i + 1] === '/') {
-          i++
-          source += '(?:.*/)?'
-        } else {
-          source += '.*'
-        }
-      } else {
-        source += '[^/]*'
-      }
-    } else {
-      source += char.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    }
-  }
-  return new RegExp(`^${source}$`)
-}
-
 function reportCoverage(manifest, repoRoot) {
   const mappings = manifest.mappings
   const findings = validateManifest(manifest, repoRoot)
@@ -285,13 +257,13 @@ function reportCoverage(manifest, repoRoot) {
 
   const upstreamMapped = new Set(swept.map((entry) => entry.upstream))
   const ignoreMatchers = (manifest.ignoredUpstreamFiles ?? []).map(
-    (pattern) => ({ pattern, regExp: globToRegExp(pattern), used: false }),
+    (pattern) => ({ pattern, isMatch: picomatch(pattern), used: false }),
   )
   for (const file of [...tracked].sort()) {
     if (isSkipped(file)) continue
     // Mapped files win over ignore patterns: they are audited, never ignored.
     if (upstreamMapped.has(file)) continue
-    const ignored = ignoreMatchers.filter(({ regExp }) => regExp.test(file))
+    const ignored = ignoreMatchers.filter(({ isMatch }) => isMatch(file))
     if (ignored.length > 0) {
       for (const matcher of ignored) matcher.used = true
       continue
