@@ -59,6 +59,10 @@ v4 不再支持旧版 peer。升级到 v4 之前请先完成升级。
 可以设置 `typescript.reactDocgen: false` 来关闭 docgen；更推荐的做法是移除 `docgenServer: false`，改用 server-side docgen。升级时 Storybook 不会自动添加这些包。
 :::
 
+:::info `htmlLang` main 配置项已移除
+为与上游 Storybook 保持一致，`htmlLang` 不再是 main 配置项，preview 的 `<html>` 元素固定为 `lang="en"`。如需设置语言，请使用 `htmlLang` story parameter（`parameters.htmlLang`）：它设置的是 story 根元素（story 视图）或内嵌 story canvas（docs 视图）的 `lang`，而不是 iframe `<html>` 的 `lang`。docs 正文（如描述）的语言请使用 `parameters.docs.lang`；Storybook 自身的界面仍为英文。这两个 parameter 均来自 Storybook 11（[storybook#35321](https://redirect.github.com/storybookjs/storybook/pull/35321)）。
+:::
+
 ## 从 Storybook Webpack5 Framework 迁移
 
 如果你的 `.storybook/main.ts` 使用了 webpack5 framework 包（例如 `@storybook/react-webpack5`、`@storybook/vue3-webpack5`），请按照本节操作。

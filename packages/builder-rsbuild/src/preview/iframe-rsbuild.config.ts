@@ -204,7 +204,6 @@ export default async (
     build,
     tagsOptions,
     security,
-    htmlLang,
   ] = await Promise.all([
     presets.apply('core'),
     presets.apply('frameworkOptions'),
@@ -219,7 +218,6 @@ export default async (
     options.presets.apply('build'),
     presets.apply('tags', {}),
     presets.apply<SecurityConfig | undefined>('security'),
-    presets.apply<string>('htmlLang', 'en'),
   ])
 
   const stories = normalizeStories(nonNormalizedStories, {
@@ -558,7 +556,6 @@ export default async (
               ? { INSECURE_IFRAME_MESSAGING: true }
               : {}),
           },
-          htmlLang,
           headHtmlSnippet,
           bodyHtmlSnippet,
         },
