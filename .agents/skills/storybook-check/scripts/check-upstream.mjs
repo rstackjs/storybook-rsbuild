@@ -223,6 +223,35 @@ function listLocalSources(repoRoot, dir) {
     .sort()
 }
 
+/**
+ * Compile an `ignoredUpstreamFiles` entry to a RegExp. `*` matches within one path segment, `**`
+ * matches across segments (`**\/` also matches zero directories); everything else is literal, so a
+ * plain path matches exactly itself. Dependency-free on purpose: `path.matchesGlob` is
+ * experimental on part of the supported Node range.
+ */
+function globToRegExp(pattern) {
+  let source = ''
+  for (let i = 0; i < pattern.length; i++) {
+    const char = pattern[i]
+    if (char === '*') {
+      if (pattern[i + 1] === '*') {
+        i++
+        if (pattern[i + 1] === '/') {
+          i++
+          source += '(?:.*/)?'
+        } else {
+          source += '.*'
+        }
+      } else {
+        source += '[^/]*'
+      }
+    } else {
+      source += char.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    }
+  }
+  return new RegExp(`^${source}$`)
+}
+
 function reportCoverage(manifest, repoRoot) {
   const mappings = manifest.mappings
   const findings = validateManifest(manifest, repoRoot)
@@ -254,13 +283,25 @@ function reportCoverage(manifest, repoRoot) {
     }
   }
 
-  const upstreamKnown = new Set([
-    ...swept.map((entry) => entry.upstream),
-    ...(manifest.ignoredUpstreamFiles ?? []),
-  ])
+  const upstreamMapped = new Set(swept.map((entry) => entry.upstream))
+  const ignoreMatchers = (manifest.ignoredUpstreamFiles ?? []).map(
+    (pattern) => ({ pattern, regExp: globToRegExp(pattern), used: false }),
+  )
   for (const file of [...tracked].sort()) {
-    if (isSkipped(file) || upstreamKnown.has(file)) continue
+    if (isSkipped(file)) continue
+    // Mapped files win over ignore patterns: they are audited, never ignored.
+    if (upstreamMapped.has(file)) continue
+    const ignored = ignoreMatchers.filter(({ regExp }) => regExp.test(file))
+    if (ignored.length > 0) {
+      for (const matcher of ignored) matcher.used = true
+      continue
+    }
     findings.push(`UNMAPPED|${file}`)
+  }
+  // Only globs are checked: an exact path of a deleted upstream file is inert, while a glob that
+  // matches nothing means the tree it covered moved.
+  for (const { pattern, used } of ignoreMatchers) {
+    if (!used && pattern.includes('*')) findings.push(`STALE-IGNORE|${pattern}`)
   }
 
   const localKnown = uniq([

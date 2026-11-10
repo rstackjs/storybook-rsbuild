@@ -38,8 +38,9 @@ node <skill-dir>/scripts/check-upstream.mjs --coverage
 This validates the manifest — first for internal consistency, then against reality on both sides:
 
 - `INVALID-MANIFEST` — the entry itself is malformed: a review-only entry with no `reviewWith`, a duplicate `upstream`, a `reviewWith` on an entry that already has a `local`, or one pointing at a package that isn't there. These block step 2, which partitions on exactly those fields.
+- `STALE-IGNORE` — an `ignoredUpstreamFiles` glob matches no upstream file in the swept directories. Remove or fix it.
 - `MISSING-UPSTREAM` — a mapped upstream file no longer exists. Track the rename (`git -C ~/.cache/storybook-upstream log --follow --format='%H %s' -5 origin/next -- <path>`) and fix the entry.
-- `UNMAPPED` — a new upstream file with no mapping decision. Map it, or add it to `ignoredUpstreamFiles`. A new mapping needs a `local` path, or `local: null` plus a `reviewWith` naming the local package that reviews it — grouping in step 2 depends on that field.
+- `UNMAPPED` — a new upstream file with no mapping decision. Map it, or add it to `ignoredUpstreamFiles` (entries may be globs: `*` within a path segment, `**` across segments). A new mapping needs a `local` path, or `local: null` plus a `reviewWith` naming the local package that reviews it — grouping in step 2 depends on that field.
 - `MISSING-LOCAL` — a mapped or local-only file was removed from this repo. Fix the entry.
 - `UNLISTED-LOCAL` — a new local file the manifest doesn't know. Map it or add to `localOnlyFiles`.
 
