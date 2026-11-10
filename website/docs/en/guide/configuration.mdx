@@ -216,7 +216,7 @@ Paths resolve relative to the Storybook config directory. When the option is omi
 
 ### Component docgen
 
-Storybook 11 extracts component metadata on the Storybook server (`features.docgenServer`). It is on by default for React, Vue, and Web Components. React and Vue need the `typescript` package installed; Web Components ship it as a dependency. Vanilla HTML has no docgen.
+Storybook 11 extracts component metadata on the Storybook server (`features.docgenServer`). It is on by default for React, Vue, and Web Components. React, Vue, and Web Components need the `typescript` package installed; it is a required peer dependency of their frameworks. Vanilla HTML has no docgen.
 
 For React, props come from TypeScript types. Default values are taken from inline destructuring defaults first, then `Component.defaultProps` / `static defaultProps`, then JSDoc `@default` / `@defaultValue`. `propTypes` is not read.
 

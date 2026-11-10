@@ -46,7 +46,7 @@
     "prepare": "pnpm run build"
   },
   "dependencies": {
-    "@storybook/react": "^11.0.0-beta.0",
+    "@storybook/react": "^11.0.0-beta.1",
     "rsbuild-plugin-react-native-web": "workspace:*",
     "storybook-builder-rsbuild": "workspace:*",
     "storybook-react-rsbuild": "workspace:*"
@@ -59,19 +59,24 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native-web": "^0.21.4",
-    "storybook": "11.0.0-beta.0",
+    "storybook": "11.0.0-beta.1",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@rsbuild/core": "^2.0.0",
     "react": "^18.0.0 || ^19.0.0",
+    "react-docgen": "^8.0.2",
+    "react-docgen-typescript": "^2.2.2",
     "react-dom": "^18.0.0 || ^19.0.0",
     "react-native-web": "^0.19.12 || ^0.20.0 || ^0.21.0",
-    "storybook": "^11.0.0-beta.0",
+    "storybook": "^11.0.0-beta.1",
     "typescript": "^5.9.0 || ^6.0.0 || ^7.0.0"
   },
   "peerDependenciesMeta": {
-    "typescript": {
+    "react-docgen": {
+      "optional": true
+    },
+    "react-docgen-typescript": {
       "optional": true
     }
   },

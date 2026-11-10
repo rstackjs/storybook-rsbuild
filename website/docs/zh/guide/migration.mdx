@@ -44,6 +44,21 @@ v4 不再支持旧版 peer。升级到 v4 之前请先完成升级。
 
 :::
 
+:::info React builder docgen 相关包变为可选 peer
+`react-docgen` 和 `react-docgen-typescript` 现在是 `storybook-react-rsbuild` 与 `storybook-react-native-web-rsbuild` 的可选 peer dependency，因此使用 server-side docgen 的项目不再安装它们，也不会安装 `react-docgen` 带来的 Babel 工具链。`typescript` 现在是 React、Vue 3、React Native Web 和 Web Components 这几个 framework 的必需 peer dependency。
+
+只有在 `.storybook/main.ts` 中设置了 `features.docgenServer: false` 的项目会受到影响。Builder docgen 只在运行时才会加载这些包；缺少任何一个包时，`storybook dev` 和 `storybook build` 会失败，并给出对应包管理器的安装命令。请按 `typescript.reactDocgen` 的模式，把需要的包加入 `devDependencies`：
+
+| `typescript.reactDocgen`    | 需要加入 devDependencies  |
+| --------------------------- | ------------------------- |
+| `'react-docgen'`（默认）    | `react-docgen`            |
+| `'react-docgen-typescript'` | `react-docgen-typescript` |
+
+`react-docgen-typescript` 模式不需要额外安装 plugin 包：`storybook-react-rsbuild` 自带该 plugin。此模式下 `react-docgen` 是可选的，只用于解析 JavaScript 文件；缺少它时 JavaScript 组件不会有 props，且 Storybook 不会给出警告。当 `typescript` 不可用（未安装，或是没有 compiler API 的 TypeScript 7）时，`react-docgen-typescript` 会回退到 `react-docgen`。
+
+可以设置 `typescript.reactDocgen: false` 来关闭 docgen；更推荐的做法是移除 `docgenServer: false`，改用 server-side docgen。升级时 Storybook 不会自动添加这些包。
+:::
+
 ## 从 Storybook Webpack5 Framework 迁移
 
 如果你的 `.storybook/main.ts` 使用了 webpack5 framework 包（例如 `@storybook/react-webpack5`、`@storybook/vue3-webpack5`），请按照本节操作。

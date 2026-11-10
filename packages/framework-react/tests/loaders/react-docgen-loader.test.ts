@@ -142,6 +142,21 @@ describe('getReactDocgenImporter function', () => {
 
     expect(result).toBe(reactNativeWebEntry)
   })
+
+  it('passes the resolve extensions to tsconfig-paths so aliases can map to TypeScript files', () => {
+    const matchingPath = rs.fn(() => undefined)
+    const imported = getReactDocgenImporter(matchingPath)
+    reactDocgenResolverMock.defaultLookupModule.mockReturnValue('/x/y.ts')
+
+    ;(imported as any)('@/components/types', '/x')
+
+    expect(matchingPath).toHaveBeenCalledWith(
+      '@/components/types',
+      undefined,
+      undefined,
+      expect.arrayContaining(['.ts', '.tsx']),
+    )
+  })
 })
 
 async function runLoader(resourcePath: string) {

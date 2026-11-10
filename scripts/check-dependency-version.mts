@@ -68,10 +68,8 @@ for (const entry of fs.readdirSync(packagesDir)) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
   const ownPeer = pkg.peerDependencies?.storybook
   if (!ownPeer) continue
-  const rendererDep = Object.keys(pkg.dependencies ?? {}).find(
-    (d) =>
-      d.startsWith('@storybook/') &&
-      d !== '@storybook/react-docgen-typescript-plugin',
+  const rendererDep = Object.keys(pkg.dependencies ?? {}).find((d) =>
+    d.startsWith('@storybook/'),
   )
   if (!rendererDep) continue
   const rendererPkgPath = path.join(

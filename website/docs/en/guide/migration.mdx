@@ -44,6 +44,21 @@ v4 drops support for legacy peer versions. Upgrade before you move to v4.
 
 :::
 
+:::info React builder docgen packages are optional peers
+`react-docgen` and `react-docgen-typescript` are now optional peer dependencies of `storybook-react-rsbuild` and `storybook-react-native-web-rsbuild`, so projects on server-side docgen no longer install them, nor the Babel toolchain that `react-docgen` brings along. `typescript` is now a required peer dependency of the React, Vue 3, React Native Web, and Web Components frameworks.
+
+Only projects whose `.storybook/main.ts` sets `features.docgenServer: false` are affected. Builder docgen loads these packages only when it runs; if one is missing, `storybook dev` and `storybook build` fail with the install command for your package manager. Add the packages for your `typescript.reactDocgen` mode to `devDependencies`:
+
+| `typescript.reactDocgen`    | Add to devDependencies    |
+| --------------------------- | ------------------------- |
+| `'react-docgen'` (default)  | `react-docgen`            |
+| `'react-docgen-typescript'` | `react-docgen-typescript` |
+
+There is no plugin package to install for `react-docgen-typescript`: `storybook-react-rsbuild` ships its own plugin. In that mode `react-docgen` is optional and only documents JavaScript files; without it, JavaScript components get no props, and Storybook does not warn about that. Without a usable `typescript` (not installed, or TypeScript 7, which has no compiler API), `react-docgen-typescript` falls back to `react-docgen`.
+
+Set `typescript.reactDocgen: false` to run without docgen, or better, remove `docgenServer: false` to use server-side docgen. Storybook does not add these packages when you upgrade.
+:::
+
 ## From Storybook Webpack5 Framework
 
 If your `.storybook/main.ts` uses a webpack5 framework package (e.g. `@storybook/react-webpack5`, `@storybook/vue3-webpack5`), follow this section.

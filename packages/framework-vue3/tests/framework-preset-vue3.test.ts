@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it, rs } from 'rstack/test'
+import * as commonActual from 'storybook/internal/common' with {
+  rstest: 'importActual',
+}
+import {
+  getTypeScriptForDocgenError,
+  isDocgenServerDisabledInMainConfig,
+} from 'storybook/internal/common'
 import * as nodeLoggerActual from 'storybook/internal/node-logger' with {
   rstest: 'importActual',
 }
@@ -6,6 +13,12 @@ import { deprecate } from 'storybook/internal/node-logger'
 import { VUE_BUILDER_DOCGEN_DEPRECATION } from '../src/docgen/options'
 import { rsbuildFinal } from '../src/framework-preset-vue3'
 import type { FrameworkOptions } from '../src/types'
+
+rs.mock('storybook/internal/common', () => ({
+  ...commonActual,
+  isDocgenServerDisabledInMainConfig: rs.fn(),
+  getTypeScriptForDocgenError: rs.fn(),
+}))
 
 rs.mock('storybook/internal/node-logger', () => ({
   ...nodeLoggerActual,
@@ -47,6 +60,9 @@ const createOptions = (
 describe('rsbuildFinal', () => {
   beforeEach(() => {
     rs.mocked(deprecate).mockClear()
+    // Defaults: `docgenServer` is not set in the main config, and `typescript` is usable.
+    rs.mocked(isDocgenServerDisabledInMainConfig).mockResolvedValue(false)
+    rs.mocked(getTypeScriptForDocgenError).mockReturnValue(undefined)
   })
 
   it('does not inject the Vue docgen loader or deprecate when docgen is false', async () => {
@@ -57,14 +73,22 @@ describe('rsbuildFinal', () => {
   })
 
   it.each([undefined, true, 'vue-docgen-api'] as const)(
-    'injects the Vue docgen loader and deprecates builder docgen when docgen is %s',
+    'injects the Vue docgen loader and deprecates builder docgen when docgen is %s and the main config sets docgenServer: false',
     async (docgen) => {
+      rs.mocked(isDocgenServerDisabledInMainConfig).mockResolvedValue(true)
       const config = await rsbuildFinal!({}, createOptions(docgen))
 
       expect(config.tools?.rspack).toEqual(expect.any(Function))
       expect(deprecate).toHaveBeenCalledWith(VUE_BUILDER_DOCGEN_DEPRECATION)
     },
   )
+
+  it('injects the Vue docgen loader without deprecating when the docgen server is off by default', async () => {
+    const config = await rsbuildFinal!({}, createOptions(undefined))
+
+    expect(config.tools?.rspack).toEqual(expect.any(Function))
+    expect(deprecate).not.toHaveBeenCalled()
+  })
 
   it.each(['vue-docgen-api', 'vue-component-meta'] as const)(
     'leaves docgen to the docgen server when it is active and docgen is %s',
@@ -109,6 +133,41 @@ describe('rsbuildFinal', () => {
     expect(createVueComponentMetaChecker).toHaveBeenCalledWith(
       'tsconfig.app.json',
     )
+    expect(deprecate).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the vue-docgen-api loader when vue-component-meta is selected but typescript is unusable', async () => {
+    rs.mocked(getTypeScriptForDocgenError).mockReturnValue(
+      new Error('TypeScript 7 has no compiler API') as ReturnType<
+        typeof getTypeScriptForDocgenError
+      >,
+    )
+    createVueComponentMetaChecker.mockClear()
+
+    const config = await rsbuildFinal!(
+      {},
+      createOptions({
+        plugin: 'vue-component-meta',
+        tsconfig: 'tsconfig.app.json',
+      }),
+    )
+
+    expect(config.plugins).toBeUndefined()
+    expect(config.tools?.rspack).toEqual(expect.any(Function))
+    expect(createVueComponentMetaChecker).not.toHaveBeenCalled()
+  })
+
+  it('deprecates builder docgen for vue-component-meta only when the main config sets docgenServer: false', async () => {
+    rs.mocked(isDocgenServerDisabledInMainConfig).mockResolvedValue(true)
+
+    await rsbuildFinal!(
+      {},
+      createOptions({
+        plugin: 'vue-component-meta',
+        tsconfig: 'tsconfig.app.json',
+      }),
+    )
+
     expect(deprecate).toHaveBeenCalledWith(VUE_BUILDER_DOCGEN_DEPRECATION)
   })
 })

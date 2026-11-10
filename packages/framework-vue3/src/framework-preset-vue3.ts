@@ -1,4 +1,8 @@
 import { mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core'
+import {
+  getTypeScriptForDocgenError,
+  isDocgenServerDisabledInMainConfig,
+} from 'storybook/internal/common'
 import { deprecate } from 'storybook/internal/node-logger'
 import {
   resolveDocgenContext,
@@ -25,12 +29,20 @@ const rsbuildFinalDoc: StorybookConfig['rsbuildFinal'] = async (
   ) {
     return {}
   }
-  deprecate(VUE_BUILDER_DOCGEN_DEPRECATION)
+  // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/frameworks/vue3-vite/src/preset.ts#L32-L34
+  if (await isDocgenServerDisabledInMainConfig(options)) {
+    deprecate(VUE_BUILDER_DOCGEN_DEPRECATION)
+  }
   const engine = await options.presets.apply<VueDocgenEngine>(
     'experimental_vueDocgenEngine',
   )
+  // vue-component-meta needs the compiler API; vue-docgen-api needs no TypeScript.
+  // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/frameworks/vue3-vite/src/preset.ts#L36-L44
+  const typescriptUsable = !getTypeScriptForDocgenError((specifier) =>
+    import.meta.resolve(specifier),
+  )
 
-  if (docgen.plugin === VUE_COMPONENT_META) {
+  if (docgen.plugin === VUE_COMPONENT_META && typescriptUsable) {
     return { plugins: [await vueComponentMeta(engine, docgen.tsconfig)] }
   }
 
