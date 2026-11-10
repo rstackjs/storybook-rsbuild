@@ -318,6 +318,12 @@ importers:
       '@storybook/react':
         specifier: ^11.0.0-beta.1
         version: 11.0.0-beta.1(@types/react-dom@19.3.0(@types/react@18.3.31))(@types/react@18.3.31)(react-docgen-typescript@2.4.0(typescript@5.9.3))(react-docgen@8.0.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@11.0.0-beta.1(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
+      react-docgen:
+        specifier: ^8.0.2
+        version: 8.0.4
+      react-docgen-typescript:
+        specifier: ^2.2.2
+        version: 2.4.0(typescript@5.9.3)
       rsbuild-plugin-react-native-web:
         specifier: workspace:*
         version: link:../rsbuild-plugin-react-native-web

@@ -44,6 +44,16 @@ describe('docgen package contract', () => {
     }
   })
 
+  it('declares the builder docgen packages of framework-react-native-web as optional peers with the supported ranges', () => {
+    const pkg = readPackageJson('framework-react-native-web')
+
+    for (const [name, range] of Object.entries(REACT_BUILDER_DOCGEN_PACKAGES)) {
+      expect(pkg.peerDependencies?.[name]).toBe(range)
+      expect(pkg.peerDependenciesMeta?.[name]?.optional).toBe(true)
+      expect(pkg.dependencies?.[name]).toBeUndefined()
+    }
+  })
+
   it('does not declare the webpack react-docgen-typescript plugin: the vendored plugin is used', () => {
     const pkg = readPackageJson('framework-react')
     const name = '@storybook/react-docgen-typescript-plugin'
