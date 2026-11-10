@@ -140,11 +140,10 @@
       "upstream": "code/renderers/react/src/builder-docgen.ts",
       "local": "packages/framework-react/src/builder-docgen.ts",
       "intentionalDivergences": [
-        "getReactBuilderDocgenPackages is replaced by getRsbuildBuilderDocgenPackages, which takes no builder argument and lists only react-docgen-typescript for the react-docgen-typescript mode: this repo runs its vendored plugin, so no builder plugin package (upstream adds @storybook/react-docgen-typescript-plugin on webpack and @joshwooding/vite-plugin-react-docgen-typescript on Vite) is needed; approved deviation, see the permalink comment in the file",
-        "prepareReactBuilderDocgen is a local copy of the upstream body line for line, calling getRsbuildBuilderDocgenPackages instead (the renderer's version cannot be called without a builder plugin package); it has no builder parameter",
+        "prepareReactBuilderDocgen is a local copy of the upstream body, except that the package list is just the mode (['react-docgen'] or ['react-docgen-typescript']) instead of getReactBuilderDocgenPackages(mode, builder): this repo runs its vendored plugin, so no builder plugin package (upstream adds @storybook/react-docgen-typescript-plugin on webpack and @joshwooding/vite-plugin-react-docgen-typescript on Vite) is needed; it has no builder parameter; approved deviation, see the permalink comment in the file",
         "ReactDocgenConfig is declared locally because @storybook/react does not export it"
       ],
-      "note": "Partial reuse: REACT_BUILDER_DOCGEN_PACKAGES, ReactBuilderDocgenPackage and isReactBuilderDocgenPackageInstalled are imported from @storybook/react/internal/builder-docgen; only the package list and prepareReactBuilderDocgen are local."
+      "note": "Partial reuse: REACT_BUILDER_DOCGEN_PACKAGES, ReactBuilderDocgenPackage and isReactBuilderDocgenPackageInstalled are imported from @storybook/react/internal/builder-docgen; only prepareReactBuilderDocgen is local."
     },
     {
       "upstream": "code/presets/react-webpack/src/index.ts",

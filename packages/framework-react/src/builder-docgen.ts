@@ -13,36 +13,8 @@ export type ReactDocgenConfig =
   'react-docgen' | 'react-docgen-typescript' | false
 
 /**
- * Return the packages that builder docgen needs for a `typescript.reactDocgen` mode.
- *
- * Intentional divergence: upstream's `getReactBuilderDocgenPackages` adds a builder plugin package
- * (`@storybook/react-docgen-typescript-plugin` on webpack, `@joshwooding/vite-plugin-react-docgen-typescript`
- * on Vite) in `react-docgen-typescript` mode. This repo runs its vendored plugin, so only
- * `react-docgen-typescript` is needed.
- * https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/renderers/react/src/builder-docgen.ts#L32-L48
- */
-export function getRsbuildBuilderDocgenPackages(
-  reactDocgen: ReactDocgenConfig | undefined,
-): ReactBuilderDocgenPackage[] {
-  if (reactDocgen === 'react-docgen') {
-    return ['react-docgen']
-  }
-  if (reactDocgen === 'react-docgen-typescript') {
-    return ['react-docgen-typescript']
-  }
-  return []
-}
-
-/**
- * Decide which `typescript.reactDocgen` mode builder docgen runs in, check that its packages are
- * installed, and report it when they are not. Call it from a framework preset once builder docgen
- * is active.
- *
- * Mirrors upstream's `prepareReactBuilderDocgen` except for the package list, which comes from
- * {@link getRsbuildBuilderDocgenPackages}.
  * https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/renderers/react/src/builder-docgen.ts#L56-L100
  *
- * @returns The mode builder docgen runs in, or `undefined` when it must not run.
  * @throws {BuilderDocgenPackagesMissingError} When the main config sets `features.docgenServer:
  *   false` and packages are missing.
  */
@@ -63,7 +35,10 @@ export async function prepareReactBuilderDocgen({
     getTypeScriptForDocgenError(resolve)
       ? 'react-docgen'
       : reactDocgen
-  const packages = getRsbuildBuilderDocgenPackages(mode)
+  // Intentional divergence: upstream's `getReactBuilderDocgenPackages` adds a builder plugin package in
+  // `react-docgen-typescript` mode; this repo runs its vendored plugin, so the mode is the only package.
+  // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/renderers/react/src/builder-docgen.ts#L32-L48
+  const packages: ReactBuilderDocgenPackage[] = [mode]
   const missing = await checkBuilderDocgenPackages({
     packages: Object.fromEntries(
       packages.map((name) => [name, REACT_BUILDER_DOCGEN_PACKAGES[name]]),

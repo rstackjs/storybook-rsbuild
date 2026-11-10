@@ -10,10 +10,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, rs } from 'rstack/test'
 import { logger, once } from 'storybook/internal/node-logger'
-import {
-  getRsbuildBuilderDocgenPackages,
-  prepareReactBuilderDocgen,
-} from '../src/builder-docgen'
+import { prepareReactBuilderDocgen } from '../src/builder-docgen'
 
 const tempDirs: string[] = []
 
@@ -72,24 +69,6 @@ function createProject({
 
 const TS_5 = { typescript: '5.9.3' }
 const TS_7 = { typescript: '7.0.0' }
-
-describe('getRsbuildBuilderDocgenPackages', () => {
-  it('needs react-docgen for the react-docgen mode', () => {
-    expect(getRsbuildBuilderDocgenPackages('react-docgen')).toEqual([
-      'react-docgen',
-    ])
-  })
-
-  it('needs only react-docgen-typescript for the react-docgen-typescript mode, since the plugin is vendored', () => {
-    expect(getRsbuildBuilderDocgenPackages('react-docgen-typescript')).toEqual([
-      'react-docgen-typescript',
-    ])
-  })
-
-  it.each([false, undefined] as const)('needs nothing for %s', (mode) => {
-    expect(getRsbuildBuilderDocgenPackages(mode)).toEqual([])
-  })
-})
 
 describe('prepareReactBuilderDocgen', () => {
   it('keeps react-docgen-typescript when typescript has a compiler API', async () => {
