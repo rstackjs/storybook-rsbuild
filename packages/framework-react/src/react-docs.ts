@@ -52,6 +52,7 @@ export const rsbuildFinalDocs: NonNullable<
   // https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/presets/react-webpack/src/framework-preset-react-docs.ts#L39-L50
   const mode = await prepareReactBuilderDocgen({
     reactDocgen,
+    builder: 'rsbuild',
     resolve,
     options,
   })

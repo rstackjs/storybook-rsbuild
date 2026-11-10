@@ -22,22 +22,28 @@ export const REACT_BUILDER_DOCGEN_PACKAGES = {
 export type ReactBuilderDocgenPackage =
   keyof typeof REACT_BUILDER_DOCGEN_PACKAGES
 
+/** The builder this repo's framework runs on; upstream's counterparts are `'vite' | 'webpack'`. */
+export type ReactDocgenBuilder = 'rsbuild'
+
 /**
  * Return the packages that builder docgen needs for a `typescript.reactDocgen` mode.
  *
- * Intentional divergence: upstream also requires its builder plugin (`@storybook/react-docgen-typescript-plugin`
- * on webpack, `@joshwooding/vite-plugin-react-docgen-typescript` on Vite) in `react-docgen-typescript`
- * mode. This repo runs its vendored plugin, so only `react-docgen-typescript` is needed.
+ * `react-docgen-typescript` mode needs the builder plugin and `react-docgen-typescript` itself.
+ * Intentional divergence: the plugin is not a package here, because this repo runs its vendored
+ * plugin, so the `rsbuild` branch lists only `react-docgen-typescript` (upstream lists
+ * `@storybook/react-docgen-typescript-plugin` on webpack and
+ * `@joshwooding/vite-plugin-react-docgen-typescript` on Vite).
  * https://github.com/storybookjs/storybook/blob/4b5e9a60c55c6d3659ffa3118881b8904b41c021/code/renderers/react/src/builder-docgen.ts#L32-L48
  */
 export function getReactBuilderDocgenPackages(
   reactDocgen: ReactDocgenConfig | undefined,
+  builder: ReactDocgenBuilder,
 ): ReactBuilderDocgenPackage[] {
   if (reactDocgen === 'react-docgen') {
     return ['react-docgen']
   }
   if (reactDocgen === 'react-docgen-typescript') {
-    return ['react-docgen-typescript']
+    return builder === 'rsbuild' ? ['react-docgen-typescript'] : []
   }
   return []
 }
@@ -65,10 +71,12 @@ export const isReactBuilderDocgenPackageInstalled = (
  */
 export async function prepareReactBuilderDocgen({
   reactDocgen,
+  builder,
   resolve,
   options,
 }: {
   reactDocgen: Exclude<ReactDocgenConfig, false>
+  builder: ReactDocgenBuilder
   /** Resolve from the framework package, which declares the packages as optional peers. */
   resolve: (specifier: string) => string
   options: Pick<Options, 'configDir'>
@@ -80,7 +88,7 @@ export async function prepareReactBuilderDocgen({
     getTypeScriptForDocgenError(resolve)
       ? 'react-docgen'
       : reactDocgen
-  const packages = getReactBuilderDocgenPackages(mode)
+  const packages = getReactBuilderDocgenPackages(mode, builder)
   const missing = await checkBuilderDocgenPackages({
     packages: Object.fromEntries(
       packages.map((name) => [name, REACT_BUILDER_DOCGEN_PACKAGES[name]]),

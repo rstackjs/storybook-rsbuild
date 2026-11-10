@@ -140,7 +140,7 @@
       "upstream": "code/renderers/react/src/builder-docgen.ts",
       "local": "packages/framework-react/src/builder-docgen.ts",
       "intentionalDivergences": [
-        "REACT_BUILDER_DOCGEN_PACKAGES and getReactBuilderDocgenPackages carry no builder plugin entry and take no builder argument: this repo runs its vendored react-docgen-typescript plugin, so the react-docgen-typescript mode needs only react-docgen-typescript (upstream additionally requires @storybook/react-docgen-typescript-plugin on webpack and @joshwooding/vite-plugin-react-docgen-typescript on Vite); approved deviation, see the permalink comment in the file",
+        "getReactBuilderDocgenPackages keeps upstream's builder parameter but typed 'rsbuild' only, and its rsbuild branch lists only react-docgen-typescript for the react-docgen-typescript mode: this repo runs its vendored plugin, so REACT_BUILDER_DOCGEN_PACKAGES has no builder plugin entry (upstream additionally requires @storybook/react-docgen-typescript-plugin on webpack and @joshwooding/vite-plugin-react-docgen-typescript on Vite); approved deviation, see the permalink comment in the file",
         "ReactDocgenConfig is declared locally instead of imported from upstream's componentManifest/reactDocgen/utils, which has no local counterpart",
         "helpers come from storybook/internal/common instead of the same relative module graph; the file is exported from the framework package only through react-docs.ts, not as a ./internal/builder-docgen subpath"
       ]

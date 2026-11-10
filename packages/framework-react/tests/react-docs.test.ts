@@ -70,7 +70,10 @@ describe('rsbuildFinalDocs', () => {
 
     expect(result).toBe(config)
     expect(prepareReactBuilderDocgen).toHaveBeenCalledWith(
-      expect.objectContaining({ reactDocgen: 'react-docgen' }),
+      expect.objectContaining({
+        reactDocgen: 'react-docgen',
+        builder: 'rsbuild',
+      }),
     )
   })
 
