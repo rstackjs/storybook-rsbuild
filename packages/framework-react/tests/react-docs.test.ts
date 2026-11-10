@@ -96,37 +96,30 @@ describe('rsbuildFinalDocs', () => {
     expect(rules(result)).toHaveLength(1)
   })
 
-  it('adds the vendored plugin and a JavaScript-only loader when react-docgen is installed', async () => {
-    rs.mocked(prepareReactBuilderDocgen).mockResolvedValue(
-      'react-docgen-typescript',
-    )
-    rs.mocked(isReactBuilderDocgenPackageInstalled).mockReturnValue(true)
+  it.each([
+    [true, [/\.(cjs|mjs|jsx?)$/.source]],
+    [false, []],
+  ])(
+    'adds the vendored plugin, and the JavaScript-only loader only when react-docgen is installed (installed: %s)',
+    async (installed, expectedRules) => {
+      rs.mocked(prepareReactBuilderDocgen).mockResolvedValue(
+        'react-docgen-typescript',
+      )
+      rs.mocked(isReactBuilderDocgenPackageInstalled).mockReturnValue(installed)
 
-    const result = await rsbuildFinalDocs(
-      {},
-      createOptions({ typescript: { reactDocgen: 'react-docgen-typescript' } }),
-    )
+      const result = await rsbuildFinalDocs(
+        {},
+        createOptions({
+          typescript: { reactDocgen: 'react-docgen-typescript' },
+        }),
+      )
 
-    expect(rules(result).map((rule) => rule.test.source)).toEqual([
-      /\.(cjs|mjs|jsx?)$/.source,
-    ])
-    expect(
-      (result.plugins as { name: string }[]).map((plugin) => plugin.name),
-    ).toEqual(['rsbuild-plugin-react-docgen-typescript'])
-  })
-
-  it('adds only the vendored plugin when react-docgen is not installed', async () => {
-    rs.mocked(prepareReactBuilderDocgen).mockResolvedValue(
-      'react-docgen-typescript',
-    )
-    rs.mocked(isReactBuilderDocgenPackageInstalled).mockReturnValue(false)
-
-    const result = await rsbuildFinalDocs(
-      {},
-      createOptions({ typescript: { reactDocgen: 'react-docgen-typescript' } }),
-    )
-
-    expect(rules(result)).toEqual([])
-    expect(result.plugins).toHaveLength(1)
-  })
+      expect(rules(result).map((rule) => rule.test.source)).toEqual(
+        expectedRules,
+      )
+      expect(
+        (result.plugins as { name: string }[]).map((plugin) => plugin.name),
+      ).toEqual(['rsbuild-plugin-react-docgen-typescript'])
+    },
+  )
 })

@@ -14,7 +14,6 @@ import {
   getReactBuilderDocgenPackages,
   isReactBuilderDocgenPackageInstalled,
   prepareReactBuilderDocgen,
-  REACT_BUILDER_DOCGEN_PACKAGES,
 } from '../src/builder-docgen'
 
 const tempDirs: string[] = []
@@ -55,11 +54,13 @@ function createProject({
       docgenServer === undefined ? {} : { docgenServer },
     )} }`,
   )
+  // Only unscoped package names are resolved in these tests.
   const resolve = (specifier: string) => {
-    const [scope, name] = specifier.split('/')
-    const packageName = specifier.startsWith('@') ? `${scope}/${name}` : scope
-    const rest = specifier.slice(packageName.length + 1) || 'index.js'
-    const file = join(dir, 'node_modules', packageName, rest)
+    const [name, rest = 'index.js'] = [
+      specifier.split('/')[0],
+      specifier.split('/').slice(1).join('/') || undefined,
+    ]
+    const file = join(dir, 'node_modules', name, rest)
     try {
       statSync(file)
     } catch {
@@ -112,9 +113,7 @@ describe('prepareReactBuilderDocgen', () => {
     const { configDir, resolve } = createProject({
       packages: {
         ...TS_5,
-        'react-docgen-typescript': REACT_BUILDER_DOCGEN_PACKAGES[
-          'react-docgen-typescript'
-        ].replace('^', ''),
+        'react-docgen-typescript': '2.2.2',
       },
     })
 
