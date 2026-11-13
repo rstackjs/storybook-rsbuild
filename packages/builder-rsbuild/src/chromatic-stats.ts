@@ -77,8 +77,15 @@ const toReasonModuleName = (reason: Record<string, unknown>): string | null => {
   return moduleName
 }
 
+const CONCATENATED_MODULE_SUFFIX = /\s\+\s\d+\smodules?$/
+
 const isConcatenatedModuleName = (moduleName: string): boolean =>
-  /\s\+\s\d+\smodules?$/.test(moduleName)
+  CONCATENATED_MODULE_SUFFIX.test(moduleName)
+
+// Entries without an id are named from `nameForCondition` (`src/a.ts`), while
+// the module itself is `./src/a.ts`, so key modules by path without `./`.
+const toModulePathKey = (moduleName: string): string =>
+  moduleName.replace(/^\.\//, '')
 
 const toChromaticModule = (
   moduleInfo: Record<string, unknown>,
@@ -188,8 +195,33 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
   const flattenedModules: Record<string, unknown>[] = []
   collectModuleEntries(modules, flattenedModules)
 
-  const normalizedModules: ChromaticModule[] = []
-  const visited = new Set<string>()
+  // One entry per path, so a file's importers are never split across entries
+  // or dropped as duplicates.
+  const modulesByPath = new Map<string, ChromaticModule>()
+  const addModule = (module: ChromaticModule): void => {
+    const pathKey = toModulePathKey(module.name)
+    const existing = modulesByPath.get(pathKey)
+    if (!existing) {
+      modulesByPath.set(pathKey, module)
+      return
+    }
+
+    // Chromatic matches story files against `./`-prefixed paths.
+    const preferred = module.name.startsWith('./') ? module : existing
+    const reasons = [...(existing.reasons ?? [])]
+    for (const reason of module.reasons ?? []) {
+      if (!reasons.some(({ moduleName }) => moduleName === reason.moduleName)) {
+        reasons.push(reason)
+      }
+    }
+    const modules = existing.modules ?? module.modules
+    modulesByPath.set(pathKey, {
+      id: preferred.id,
+      name: preferred.name,
+      ...(modules ? { modules } : {}),
+      ...(reasons.length > 0 ? { reasons } : {}),
+    })
+  }
 
   for (const moduleInfo of flattenedModules) {
     const normalizedModule = toChromaticModule(moduleInfo)
@@ -197,39 +229,28 @@ export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
       continue
     }
 
-    const moduleKey = `${String(normalizedModule.id)}::${normalizedModule.name}`
-    if (visited.has(moduleKey)) {
-      continue
-    }
+    addModule(normalizedModule)
 
-    visited.add(moduleKey)
-    normalizedModules.push(normalizedModule)
-
-    if (
-      isConcatenatedModuleName(normalizedModule.name) &&
-      Array.isArray(normalizedModule.modules)
-    ) {
-      for (const nestedModule of normalizedModule.modules) {
-        const nestedModuleKey = `${nestedModule.name}::${nestedModule.name}`
-
-        if (visited.has(nestedModuleKey)) {
-          continue
-        }
-
-        visited.add(nestedModuleKey)
-        normalizedModules.push({
-          id: nestedModule.name,
-          name: nestedModule.name,
-          ...(Array.isArray(normalizedModule.reasons) &&
-          normalizedModule.reasons.length > 0
-            ? { reasons: normalizedModule.reasons }
-            : {}),
-        })
-      }
+    if (isConcatenatedModuleName(normalizedModule.name)) {
+      // The concatenation's importers import only the module it is named after.
+      // Its other inner modules keep the importers rspack reports for them in
+      // their own nested entries. Read the root from the container's name: its
+      // `modules` list can name the root after the container itself.
+      const rootName = normalizedModule.name.replace(
+        CONCATENATED_MODULE_SUFFIX,
+        '',
+      )
+      addModule({
+        id: rootName,
+        name: rootName,
+        ...(normalizedModule.reasons
+          ? { reasons: normalizedModule.reasons }
+          : {}),
+      })
     }
   }
 
-  normalizedStatsJson.modules = normalizedModules
+  normalizedStatsJson.modules = [...modulesByPath.values()]
 
   return normalizedStatsJson
 }
