@@ -1,0 +1,8 @@
+{
+  "name": "@sandboxes/chromatic-turbosnap-shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Module outside the Storybook project root of @sandboxes/chromatic-turbosnap",
+  "type": "module",
+  "main": "./src/index.ts"
+}
