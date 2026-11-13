@@ -449,6 +449,54 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  sandboxes/chromatic-turbosnap:
+    dependencies:
+      '@sandboxes/chromatic-turbosnap-shared':
+        specifier: workspace:*
+        version: link:../chromatic-turbosnap-shared
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: 18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@rsbuild/core':
+        specifier: ^2.2.14
+        version: 2.3.1(@module-federation/runtime-tools@2.9.3)(core-js@3.50.0)
+      '@rsbuild/plugin-react':
+        specifier: ^2.1.1
+        version: 2.1.1(@rsbuild/core@2.3.1(@module-federation/runtime-tools@2.9.3)(core-js@3.50.0))(@rspack/core@2.3.1(@module-federation/runtime-tools@2.9.3)(@swc/helpers@0.5.24))
+      '@storybook/addon-docs':
+        specifier: 10.6.6
+        version: 10.6.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(storybook@10.6.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))
+      '@storybook/react':
+        specifier: 10.6.6
+        version: 10.6.6(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.6.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))(typescript@5.9.3)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.1
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@18.3.31)
+      chromatic:
+        specifier: 18.14.3
+        version: 18.14.3
+      storybook:
+        specifier: 10.6.6
+        version: 10.6.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1)
+      storybook-react-rsbuild:
+        specifier: workspace:*
+        version: link:../../packages/framework-react
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  sandboxes/chromatic-turbosnap-shared: {}
+
   sandboxes/lit:
     dependencies:
       lit:
@@ -7092,8 +7140,8 @@ packages:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
 
-  chromatic@18.14.0:
-    resolution: {integrity: sha512-9frJbg8g5AkM4Dhr7LP8ul3jiaX5K2rMUYFGeLE3OaWUhZ99l/2lE8jrRAUc4TW6ZFkcWJfGoCX7jNwXUgLlIg==}
+  chromatic@18.14.3:
+    resolution: {integrity: sha512-xseyRMvmHGLC2AV99Ub1CMKMhwMFmlGY96Fy4uO5exyavp0hCixnb0ZhZMfbjS3PqVIzHhxyZ7NstCPhDXMdtA==}
     engines: {node: '>=22.0.0'}
     hasBin: true
     peerDependencies:
@@ -13338,7 +13386,7 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-annotate-as-pure': 7.29.7
       '@babel/helper-wrap-function': 7.27.1
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
 
@@ -13402,7 +13450,7 @@ snapshots:
   '@babel/helper-wrap-function@7.27.1':
     dependencies:
       '@babel/template': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
       '@babel/types': 7.29.11
     transitivePeerDependencies:
       - supports-color
@@ -13436,7 +13484,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -13467,7 +13515,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -13640,7 +13688,7 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
       '@babel/helper-remap-async-to-generator': 7.27.1(@babel/core@7.29.7)
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
 
@@ -13712,7 +13760,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
 
@@ -13782,7 +13830,7 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-compilation-targets': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -13848,7 +13896,7 @@ snapshots:
       '@babel/helper-module-transforms': 7.29.7(@babel/core@7.29.7)
       '@babel/helper-plugin-utils': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -13897,7 +13945,7 @@ snapshots:
       '@babel/helper-plugin-utils': 7.29.7
       '@babel/plugin-transform-destructuring': 7.28.0(@babel/core@7.29.7)
       '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.29.7)
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -14319,7 +14367,7 @@ snapshots:
   '@chromatic-com/storybook@5.6.0(storybook@10.6.6(@types/react@16.14.68)(prettier@3.9.10)(react@16.14.0))':
     dependencies:
       '@neoconfetti/react': 1.0.0
-      chromatic: 18.14.0
+      chromatic: 18.14.3
       jsonfile: 6.2.0
       storybook: 10.6.6(@types/react@16.14.68)(prettier@3.9.10)(react@16.14.0)
       strip-ansi: 7.1.0
@@ -14331,7 +14379,7 @@ snapshots:
   '@chromatic-com/storybook@5.6.0(storybook@10.6.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1))':
     dependencies:
       '@neoconfetti/react': 1.0.0
-      chromatic: 18.14.0
+      chromatic: 18.14.3
       jsonfile: 6.2.0
       storybook: 10.6.6(@types/react@18.3.31)(prettier@3.9.10)(react@18.3.1)
       strip-ansi: 7.1.0
@@ -14343,7 +14391,7 @@ snapshots:
   '@chromatic-com/storybook@5.6.0(storybook@10.6.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1))':
     dependencies:
       '@neoconfetti/react': 1.0.0
-      chromatic: 18.14.0
+      chromatic: 18.14.3
       jsonfile: 6.2.0
       storybook: 10.6.6(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.1)
       strip-ansi: 7.1.0
@@ -17224,7 +17272,7 @@ snapshots:
 
   '@react-native/babel-plugin-codegen@0.84.1(@babel/core@7.29.7)':
     dependencies:
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
       '@react-native/codegen': 0.84.1(@babel/core@7.29.7)
     transitivePeerDependencies:
       - '@babel/core'
@@ -17271,7 +17319,7 @@ snapshots:
   '@react-native/codegen@0.84.1(@babel/core@7.29.7)':
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.12
+      '@babel/parser': 7.29.13
       hermes-parser: 0.32.0
       invariant: 2.2.4
       nullthrows: 1.1.1
@@ -19997,7 +20045,7 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
       '@babel/plugin-syntax-typescript': 7.29.7(@babel/core@7.29.7)
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -20407,7 +20455,7 @@ snapshots:
 
   chownr@3.0.0: {}
 
-  chromatic@18.14.0:
+  chromatic@18.14.3:
     dependencies:
       semver: 7.8.1
 
@@ -23956,8 +24004,8 @@ snapshots:
 
   metro-source-map@0.83.3:
     dependencies:
-      '@babel/traverse': 7.29.10
-      '@babel/traverse--for-generate-function-map': '@babel/traverse@7.29.10'
+      '@babel/traverse': 7.29.13
+      '@babel/traverse--for-generate-function-map': '@babel/traverse@7.29.13'
       '@babel/types': 7.29.11
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
@@ -24008,9 +24056,9 @@ snapshots:
   metro-transform-plugins@0.83.3:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/generator': 7.29.8
+      '@babel/generator': 7.29.13
       '@babel/template': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
       flow-enums-runtime: 0.0.6
       nullthrows: 1.1.1
     transitivePeerDependencies:
@@ -24030,8 +24078,8 @@ snapshots:
   metro-transform-worker@0.83.3:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/generator': 7.29.8
-      '@babel/parser': 7.29.12
+      '@babel/generator': 7.29.13
+      '@babel/parser': 7.29.13
       '@babel/types': 7.29.11
       flow-enums-runtime: 0.0.6
       metro: 0.83.3
@@ -24071,10 +24119,10 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.29.7
       '@babel/core': 7.29.7
-      '@babel/generator': 7.29.8
-      '@babel/parser': 7.29.12
+      '@babel/generator': 7.29.13
+      '@babel/parser': 7.29.13
       '@babel/template': 7.29.7
-      '@babel/traverse': 7.29.10
+      '@babel/traverse': 7.29.13
       '@babel/types': 7.29.11
       accepts: 1.3.8
       chalk: 4.1.2

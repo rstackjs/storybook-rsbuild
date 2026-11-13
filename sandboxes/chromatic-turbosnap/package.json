@@ -1,0 +1,29 @@
+{
+  "name": "@sandboxes/chromatic-turbosnap",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Asserts Chromatic TurboSnap results on a real rsbuild Storybook build",
+  "type": "module",
+  "scripts": {
+    "build:storybook": "storybook build --stats-json",
+    "storybook": "storybook dev -p 6006"
+  },
+  "dependencies": {
+    "@sandboxes/chromatic-turbosnap-shared": "workspace:*",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.2.14",
+    "@rsbuild/plugin-react": "^2.1.1",
+    "@storybook/addon-docs": "10.6.6",
+    "@storybook/react": "10.6.6",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "chromatic": "18.14.3",
+    "storybook": "10.6.6",
+    "storybook-react-rsbuild": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}
