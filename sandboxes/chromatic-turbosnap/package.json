@@ -5,7 +5,7 @@
   "description": "Asserts Chromatic TurboSnap results on a real rsbuild Storybook build",
   "type": "module",
   "scripts": {
-    "build:storybook": "storybook build --stats-json",
+    "build:storybook": "storybook build --stats-json && storybook build -c .storybook-jsx --stats-json -o dist/jsx-preview/storybook-static",
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
