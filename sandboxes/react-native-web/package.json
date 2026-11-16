@@ -32,7 +32,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.6.2",
-    "postcss": "^8.5.32",
+    "postcss": "^8.5.33",
     "react-native": "0.88.1",
     "storybook": "10.6.7",
     "storybook-react-native-web-rsbuild": "workspace:*",

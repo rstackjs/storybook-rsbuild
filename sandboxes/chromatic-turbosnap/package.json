@@ -21,7 +21,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
-    "chromatic": "18.14.3",
+    "chromatic": "18.14.4",
     "storybook": "10.6.7",
     "storybook-react-rsbuild": "workspace:*",
     "typescript": "^5.9.3"
