@@ -9,5 +9,5 @@
     "isolatedModules": true,
     "moduleResolution": "bundler"
   },
-  "include": ["src", ".storybook/*", "tests"]
+  "include": ["src", ".storybook/*", ".storybook-jsx/*", "tests"]
 }
