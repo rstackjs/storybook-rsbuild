@@ -14,7 +14,7 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
-    "playwright": "^1.65.0",
+    "playwright": "^1.65.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
@@ -29,7 +29,7 @@
     "@storybook/test-runner": "0.26.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.8",
+    "@testing-library/user-event": "^14.6.12",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.31",
