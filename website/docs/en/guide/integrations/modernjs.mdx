@@ -2,19 +2,17 @@ import { PackageManagerTabs } from '@theme'
 
 # Modern.js
 
-This addon loads a reusable Rsbuild config from your Modern.js configuration file so `storybook-builder-rsbuild` reuses the same settings your application already trusts.
+Modern.js maintains `@modern-js/storybook-addon`. It uses the application’s configuration resolver to load the settings shared by your app and its Storybook preview.
 
 ## Getting started
 
-Explore the [Modern.js React example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/modernjs-react) to see the integration in a real project.
+Explore the [Modern.js React example](https://github.com/rstackjs/storybook-rsbuild/tree/v4/sandboxes/modernjs-react) to see the integration in a real project.
 
 ### Installation
 
-<PackageManagerTabs command="install @rsbuild/core storybook-react-rsbuild storybook-addon-modernjs -D" />
+<PackageManagerTabs command="install @rsbuild/core storybook-builder-rsbuild storybook-react-rsbuild @modern-js/storybook-addon -D" />
 
-Install the React framework package and `@rsbuild/core` in the same workspace. The configuration below uses `storybook-react-rsbuild` as the framework, and the addon needs `@rsbuild/core` to read your Modern.js configuration.
-
-Match the version used by `@modern-js/app-tools` when possible. If you install a different release, `storybook-addon-modernjs` prints a warning with the recommended version.
+Install these packages in the Modern.js application workspace. Choose an addon release whose peer dependencies cover your builder and `@modern-js/app-tools`. The addon requires the public `resolveModernRsbuildConfig` export from app-tools. Match `@rsbuild/core` to the version used by app-tools.
 
 ### Setup `.storybook/main.ts`
 
@@ -24,17 +22,17 @@ import type { StorybookConfig } from 'storybook-react-rsbuild'
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
-  addons: ['storybook-addon-modernjs'],
+  addons: ['@modern-js/storybook-addon'],
   framework: 'storybook-react-rsbuild',
 }
 export default config
 ```
 
-Before the resolved Modern.js config is merged into Storybook, it passes through the inherited-config boundary documented in [Builder Options](/guide/configuration#builder-options). To restore a stripped field intentionally, add it in Storybook's `rsbuildFinal`; explicit configuration runs after inherited fields are stripped. Of a Modern.js `environments` config, only the browser environment (`client` on v3, `web` on v2) is applied to the preview; other environments are ignored.
+The addon merges shared settings with `environments.client` and applies the filtering described in [Builder Options](/guide/configuration#builder-options). To set a filtered field explicitly for Storybook, add it in `rsbuildFinal`.
 
 ## With Module Federation
 
-Review the [Module Federation example](https://github.com/rstackjs/storybook-rsbuild/tree/main/sandboxes/modernjs-react-mf) for a full walkthrough.
+Review the [Module Federation example](https://github.com/rstackjs/storybook-rsbuild/tree/v4/sandboxes/modernjs-react-mf) for a full walkthrough.
 
 ### Installation
 
@@ -55,7 +53,7 @@ const moduleFederationConfig = { remotes: {} }
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
-    'storybook-addon-modernjs',
+    '@modern-js/storybook-addon',
     {
       name: '@module-federation/storybook-addon',
       options: {
@@ -84,17 +82,12 @@ One approach is to check an environment variable set by your Storybook scripts.
 
 ```ts title="modern.config.ts"
 import { appTools, defineConfig } from '@modern-js/app-tools'
-import { moduleFederationPlugin } from '@module-federation/modern-js'
+import { moduleFederationPlugin } from '@module-federation/modern-js-v3'
 
 // https://modernjs.dev/en/configure/app/usage
 export default defineConfig({
-  runtime: {
-    router: true,
-  },
   plugins: [
-    appTools({
-      bundler: 'rspack',
-    }),
+    appTools(),
     ...(process.env.STORYBOOK === 'true' ? [] : [moduleFederationPlugin()]),
   ],
 })
@@ -121,7 +114,6 @@ Therefore, the addon has some limitations in Modern.js.
 - Webpack cannot be used, only Rspack is supported.
 - SSR configuration will not work in Storybook
 - Runtime capabilities, such as `<Link>` navigation
-- [Modern.js plugins](https://modernjs.dev/plugin/cli-plugins/api.html) will only call the `config` and `resolveConfig` hooks
 
 ### ☎️ Contact Us
 

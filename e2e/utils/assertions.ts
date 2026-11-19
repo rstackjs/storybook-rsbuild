@@ -35,7 +35,7 @@ export async function waitForPreviewReady(page: Page): Promise<FrameLocator> {
   // Combined with expect's built-in retry mechanism, this will keep polling
   // until one of them becomes visible or timeout is reached.
   // Using 60s timeout to accommodate slow CI environments (Windows) and
-  // sandboxes with long build times (modernjs-react).
+  // sandboxes with long build times.
   await expect(
     frame
       .locator('#storybook-docs:not([hidden]), #storybook-root:not([hidden])')

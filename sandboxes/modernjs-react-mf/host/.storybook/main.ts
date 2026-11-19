@@ -18,11 +18,7 @@ const config: StorybookConfig = {
     '@storybook/addon-onboarding',
     '@storybook/addon-docs',
     '@chromatic-com/storybook',
-    {
-      // For this repo, you can use `storybook-addon-modernjs` directly.
-      name: getAbsolutePath('storybook-addon-modernjs'),
-      options: {},
-    },
+    '@modern-js/storybook-addon',
     {
       name: '@module-federation/storybook-addon',
       options: {
