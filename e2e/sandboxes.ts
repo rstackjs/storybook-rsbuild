@@ -8,12 +8,6 @@ export interface SandboxDefinition {
 export const sandboxes: SandboxDefinition[] = [
   { name: 'lit', relativeDir: 'sandboxes/lit', port: 6100 },
   {
-    name: 'modernjs-react',
-    relativeDir: 'sandboxes/modernjs-react',
-    port: 6101,
-    env: { SB_RSBUILD_TEST_MINIMAL_DEV: 'true' },
-  },
-  {
     name: 'modernjs-react-mf-host',
     relativeDir: 'sandboxes/modernjs-react-mf/host',
     port: 6102,

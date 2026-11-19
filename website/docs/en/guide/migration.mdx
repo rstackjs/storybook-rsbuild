@@ -38,7 +38,7 @@ v4 drops support for legacy peer versions. Upgrade before you move to v4.
 
 `react-native-web` must resolve to <PeerRange name="react-native-web" /> when you use the React Native Web framework; the previous floor was `0.19.0`.
 
-`@modern-js/app-tools` must resolve to <PeerRange name="@modern-js/app-tools" /> when you use the Modern.js addon. Modern.js 2 is no longer supported, and `@modern-js/plugin-v2` is no longer a peer.
+For Modern.js projects, replace `storybook-addon-modernjs` with `@modern-js/storybook-addon` in your dependencies and Storybook addons. Use a release compatible with your builder and Modern.js versions. See the [Modern.js integration guide](/guide/integrations/modernjs).
 
 `@rslib/core` must resolve to <PeerRange name="@rslib/core" /> when you use the Rslib addon; 0.20 and 0.21 build against Rsbuild 2 pre-releases.
 

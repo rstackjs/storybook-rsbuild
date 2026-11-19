@@ -16,11 +16,7 @@ const config: StorybookConfig = {
   addons: [
     '@storybook/addon-onboarding',
     '@storybook/addon-docs',
-    {
-      // For this repo, you can use `storybook-addon-modernjs` directly.
-      name: getAbsolutePath('storybook-addon-modernjs'),
-      options: {},
-    },
+    '@modern-js/storybook-addon',
   ],
   framework: {
     // For this repo, you can use `storybook-react-rsbuild` directly.

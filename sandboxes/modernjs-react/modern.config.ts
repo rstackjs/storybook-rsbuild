@@ -32,43 +32,14 @@ export default defineConfig({
         })
       },
     },
-    // Leak-bait plugin: only active when SB_RSBUILD_TEST_LEAK_PROBE is set.
-    // Used by the e2e probe to verify storybook-addon-modernjs strips host
-    // output fields (assetPrefix / filename), including the browser environment
-    // (`client` on v3, `web` on v2), and drops every other environment before
-    // merging into Storybook's iframe config. See e2e/tests/modernjs-react.spec.ts.
-    {
-      name: 'modern-js-leak-probe',
-      setup(api) {
-        if (!process.env.SB_RSBUILD_TEST_LEAK_PROBE) {
-          return
-        }
-        api.config(() => ({
-          output: {
-            assetPrefix: '/leak-probe-prefix/',
-            filename: {
-              js: 'leak-probe-[name].js',
-            },
-          },
-          environments: {
-            client: { output: { assetPrefix: '/leak-probe-client-prefix/' } },
-            web: { output: { assetPrefix: '/leak-probe-web-prefix/' } },
-            server: { output: { assetPrefix: '/leak-probe-server-prefix/' } },
-          },
-        }))
-      },
-    },
   ],
   bff: {
     prefix: '/bff-api',
   },
 
-  server:
-    process.env.npm_lifecycle_event === 'e2e'
-      ? undefined
-      : {
-          port: 8088,
-        },
+  server: {
+    port: 8088,
+  },
   dev: process.env.BFF_PROXY
     ? {
         server: {
