@@ -156,7 +156,7 @@
         "prepareReactBuilderDocgen is a local copy of the upstream body, except that the package list is just the mode (['react-docgen'] or ['react-docgen-typescript']) instead of getReactBuilderDocgenPackages(mode, builder): this repo runs its vendored plugin, so no builder plugin package (upstream adds @storybook/react-docgen-typescript-plugin on webpack and @joshwooding/vite-plugin-react-docgen-typescript on Vite) is needed; it has no builder parameter; approved deviation, see the permalink comment in the file",
         "ReactDocgenConfig is declared locally because @storybook/react does not export it"
       ],
-      "note": "Partial reuse: REACT_BUILDER_DOCGEN_PACKAGES, ReactBuilderDocgenPackage and isReactBuilderDocgenPackageInstalled are imported from @storybook/react/internal/builder-docgen; only prepareReactBuilderDocgen is local."
+      "note": "Partial reuse: REACT_BUILDER_DOCGEN_PACKAGES, ReactBuilderDocgenPackage and isReactBuilderDocgenPackageInstalled are imported from @storybook/react/internal/builder-docgen; only prepareReactBuilderDocgen is local. REACT_DOCGEN_TYPESCRIPT_APIS (upstream code/renderers/react/src/docgen-typescript-apis.ts) is copied locally because @storybook/react's exports map does not expose that module."
     },
     {
       "upstream": "code/presets/react-webpack/src/index.ts",
