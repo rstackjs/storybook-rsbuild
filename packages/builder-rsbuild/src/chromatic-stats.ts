@@ -173,6 +173,13 @@ const collectModuleEntries = (
   }
 }
 
+// TODO: Rspack stats do not attribute files that loaders/plugins register only as watch dependencies
+// (Sass partials, Tailwind-scanned sources, Angular `templateUrl`) to the module that watched them,
+// so TurboSnap cannot trace a change to those files back to the stories that use them. Upstream
+// `builder-vite` captures them by wrapping plugin `load`/`transform` hooks for stats builds; port
+// that intent onto Rspack (`compilation.fileDependencies` / per-loader dependencies) if TurboSnap
+// tracing needs it.
+// https://github.com/storybookjs/storybook/commit/8bc0826db47a9fdda453613bb62da3494aab2153
 export const withChromaticMinimalContract = (statsJson: unknown): unknown => {
   if (!isRecord(statsJson)) {
     return statsJson

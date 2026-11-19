@@ -10,6 +10,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, rs } from 'rstack/test'
 import { logger, once } from 'storybook/internal/node-logger'
+import type { Options } from 'storybook/internal/types'
 import { prepareReactBuilderDocgen } from '../src/builder-docgen'
 
 const tempDirs: string[] = []
@@ -27,9 +28,12 @@ afterEach(() => {
 function createProject({
   packages,
   docgenServer,
+  typeScriptAtSpecifier,
 }: {
   packages: Record<string, string>
   docgenServer?: boolean
+  /** Version of a fake TypeScript package that `typescript.docgenSpecifier` points at. */
+  typeScriptAtSpecifier?: string
 }) {
   const dir = mkdtempSync(join(tmpdir(), 'sb-rsbuild-builder-docgen-'))
   tempDirs.push(dir)
@@ -64,8 +68,28 @@ function createProject({
     }
     return pathToFileURL(file).href
   }
+  let docgenSpecifier: string | undefined
+  if (typeScriptAtSpecifier) {
+    const typeScriptDir = join(dir, 'vendor', 'typescript')
+    mkdirSync(typeScriptDir, { recursive: true })
+    writeFileSync(
+      join(typeScriptDir, 'package.json'),
+      JSON.stringify({
+        name: 'typescript',
+        version: typeScriptAtSpecifier,
+      }),
+    )
+    docgenSpecifier = typeScriptDir
+  }
+  const presets = {
+    apply: async () => (docgenSpecifier ? { docgenSpecifier } : {}),
+  } as unknown as Options['presets']
   const run = (reactDocgen: 'react-docgen' | 'react-docgen-typescript') =>
-    prepareReactBuilderDocgen({ reactDocgen, resolve, options: { configDir } })
+    prepareReactBuilderDocgen({
+      reactDocgen,
+      resolve,
+      options: { configDir, presets },
+    })
   return { run }
 }
 
@@ -109,6 +133,19 @@ describe('prepareReactBuilderDocgen', () => {
     })
 
     await expect(run('react-docgen')).rejects.toThrow(/react-docgen/)
+  })
+
+  it('uses the TypeScript that typescript.docgenSpecifier names, because React supports the native API', async () => {
+    const { run } = createProject({
+      packages: {},
+      docgenServer: false,
+      typeScriptAtSpecifier: '5.9.3',
+    })
+
+    // The usable branch; the message otherwise asks for `typescript@^6`.
+    await expect(run('react-docgen')).rejects.toThrow(
+      /use server-side docgen, which does not need/,
+    )
   })
 
   it('does not run builder docgen, and does not throw, when packages are missing without an explicit docgenServer: false', async () => {
