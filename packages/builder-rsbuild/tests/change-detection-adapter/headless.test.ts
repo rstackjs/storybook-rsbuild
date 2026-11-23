@@ -25,9 +25,13 @@ describe('createHeadlessRsbuildChangeDetectionAdapter', () => {
 
     expect(config.projectRoot).toBe(process.cwd())
     expect(config.conditions).toEqual(
-      expect.arrayContaining(['development', 'browser']),
+      expect.arrayContaining(['import', 'module', 'development', 'browser']),
     )
     expect(config.conditions).not.toContain('...')
+    expect(config.requireConditions).toEqual(
+      expect.arrayContaining(['require', 'module', 'development', 'browser']),
+    )
+    expect(config.requireConditions).not.toContain('...')
     expect(config.alias).toEqual(expect.any(Object))
     expect(Array.isArray(config.alias)).toBe(false)
   })
