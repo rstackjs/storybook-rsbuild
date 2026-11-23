@@ -1,6 +1,5 @@
 // Ported from Storybook's builder-webpack5 change-detection adapter. Keep in sync with upstream:
-// https://github.com/storybookjs/storybook/blob/v10.5.0/code/builders/builder-webpack5/src/change-detection-adapter/index.ts
-// Introduced in storybookjs/storybook commit 3f12c4e and hardened in eed530c (first-run fix).
+// https://github.com/storybookjs/storybook/blob/e446b48777645c7f68a34d37d6bcb761c3c33999/code/builders/builder-webpack5/src/change-detection-adapter/index.ts
 import type { Rspack } from '@rsbuild/core'
 import { normalize } from 'pathe'
 import type {
@@ -13,7 +12,8 @@ import { logger } from 'storybook/internal/node-logger'
 /**
  * Rspack implementation of {@link ChangeDetectionAdapter}.
  *
- * - `getResolveConfig()` reads `compiler.options.resolve` and `compiler.context` once at startup.
+ * - `getResolveConfig()` reads `compiler.options.resolve`, `compiler.context` and the conditions
+ *   Rspack matches for an ESM import and a CommonJS `require()` once at startup.
  * - `onFileChange()` taps `compiler.hooks.watchRun` and forwards `modifiedFiles` as `add`/`change`
  *   and `removedFiles` as `unlink` events.
  *
@@ -37,7 +37,8 @@ export function createRspackChangeDetectionAdapter(
       return {
         projectRoot: compiler.context,
         alias: normaliseRspackAlias(resolveOpts.alias),
-        conditions: resolveOpts.conditionNames,
+        conditions: resolveConditionsFor(resolveOpts, 'esm'),
+        requireConditions: resolveConditionsFor(resolveOpts, 'commonjs'),
       }
     },
 
@@ -89,6 +90,23 @@ export function createRspackChangeDetectionAdapter(
       }
     },
   }
+}
+
+// Upstream reads `compiler.resolverFactory.get('normal', { dependencyType }).options.conditionNames`,
+// but Rspack's JS `Resolver` wrapper does not expose `.options`. Instead, Rspack normalises
+// per-dependency conditions onto `compiler.options.resolve.byDependency[dependencyType].conditionNames`
+// with `'...'` expanding to `compiler.options.resolve.conditionNames`.
+// https://github.com/storybookjs/storybook/blob/e446b48777645c7f68a34d37d6bcb761c3c33999/code/builders/builder-webpack5/src/change-detection-adapter/index.ts#L28-L35
+function resolveConditionsFor(
+  resolveOpts: Rspack.Compiler['options']['resolve'],
+  dependencyType: 'esm' | 'commonjs',
+): string[] {
+  const base = resolveOpts.conditionNames ?? []
+  const byDep = resolveOpts.byDependency?.[dependencyType]?.conditionNames
+  const expanded = byDep
+    ? byDep.flatMap((name) => (name === '...' ? base : [name]))
+    : base.filter((name) => name !== '...')
+  return [...new Set(expanded)]
 }
 
 type RspackResolveAlias = NonNullable<Rspack.ResolveOptions['alias']>

@@ -1,5 +1,6 @@
 // Tests the Rspack implementation of ChangeDetectionAdapter — resolve-config extraction
 // and watchRun-based file-change event normalisation. Ported from builder-webpack5.
+import { rspack, type Rspack } from '@rsbuild/core'
 import { describe, expect, it, rs } from 'rstack/test'
 import { createRspackChangeDetectionAdapter } from '../src/change-detection-adapter'
 
@@ -12,13 +13,6 @@ interface FakeCompilation {
 }
 
 interface FakeCompiler {
-  context: string
-  options: {
-    resolve: {
-      alias?: unknown
-      conditionNames?: string[]
-    }
-  }
   hooks: {
     watchRun: FakeTapable<FakeCompiler>
     afterCompile: FakeTapable<FakeCompilation>
@@ -27,7 +21,16 @@ interface FakeCompiler {
   removedFiles?: ReadonlySet<string>
 }
 
-function createFakeCompiler(overrides: Partial<FakeCompiler> = {}): {
+function createCompiler(config: Rspack.Configuration = {}) {
+  return rspack({
+    mode: 'development',
+    target: 'web',
+    context: '/repo',
+    ...config,
+  })
+}
+
+function createFakeCompiler(): {
   compiler: FakeCompiler
   triggerWatchRun: (modifiedFiles?: string[], removedFiles?: string[]) => void
   triggerAfterCompile: (fileDependencies?: string[]) => void
@@ -36,10 +39,6 @@ function createFakeCompiler(overrides: Partial<FakeCompiler> = {}): {
   let afterCompileCallback: ((c: FakeCompilation) => void) | undefined
 
   const compiler: FakeCompiler = {
-    context: '/repo',
-    options: {
-      resolve: {},
-    },
     hooks: {
       watchRun: {
         tap(_pluginName, fn) {
@@ -52,7 +51,6 @@ function createFakeCompiler(overrides: Partial<FakeCompiler> = {}): {
         },
       },
     },
-    ...overrides,
   }
 
   function triggerWatchRun(
@@ -77,35 +75,80 @@ function createFakeCompiler(overrides: Partial<FakeCompiler> = {}): {
 describe('createRspackChangeDetectionAdapter', () => {
   describe('getResolveConfig()', () => {
     it('returns projectRoot from compiler.context', async () => {
-      const { compiler } = createFakeCompiler({ context: '/my/project' })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
+      const adapter = createRspackChangeDetectionAdapter(
+        createCompiler({ context: '/my/project' }),
+      )
       const config = await adapter.getResolveConfig()
       expect(config.projectRoot).toBe('/my/project')
     })
 
-    it('returns conditions from resolve.conditionNames', async () => {
-      const { compiler } = createFakeCompiler({
-        options: { resolve: { conditionNames: ['import', 'module'] } },
-      })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
-      const config = await adapter.getResolveConfig()
-      expect(config.conditions).toEqual(['import', 'module'])
-    })
+    it.each([
+      {
+        name: 'the Storybook preview conditions',
+        resolve: { conditionNames: ['storybook', 'stories', 'test', '...'] },
+        conditions: [
+          'storybook',
+          'stories',
+          'test',
+          'import',
+          'module',
+          'webpack',
+          'development',
+          'browser',
+        ],
+        requireConditions: [
+          'storybook',
+          'stories',
+          'test',
+          'require',
+          'module',
+          'webpack',
+          'development',
+          'browser',
+        ],
+      },
+      {
+        name: 'a top-level list without "..."',
+        resolve: { conditionNames: ['custom'] },
+        conditions: ['custom'],
+        requireConditions: ['custom'],
+      },
+      {
+        name: 'an ESM list without "..."',
+        resolve: { byDependency: { esm: { conditionNames: ['esm-only'] } } },
+        conditions: ['esm-only'],
+        requireConditions: [
+          'require',
+          'module',
+          'webpack',
+          'development',
+          'browser',
+        ],
+      },
+    ])(
+      'returns the conditions Rspack matches for an ESM import and a `require()`, given $name',
+      async ({ resolve, conditions, requireConditions }) => {
+        const adapter = createRspackChangeDetectionAdapter(
+          createCompiler({ resolve }),
+        )
+        const config = await adapter.getResolveConfig()
+        expect(config.conditions).toEqual(conditions)
+        expect(config.requireConditions).toEqual(requireConditions)
+      },
+    )
 
     it('normalises object-form alias to Record<string, string>', async () => {
-      const { compiler } = createFakeCompiler({
-        options: {
-          resolve: {
-            alias: {
-              '@': '/repo/src',
-              utils: '/repo/utils',
-              disabled: false,
-              multi: ['/repo/multi-a', '/repo/multi-b'],
-            },
+      const compiler = createCompiler({
+        resolve: {
+          alias: {
+            '@': '/repo/src',
+            utils: '/repo/utils',
+            disabled: false,
+            multi: ['/repo/multi-a', '/repo/multi-b'],
           },
         },
       })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
+      const adapter = createRspackChangeDetectionAdapter(compiler)
       const config = await adapter.getResolveConfig()
       expect(config.alias).toEqual({
         '@': '/repo/src',
@@ -116,32 +159,28 @@ describe('createRspackChangeDetectionAdapter', () => {
     })
 
     it('picks the first string when an alias array leads with false', async () => {
-      const { compiler } = createFakeCompiler({
-        options: {
-          resolve: {
-            alias: {
-              lead: [false, '/repo/lead-a'],
-            },
+      const compiler = createCompiler({
+        resolve: {
+          alias: {
+            lead: [false, '/repo/lead-a'],
           },
         },
       })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
+      const adapter = createRspackChangeDetectionAdapter(compiler)
       const config = await adapter.getResolveConfig()
       expect(config.alias).toEqual({ lead: '/repo/lead-a' })
     })
 
     it('returns undefined alias when resolve has no alias', async () => {
-      const { compiler } = createFakeCompiler({ options: { resolve: {} } })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
+      const adapter = createRspackChangeDetectionAdapter(createCompiler())
       const config = await adapter.getResolveConfig()
       expect(config.alias).toBeUndefined()
     })
 
     it('returns undefined alias when resolve.alias is false', async () => {
-      const { compiler } = createFakeCompiler({
-        options: { resolve: { alias: false } },
-      })
-      const adapter = createRspackChangeDetectionAdapter(compiler as any)
+      const adapter = createRspackChangeDetectionAdapter(
+        createCompiler({ resolve: { alias: false } }),
+      )
       const config = await adapter.getResolveConfig()
       expect(config.alias).toBeUndefined()
     })

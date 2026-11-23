@@ -48,7 +48,8 @@
       "upstream": "code/builders/builder-webpack5/src/change-detection-adapter/index.ts",
       "local": "packages/builder-rsbuild/src/change-detection-adapter/index.ts",
       "intentionalDivergences": [
-        "add-vs-change is classified from the built module graph (compilation.fileDependencies) instead of upstream's firstRun heuristic, which misclassifies the first edit of a pre-existing file as `add` when the cold-start watchRun reports no initial file set"
+        "add-vs-change is classified from the built module graph (compilation.fileDependencies) instead of upstream's firstRun heuristic, which misclassifies the first edit of a pre-existing file as `add` when the cold-start watchRun reports no initial file set",
+        "ESM and CommonJS conditionNames are expanded from `compiler.options.resolve.byDependency[dependencyType].conditionNames` against `compiler.options.resolve.conditionNames` instead of reading `compiler.resolverFactory.get('normal', { dependencyType }).options.conditionNames`: Rspack's JS `Resolver` wrapper does not expose `.options`"
       ]
     },
     {
