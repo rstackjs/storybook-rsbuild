@@ -2,7 +2,7 @@
   {
     "text": "指南",
     "link": "/guide/",
-    "activeMatch": "/guide/"
+    "activeMatch": "/guide/(?!configuration(?:/|\\.html|$)|examples(?:/|\\.html|$))"
   },
   {
     "text": "配置",

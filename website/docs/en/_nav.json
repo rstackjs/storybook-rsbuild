@@ -2,7 +2,7 @@
   {
     "text": "Guide",
     "link": "/guide/",
-    "activeMatch": "/guide/"
+    "activeMatch": "/guide/(?!configuration(?:/|\\.html|$)|examples(?:/|\\.html|$))"
   },
   {
     "text": "Configuration",
