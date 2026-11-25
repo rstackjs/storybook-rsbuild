@@ -1,18 +1,15 @@
 [
   {
     "text": "指南",
-    "link": "/guide/",
-    "activeMatch": "/guide/"
+    "link": "/guide/"
   },
   {
     "text": "配置",
-    "link": "/guide/configuration",
-    "activeMatch": "/guide/configuration"
+    "link": "/guide/configuration"
   },
   {
     "text": "示例",
-    "link": "/guide/examples",
-    "activeMatch": "/guide/examples"
+    "link": "/guide/examples"
   },
   {
     "text": "Storybook",

@@ -7,6 +7,7 @@ import {
   transformerNotationHighlight,
 } from '@shikijs/transformers'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { pluginOpenGraph } from 'rsbuild-plugin-open-graph'
 import { pluginFontOpenSans } from 'rspress-plugin-font-open-sans'
 import { define } from 'rstack'
@@ -117,6 +118,19 @@ define.doc({
     ],
   },
   builderConfig: {
+    performance: {
+      buildCache: {
+        buildDependencies: [fileURLToPath(import.meta.url)],
+      },
+    },
+    tools: {
+      bundlerChain(chain) {
+        chain.resolve.alias.set(
+          '@rspress/core/runtime',
+          fileURLToPath(new URL('./theme/runtime.ts', import.meta.url)),
+        )
+      },
+    },
     source: {
       define: {
         __PEER_RANGES__: JSON.stringify(peerRanges),
