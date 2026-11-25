@@ -6,20 +6,47 @@
   --rp-c-brand-lighter: #ffc966; /* hsl(39deg 100% 70%) */
   --rp-c-brand-tint: rgba(255, 165, 0, 0.15);
 
-  /* Storybook icon main color */
-  --rp-storybook-main-color: #e85a85;
+  /* Warm accents shared by the Storybook and Rsbuild artwork. */
+  --rp-storybook-main-color: #e63878;
+  --rp-home-hero-secondary-color: #ed7954;
 
   .rp-button--brand {
-    background: linear-gradient(
-      90deg,
-      var(--rp-storybook-main-color) 20%,
-      var(--rp-c-brand-dark) 180%
-    );
+    background: linear-gradient(110deg, #c92c61, #b74436);
   }
 
   --rp-home-hero-title-bg: linear-gradient(
-    120deg,
-    var(--rp-storybook-main-color) 30%,
-    var(--rp-c-brand-dark) 120%
+    110deg,
+    var(--rp-storybook-main-color) 15%,
+    var(--rp-home-hero-secondary-color) 100%
   );
+
+  --rp-home-background-bg:
+    radial-gradient(
+      ellipse at 18% 0%,
+      rgba(255, 71, 133, 0.07),
+      rgba(255, 71, 133, 0) 65%
+    ),
+    radial-gradient(
+      ellipse at 85% 15%,
+      rgba(255, 178, 112, 0.1),
+      rgba(255, 178, 112, 0) 65%
+    ),
+    var(--rp-c-bg);
+}
+
+:root.rp-dark {
+  --rp-storybook-main-color: #ff79ab;
+  --rp-home-hero-secondary-color: #ffb078;
+  --rp-home-background-bg:
+    radial-gradient(
+      ellipse at 18% 0%,
+      rgba(255, 71, 133, 0.1),
+      rgba(255, 71, 133, 0) 65%
+    ),
+    radial-gradient(
+      ellipse at 85% 15%,
+      rgba(255, 178, 112, 0.07),
+      rgba(255, 178, 112, 0) 65%
+    ),
+    var(--rp-c-bg);
 }
