@@ -92,7 +92,7 @@ describe('virtual-module-mapping: config entry imports', () => {
 
     expect(entry).toContain("from 'storybook/internal/channels'")
     expect(entry).toContain("from 'storybook/internal/core-events'")
-    expect(entry).toContain("from '@storybook/global'")
     expect(entry).toContain("from 'storybook/preview-api'")
+    expect(entry).not.toContain('@storybook/global')
   })
 })
