@@ -2,8 +2,7 @@ import type { RsbuildConfig, Rspack } from '@rsbuild/core'
 import { loadConfig, mergeRsbuildConfig } from '@rsbuild/core'
 import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join, resolve } from 'node:path'
 // @ts-expect-error (I removed this on purpose, because it's incorrect)
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin'
 import { pluginHtmlMinifierTerser } from 'rsbuild-plugin-html-minifier-terser'
@@ -33,27 +32,6 @@ import {
 import { getVirtualModules } from './virtual-module-mapping'
 
 const require = createRequire(import.meta.url)
-
-const getAbsolutePath = <T extends string>(input: T): T => {
-  const storybookPath = fileURLToPath(
-    import.meta.resolve('storybook/package.json'),
-  )
-
-  // Can't directly use `import.meta.resolve` here because `parentURL` parameter is not standardized yet.
-  return dirname(
-    require.resolve(join(input, 'package.json'), {
-      paths: [dirname(storybookPath)],
-    }),
-  ) as any as T
-}
-
-const maybeGetAbsolutePath = <I extends string>(input: I): I | false => {
-  try {
-    return getAbsolutePath(input)
-  } catch (_e) {
-    return false
-  }
-}
 
 const builtInResolveExtensions = [
   '.mjs',
@@ -90,15 +68,6 @@ const PRODUCTION_MINIFY_OPTIONS: NonNullable<
       },
     },
   },
-}
-
-const globalPath = maybeGetAbsolutePath('@storybook/global')
-
-// these packages are not pre-bundled because of react dependencies.
-// these are not dependencies of the builder anymore, thus resolving them can fail.
-// we should remove the aliases in 8.0, I'm not sure why they are here in the first place.
-const storybookPaths: Record<string, string> = {
-  ...(globalPath ? { ['@storybook/global']: globalPath } : {}),
 }
 
 export type RsbuildBuilderOptions = Options & {
@@ -338,11 +307,6 @@ export default async (
       assetPrefix: '',
       progressBar: !quiet,
       hmr: shouldDisableHmr ? false : undefined,
-    },
-    resolve: {
-      alias: {
-        ...storybookPaths,
-      },
     },
     source: {
       define: {
