@@ -11,6 +11,7 @@ import {
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, normalize } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   afterAll,
   beforeAll,
@@ -164,7 +165,7 @@ function makeAutomockWrapper() {
   writeFileSync(
     wrapper,
     `import { appendFileSync } from 'node:fs'
-import real from ${JSON.stringify(automockLoader)}
+import real from ${JSON.stringify(pathToFileURL(automockLoader).href)}
 
 export default function (source) {
   appendFileSync(${JSON.stringify(logFile)}, JSON.stringify({
