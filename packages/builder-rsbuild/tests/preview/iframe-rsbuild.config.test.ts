@@ -52,7 +52,6 @@ const createOptions = (
 ) => {
   const builderCoreOptions: Record<string, unknown> = {
     rsbuildConfigPath: fixtureRsbuildConfig,
-    addonDocs: {},
     fsCache: false,
     ...(lazyCompilation === 'unset' ? {} : { lazyCompilation }),
     ...builderOptionOverrides,

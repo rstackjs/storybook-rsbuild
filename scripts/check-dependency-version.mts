@@ -22,8 +22,6 @@ if (dep) {
 // === devDependencies ===
 const cdvcDevDep = new CDVC(root, {
   depType: ['devDependencies'],
-  // addon-rslib keeps a Rslib 1 dev copy for type-check/tests of its peer dependency; sandboxes track Rslib 0.x.
-  ignoreDep: ['@rslib/core'],
   ignorePackage: ['website'],
 })
 

@@ -133,18 +133,11 @@ const loadWebpackAddonPresets = async (options: RsbuildBuilderOptions) => {
 export default async (
   options: RsbuildBuilderOptions,
 ): Promise<RsbuildConfig> => {
-  const { rsbuildConfigPath, addonDocs } =
-    await getBuilderOptions<BuilderOptions>(options)
+  const { rsbuildConfigPath } = await getBuilderOptions<BuilderOptions>(options)
   const [webpackConfigFromPresets, webpackAddonPresets] = await Promise.all([
     options.presets.apply<Rspack.Configuration>('webpack', {}, options),
     loadWebpackAddonPresets(options),
   ])
-
-  if (addonDocs) {
-    console.warn(
-      '`addonDocs` option is deprecated and will be removed in future versions. Please use `@storybook/addon-docs` option instead.',
-    )
-  }
 
   const {
     outputDir = join('.', 'public'),
@@ -438,14 +431,6 @@ export default async (
           ? false
           : isProd
         config.optimization.moduleIds = 'named'
-
-        // If using react-dom-shim with React 16/17, `useId` won't be exported in dependency,
-        // which will cause an HarmonyLinkingError. Set `exportsPresence` to `false` to allow
-        // doing this runtime detection.
-        config.module ??= {}
-        config.module.parser ??= {}
-        config.module.parser.javascript ??= {}
-        config.module.parser.javascript.exportsPresence = false
 
         config.plugins ??= []
         config.plugins.push(

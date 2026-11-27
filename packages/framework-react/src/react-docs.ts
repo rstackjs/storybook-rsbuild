@@ -77,8 +77,6 @@ export const rsbuildFinalDocs: NonNullable<
   //#region react-docgen-typescript
   const reactDocGenTsPlugin = await import('./plugins/react-docgen-typescript')
 
-  // TODO: Rspack doesn't support the hooks `react-docgen-typescript`' required.
-  // Currently, using `transform` hook to implement the same behavior.
   return mergeRsbuildConfig(config, {
     tools: {
       rspack: {
@@ -100,46 +98,5 @@ export const rsbuildFinalDocs: NonNullable<
       }),
     ],
   })
-  //#endregion
-
-  //#region webpack flavor react-docgen-typescript implementation, lacking support for hooks.
-  // it's now superseded by the `transform` hook implementation of Vite flavor.
-
-  // Reference only: `@storybook/react-docgen-typescript-plugin` is not a dependency of this package.
-  // const { ReactDocgenTypeScriptPlugin } = await import(
-  //   '@storybook/react-docgen-typescript-plugin'
-  // )
-
-  // const { reactDocgenTypescriptOptions } = typescriptOptions || {}
-
-  // return mergeRsbuildConfig(config, {
-  //   tools: {
-  //     rspack: {
-  //       module: {
-  //         rules: [
-  //           {
-  //             test: /\.(cjs|mjs|jsx?)$/,
-  //             enforce: 'pre',
-  //             loader: requirer(
-  //               require.resolve,
-  //               'storybook-react-rsbuild/loaders/react-docgen-loader',
-  //             ),
-  //             options: {
-  //               debug,
-  //             },
-  //             exclude: /(\.(stories|story)\.(js|jsx|ts|tsx))|(node_modules)/,
-  //           },
-  //         ],
-  //       },
-  //       plugins: [
-  //         new ReactDocgenTypeScriptPlugin({
-  //           ...reactDocgenTypescriptOptions,
-  //           // We *need* this set so that RDT returns default values in the same format as react-docgen
-  //           savePropValueAsString: true,
-  //         }),
-  //       ],
-  //     },
-  //   },
-  // })
   //#endregion
 }

@@ -30,9 +30,7 @@
     "./preset": "./dist/preset.js",
     "./presets/preview-preset": "./dist/preview-preset.js",
     "./templates/preview.ejs": "./templates/preview.ejs",
-    "./templates/virtualModuleEntry.template.js": "./templates/virtualModuleEntry.template.js",
-    "./templates/virtualModuleModernEntry.js": "./templates/virtualModuleModernEntry.js",
-    "./templates/virtualModuleStory.template.js": "./templates/virtualModuleStory.template.js"
+    "./templates/virtualModuleModernEntry.js": "./templates/virtualModuleModernEntry.js"
   },
   "files": [
     "dist/**/*",
@@ -84,11 +82,6 @@
   "peerDependencies": {
     "@rsbuild/core": "^2.0.0",
     "storybook": "^11.0.0-rc.1"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22.12.0"
