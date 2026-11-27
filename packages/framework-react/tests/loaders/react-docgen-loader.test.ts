@@ -2,6 +2,7 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
+import type { Rspack } from '@rsbuild/core'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, rs } from 'rstack/test'
@@ -165,7 +166,7 @@ async function runLoader(resourcePath: string) {
       async: () => rs.fn(),
       getOptions: () => ({}),
       resourcePath,
-    },
+    } as unknown as Rspack.LoaderContext<{ debug?: boolean }>,
     'export const Button = () => null',
     undefined,
   )

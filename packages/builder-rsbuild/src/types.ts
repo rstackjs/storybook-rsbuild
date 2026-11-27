@@ -75,10 +75,6 @@ export type BuilderOptions = {
    * Which environment to use from the Rsbuild config.
    */
   environment?: string
-  /**
-   * @storybook/addon-docs options
-   */
-  addonDocs?: any
 }
 
 export interface BuilderResult extends BuilderResultBase {

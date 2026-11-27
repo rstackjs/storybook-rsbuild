@@ -2,6 +2,7 @@
  * Code taken from https://github.com/storybookjs/storybook/tree/next/code/presets/react-webpack/src/loaders
  */
 
+import type { Rspack } from '@rsbuild/core'
 import MagicString from 'magic-string'
 import { existsSync } from 'node:fs'
 import { dirname, sep } from 'node:path'
@@ -25,8 +26,6 @@ import {
 } from 'storybook/internal/common'
 import { logger } from 'storybook/internal/node-logger'
 import * as TsconfigPaths from 'tsconfig-paths'
-// @ts-expect-error can not reexport `LoaderContext` from @rsbuild/core
-import type { LoaderContext } from 'webpack'
 
 import {
   defaultLookupModule,
@@ -88,7 +87,7 @@ const defaultResolver = new docgenResolver.FindExportedDefinitionsResolver()
 const handlers = [...defaultHandlers, actualNameHandler]
 
 export default async function reactDocgenLoader(
-  this: LoaderContext<{ debug: boolean }>,
+  this: Rspack.LoaderContext<{ debug?: boolean }>,
   source: string,
   map: any,
 ) {

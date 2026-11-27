@@ -63,9 +63,6 @@
   "peerDependenciesMeta": {
     "@modern-js/plugin": {
       "optional": true
-    },
-    "typescript": {
-      "optional": true
     }
   },
   "engines": {

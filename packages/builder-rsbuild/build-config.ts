@@ -38,10 +38,6 @@ const config: BuildEntries = {
     './templates/virtualModuleModernEntry.js':
       './templates/virtualModuleModernEntry.js',
     './templates/preview.ejs': './templates/preview.ejs',
-    './templates/virtualModuleEntry.template.js':
-      './templates/virtualModuleEntry.template.js',
-    './templates/virtualModuleStory.template.js':
-      './templates/virtualModuleStory.template.js',
   },
 }
 
